@@ -1,0 +1,703 @@
+basePath: /api/v1
+definitions:
+  models.Alerte:
+    properties:
+      analysteAssigneId:
+        type: string
+      dateGeneration:
+        type: string
+      id:
+        type: string
+      niveauCriticite:
+        type: string
+      raisonDetection:
+        type: string
+      regleDeclencheeId:
+        type: string
+      scoreRisque:
+        type: number
+      statut:
+        description: '"En cours", "Traité", "Faux positif"'
+        type: string
+      transactionId:
+        type: string
+    type: object
+  models.Client:
+    properties:
+      activiteEconomique:
+        type: string
+      dateCreation:
+        type: string
+      id:
+        type: string
+      kycId:
+        type: string
+      niveauRisqueIntrinseque:
+        type: string
+      profilClientId:
+        type: string
+      typeClient:
+        type: string
+      zoneGeographique:
+        type: string
+    type: object
+  models.EntiteBlacklist:
+    properties:
+      dateAjout:
+        type: string
+      id:
+        type: string
+      informationsSupplementaires:
+        type: string
+      nom:
+        type: string
+      typeEntite:
+        description: '"Interdit", "Blacklisté", "PEP", "Surveillé"'
+        type: string
+    type: object
+  models.ProfilClient:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      nomProfil:
+        type: string
+    type: object
+  models.RegleControle:
+    properties:
+      active:
+        type: boolean
+      criticite:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      nomRegle:
+        type: string
+      periodeReference:
+        description: 'Ex: "24h", "7d"'
+        type: string
+      profilClientId:
+        type: string
+      seuil:
+        type: number
+      typeRegle:
+        description: 'Ex: "montant", "frequence"'
+        type: string
+    type: object
+  models.Transaction:
+    properties:
+      clientDestId:
+        type: string
+      clientSourceId:
+        type: string
+      dateTransaction:
+        type: string
+      id:
+        type: string
+      montant:
+        type: number
+      typeTransaction:
+        type: string
+    type: object
+  models.Utilisateur:
+    properties:
+      actif:
+        type: boolean
+      dateCreation:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      nomUtilisateur:
+        type: string
+      password:
+        description: Le mot de passe ne doit jamais être exposé en JSON
+        type: string
+      role:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: modou.gueye@gsietechnology.com
+    name: Modou GUEYE
+  description: Backend pour le projet MDA de GSIE Technology, conçu pour la détection
+    de fraudes LBC/FT.
+  title: API du Moteur de Détection d'Anomalies
+  version: "1.0"
+paths:
+  /alertes:
+    get:
+      description: Récupère la liste de toutes les alertes générées par le système.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Alerte'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lister toutes les alertes
+      tags:
+      - Analystes - Alertes
+  /alertes/{id}/status:
+    put:
+      consumes:
+      - application/json
+      description: 'Permet à un analyste de changer le statut d''une alerte (ex: ''Traité'',
+        ''Faux positif'').'
+      parameters:
+      - description: ID de l'alerte
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Nouveau statut de l'alerte
+        in: body
+        name: status
+        required: true
+        schema:
+          properties:
+            statut:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Alerte'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Mettre à jour le statut d'une alerte
+      tags:
+      - Analystes - Alertes
+  /blacklist:
+    get:
+      description: Récupère toutes les entités de la liste de surveillance. Nécessite
+        des droits admin.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.EntiteBlacklist'
+            type: array
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lister les entrées de la blacklist
+      tags:
+      - Administration - Blacklist
+    post:
+      consumes:
+      - application/json
+      description: Ajoute une nouvelle entité à la liste de surveillance. Nécessite
+        des droits admin.
+      parameters:
+      - description: Détails de l'entité à ajouter
+        in: body
+        name: blacklistEntry
+        required: true
+        schema:
+          $ref: '#/definitions/models.EntiteBlacklist'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.EntiteBlacklist'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Créer une entrée dans la blacklist
+      tags:
+      - Administration - Blacklist
+  /blacklist/{id}:
+    delete:
+      description: Supprime une entité de la liste de surveillance par son ID. Nécessite
+        des droits admin.
+      parameters:
+      - description: ID de l'entité
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Supprimer une entrée de la blacklist
+      tags:
+      - Administration - Blacklist
+    put:
+      consumes:
+      - application/json
+      description: Modifie une entité de la liste de surveillance. Nécessite des droits
+        admin.
+      parameters:
+      - description: ID de l'entité
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Nouvelles données de l'entité
+        in: body
+        name: blacklistEntry
+        required: true
+        schema:
+          $ref: '#/definitions/models.EntiteBlacklist'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.EntiteBlacklist'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Mettre à jour une entrée de la blacklist
+      tags:
+      - Administration - Blacklist
+  /clients:
+    post:
+      consumes:
+      - application/json
+      description: Crée un nouveau client et l'associe à un profil. Nécessite des
+        droits admin.
+      parameters:
+      - description: Détails du client
+        in: body
+        name: client
+        required: true
+        schema:
+          $ref: '#/definitions/models.Client'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Client'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Créer un client
+      tags:
+      - Administration - Clients
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Authentifie un utilisateur avec email et mot de passe et renvoie
+        un token JWT.
+      parameters:
+      - description: Identifiants de l'utilisateur
+        in: body
+        name: credentials
+        required: true
+        schema:
+          properties:
+            email:
+              type: string
+            password:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Renvoie un token JWT
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Connecter un utilisateur
+      tags:
+      - Authentification
+  /profile:
+    get:
+      description: Renvoie les informations de l'utilisateur actuellement authentifié
+        via le token JWT.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Utilisateur'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Obtenir le profil de l'utilisateur connecté
+      tags:
+      - Utilisateurs
+  /profils:
+    get:
+      description: Récupère tous les profils clients. Nécessite des droits admin.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.ProfilClient'
+            type: array
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lister les profils clients
+      tags:
+      - Administration - Profils
+    post:
+      consumes:
+      - application/json
+      description: Crée un nouveau profil client. Nécessite des droits admin.
+      parameters:
+      - description: Détails du profil
+        in: body
+        name: profil
+        required: true
+        schema:
+          $ref: '#/definitions/models.ProfilClient'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.ProfilClient'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Créer un profil client
+      tags:
+      - Administration - Profils
+  /profils/{id}:
+    delete:
+      description: Supprime un profil client. Nécessite des droits admin.
+      parameters:
+      - description: ID du profil
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Supprimer un profil client
+      tags:
+      - Administration - Profils
+    put:
+      consumes:
+      - application/json
+      description: Modifie un profil client. Nécessite des droits admin.
+      parameters:
+      - description: ID du profil
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Nouvelles données du profil
+        in: body
+        name: profil
+        required: true
+        schema:
+          $ref: '#/definitions/models.ProfilClient'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ProfilClient'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Mettre à jour un profil client
+      tags:
+      - Administration - Profils
+  /profils/{id}/regles:
+    get:
+      description: Récupère toutes les règles associées à un profil client. Nécessite
+        des droits admin.
+      parameters:
+      - description: ID du Profil Client
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.RegleControle'
+            type: array
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lister les règles d'un profil
+      tags:
+      - Administration - Règles
+  /regles:
+    post:
+      consumes:
+      - application/json
+      description: Crée une nouvelle règle de contrôle. Nécessite des droits admin.
+      parameters:
+      - description: Détails de la règle
+        in: body
+        name: regle
+        required: true
+        schema:
+          $ref: '#/definitions/models.RegleControle'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.RegleControle'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Créer une règle de contrôle
+      tags:
+      - Administration - Règles
+  /regles/{id}:
+    delete:
+      description: Supprime une règle de contrôle. Nécessite des droits admin.
+      parameters:
+      - description: ID de la règle
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Supprimer une règle de contrôle
+      tags:
+      - Administration - Règles
+    put:
+      consumes:
+      - application/json
+      description: Modifie une règle de contrôle. Nécessite des droits admin.
+      parameters:
+      - description: ID de la règle
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Nouvelles données de la règle
+        in: body
+        name: regle
+        required: true
+        schema:
+          $ref: '#/definitions/models.RegleControle'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.RegleControle'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Mettre à jour une règle de contrôle
+      tags:
+      - Administration - Règles
+  /transactions/analyze:
+    post:
+      consumes:
+      - application/json
+      description: Soumet une transaction pour analyse par le moteur de détection
+        d'anomalies.
+      parameters:
+      - description: Détails de la transaction à analyser
+        in: body
+        name: transaction
+        required: true
+        schema:
+          $ref: '#/definitions/models.Transaction'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Aucune anomalie détectée
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "201":
+          description: Anomalie détectée et alerte créée
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 'Transaction refusée (ex: client sur blacklist)'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Analyser une transaction
+      tags:
+      - Moteur de Détection
+  /users:
+    post:
+      consumes:
+      - application/json
+      description: Crée un nouvel utilisateur (admin ou analyste).
+      parameters:
+      - description: Le mot de passe doit être dans le champ 'password'
+        in: body
+        name: utilisateur
+        required: true
+        schema:
+          $ref: '#/definitions/models.Utilisateur'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Créer un nouvel utilisateur
+      tags:
+      - Authentification
+securityDefinitions:
+  BearerAuth:
+    description: '"Type ''Bearer'' suivi par un espace et un token JWT."'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
