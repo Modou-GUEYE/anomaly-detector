@@ -1,5 +1,3 @@
-// Migration SQL à exécuter pour ajouter le champ type_client à la table clients :
-// ALTER TABLE clients ADD COLUMN type_client VARCHAR(50);
 package store
 
 import (
