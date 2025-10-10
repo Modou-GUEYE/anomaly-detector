@@ -1,3 +1,5 @@
+// Migration SQL à exécuter pour ajouter le champ type_client à la table clients :
+// ALTER TABLE clients ADD COLUMN type_client VARCHAR(50);
 package store
 
 import (
@@ -106,13 +108,14 @@ func (s *Store) GetUserByID(ctx context.Context, id string) (*models.Utilisateur
 // CreateBlacklistEntry insère une nouvelle entité dans la blacklist.
 func (s *Store) CreateBlacklistEntry(ctx context.Context, entry *models.EntiteBlacklist) (*models.EntiteBlacklist, error) {
 	query := `
-        INSERT INTO entites_blacklist (nom, type_entite, informations_supplementaires)
-        VALUES ($1, $2, $3)
-        RETURNING id, nom, type_entite, informations_supplementaires, date_ajout
-    `
-	err := s.db.QueryRow(ctx, query, entry.Nom, entry.TypeEntite, entry.InformationsSupplementaires).Scan(
+			INSERT INTO entites_blacklist (nom, numero_compte, type_entite, informations_supplementaires)
+			VALUES ($1, $2, $3, $4)
+			RETURNING id, nom, numero_compte, type_entite, informations_supplementaires, date_ajout
+		`
+	err := s.db.QueryRow(ctx, query, entry.Nom, entry.NumeroCompte, entry.TypeEntite, entry.InformationsSupplementaires).Scan(
 		&entry.ID,
 		&entry.Nom,
+		&entry.NumeroCompte,
 		&entry.TypeEntite,
 		&entry.InformationsSupplementaires,
 		&entry.DateAjout,
@@ -126,7 +129,7 @@ func (s *Store) CreateBlacklistEntry(ctx context.Context, entry *models.EntiteBl
 // GetBlacklistEntries récupère toutes les entités de la blacklist.
 func (s *Store) GetBlacklistEntries(ctx context.Context) ([]models.EntiteBlacklist, error) {
 	var entries []models.EntiteBlacklist
-	query := `SELECT id, nom, type_entite, informations_supplementaires, date_ajout FROM entites_blacklist`
+	query := `SELECT id, nom, numero_compte, type_entite, informations_supplementaires, date_ajout FROM entites_blacklist`
 
 	rows, err := s.db.Query(ctx, query)
 	if err != nil {
@@ -136,20 +139,13 @@ func (s *Store) GetBlacklistEntries(ctx context.Context) ([]models.EntiteBlackli
 
 	for rows.Next() {
 		var entry models.EntiteBlacklist
-		if err := rows.Scan(&entry.ID, &entry.Nom, &entry.TypeEntite, &entry.InformationsSupplementaires, &entry.DateAjout); err != nil {
+		if err := rows.Scan(&entry.ID, &entry.Nom, &entry.NumeroCompte, &entry.TypeEntite, &entry.InformationsSupplementaires, &entry.DateAjout); err != nil {
 			return nil, err
 		}
 		entries = append(entries, entry)
 	}
 
 	return entries, nil
-}
-
-// DeleteBlacklistEntry supprime une entité de la blacklist par son ID.
-func (s *Store) DeleteBlacklistEntry(ctx context.Context, id string) error {
-	query := `DELETE FROM entites_blacklist WHERE id = $1`
-	_, err := s.db.Exec(ctx, query, id)
-	return err
 }
 
 // UpdateBlacklistEntry met à jour une entité existante dans la blacklist.
@@ -175,13 +171,20 @@ func (s *Store) UpdateBlacklistEntry(ctx context.Context, id string, entry *mode
 	return entry, nil
 }
 
+// DeleteBlacklistEntry supprime une entité de la blacklist par son ID.
+func (s *Store) DeleteBlacklistEntry(ctx context.Context, id string) error {
+	query := `DELETE FROM entites_blacklist WHERE id = $1`
+	_, err := s.db.Exec(ctx, query, id)
+	return err
+}
+
 // GetBlacklistStatusForClient vérifie si un client est dans la blacklist et retourne le type d'entité s'il y est.
 func (s *Store) GetBlacklistStatusForClient(ctx context.Context, clientID string) (string, error) {
 	var typeEntite string
 	query := `
 		SELECT eb.type_entite FROM entites_blacklist eb
-		JOIN clients c ON eb.nom = c.kyc_id
-		WHERE c.id = $1
+		JOIN clients c ON eb.numero_compte = c.numero_compte
+		WHERE c.numero_compte = $1
 	`
 	err := s.db.QueryRow(ctx, query, clientID).Scan(&typeEntite)
 	if err != nil {
@@ -308,17 +311,58 @@ func (s *Store) DeleteRegleControle(ctx context.Context, id string) error {
 
 // CreateClient insère un nouveau client dans la base de données.
 func (s *Store) CreateClient(ctx context.Context, client *models.Client) (*models.Client, error) {
-	query := `INSERT INTO clients (kyc_id, type_client, activite_economique, zone_geographique, niveau_risque_intrinseque, profil_client_id) 
-               VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
-	err := s.db.QueryRow(ctx, query, client.KycID, client.TypeClient, client.ActiviteEconomique, client.ZoneGeographique, client.NiveauRisqueIntrinseque, client.ProfilClientID).Scan(&client.ID)
+	query := `INSERT INTO clients (
+			numero_compte, type_client, profil_client_id, date_creation,
+			nom_client, type_compte, categorie, pays, ville, adresse
+		) VALUES (
+			$1, $2, $3, $4,
+			$5, $6, $7, $8, $9, $10
+		) RETURNING id`
+	var profilID interface{}
+	if client.ProfilClientID == "" {
+		profilID = nil
+	} else {
+		profilID = client.ProfilClientID
+	}
+	err := s.db.QueryRow(ctx, query,
+		client.NumeroCompte, // numero_compte
+		client.TypeClient,   // type_client
+		profilID,
+		client.DateCreation,
+		client.NomClient,
+		client.TypeCompte,
+		client.Categorie,
+		client.Pays,
+		client.Ville,
+		client.Adresse,
+	).Scan(&client.ID)
 	return client, err
 }
 
-// GetClientByKycID recherche un client par son identifiant métier unique (KYC ID).
-func (s *Store) GetClientByKycID(ctx context.Context, kycID string) (*models.Client, error) {
+// GetClientByNumeroCompte recherche un client par son numéro de compte unique.
+func (s *Store) GetClientByNumeroCompte(ctx context.Context, numeroCompte string) (*models.Client, error) {
 	var client models.Client
-	query := `SELECT id, kyc_id, profil_client_id FROM clients WHERE kyc_id = $1`
-	err := s.db.QueryRow(ctx, query, kycID).Scan(&client.ID, &client.KycID, &client.ProfilClientID)
+	query := `SELECT 
+			id, numero_compte, type_client, profil_client_id, date_creation,
+			nom_client, type_compte, categorie, pays, ville, adresse
+			FROM clients WHERE numero_compte = $1`
+	err := s.db.QueryRow(ctx, query, numeroCompte).Scan(
+		&client.ID,
+		&client.NumeroCompte,
+		&client.TypeClient,
+		&client.ProfilClientID,
+		&client.DateCreation,
+		&client.NomClient,
+		&client.TypeCompte,
+		&client.Categorie,
+		&client.Pays,
+		&client.Ville,
+		&client.Adresse,
+	)
+	if err == pgx.ErrNoRows {
+		// Aucun client trouvé, retourne un client vide
+		return &models.Client{}, nil
+	}
 	return &client, err
 }
 
@@ -337,10 +381,10 @@ func (s *Store) CreateAlerte(ctx context.Context, alerte *models.Alerte) (*model
 func (s *Store) GetReglesForClient(ctx context.Context, clientID string) ([]models.RegleControle, error) {
 	query := `
 		SELECT rc.id, rc.nom_regle, rc.description, rc.type_regle,
-		       rc.criticite, rc.seuil, rc.periode_reference, rc.active, rc.profil_client_id 
+			   rc.criticite, rc.seuil, rc.periode_reference, rc.active, rc.profil_client_id 
 		FROM regles_controle rc
 		JOIN clients c ON rc.profil_client_id = c.profil_client_id
-		WHERE c.id = $1 AND rc.active = true
+		WHERE c.numero_compte = $1 AND rc.active = true
 	`
 	var regles []models.RegleControle
 	rows, err := s.db.Query(ctx, query, clientID)
@@ -413,7 +457,7 @@ func (s *Store) GetReglesForNumeroCompte(ctx context.Context, numeroCompte strin
                rc.criticite, rc.seuil, rc.periode_reference, rc.active, rc.profil_client_id 
         FROM regles_controle rc
         JOIN clients c ON rc.profil_client_id = c.profil_client_id
-        WHERE c.kyc_id = $1 AND rc.active = true
+	WHERE c.numero_compte = $1 AND rc.active = true
     `
 	rows, err := s.db.Query(ctx, query, numeroCompte)
 	if err != nil {
@@ -444,7 +488,7 @@ func (s *Store) GetReglesForNumeroCompte(ctx context.Context, numeroCompte strin
 // IsKycOnBlacklist vérifie si un KYC ID est sur la blacklist.
 func (s *Store) IsKycOnBlacklist(ctx context.Context, kycID string) (string, error) {
 	var typeEntite string
-	query := `SELECT type_entite FROM entites_blacklist WHERE nom = $1`
+	query := `SELECT type_entite FROM entites_blacklist WHERE numero_compte = $1`
 	err := s.db.QueryRow(ctx, query, kycID).Scan(&typeEntite)
 	if err != nil {
 		if err == pgx.ErrNoRows {

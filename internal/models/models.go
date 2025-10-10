@@ -1,6 +1,9 @@
+
 package models
 
-import "time"
+import (
+	"time"
+)
 
 // Utilisateur représente un acteur du système (admin, analyste).
 type Utilisateur struct {
@@ -15,20 +18,20 @@ type Utilisateur struct {
 
 // Client représente une personne physique ou morale.
 type Client struct {
-	ID                      string    `json:"id"`
-	KycID                   string    `json:"kycId"` //
-	TypeClient              string    `json:"typeClient"`
-	ActiviteEconomique      string    `json:"activiteEconomique"`
-	ZoneGeographique        string    `json:"zoneGeographique"`
-	NiveauRisqueIntrinseque string    `json:"niveauRisqueIntrinseque"`
-	ProfilClientID          string    `json:"profilClientId,omitempty"`
-	DateCreation            time.Time `json:"dateCreation"`
+	ID             string    `json:"id"`
+	NumeroCompte   string    `json:"numeroCompte"`
+	NomClient      string    `json:"nomClient"`
+	TypeClient     string    `json:"typeClient"`
+	TypeCompte     string    `json:"typeCompte"`
+	Categorie      string    `json:"categorie"`
+	Pays           string    `json:"pays"`
+	Ville          string    `json:"ville"`
+	Adresse        string    `json:"adresse"`
+	ProfilClientID string    `json:"profilClientId,omitempty"`
+	DateCreation   time.Time `json:"dateCreation"`
 }
 
 // Transaction représente une opération financière.
-// dans internal/models/models.go
-
-// Transaction représente le format de données standard attendu par l'API du MDA.
 type Transaction struct {
 	ID                 string    `json:"id,omitempty"`
 	DateOperation      time.Time `json:"date_operation"`
@@ -38,6 +41,7 @@ type Transaction struct {
 	VillePayeur        string    `json:"ville_payeur"`
 	AdressePayeur      string    `json:"adresse_payeur"`
 	TypeComptePayeur   string    `json:"type_compte_payeur"`
+	TypeClientPayeur   string    `json:"type_client_payeur"`
 	CategoriePayeur    string    `json:"categorie_payeur"`
 	NumeroComptePayeur string    `json:"numero_compte_payeur"`
 	NomPayeur          string    `json:"nom_payeur"`
@@ -45,6 +49,7 @@ type Transaction struct {
 	VillePaye          string    `json:"ville_paye"`
 	AdressePaye        string    `json:"adresse_paye"`
 	TypeComptePaye     string    `json:"type_compte_paye"`
+	TypeClientPaye     string    `json:"type_client_paye"`
 	CategoriePaye      string    `json:"categorie_paye"`
 	NumeroComptePaye   string    `json:"numero_compte_paye"`
 	NomPaye            string    `json:"nom_paye"`
@@ -54,7 +59,8 @@ type Transaction struct {
 type EntiteBlacklist struct {
 	ID                          string    `json:"id"`
 	Nom                         string    `json:"nom"`
-	TypeEntite                  string    `json:"typeEntite"` // "Interdit", "Blacklisté", "PEP", "Surveillé"
+	NumeroCompte                string    `json:"numeroCompte"` // Numéro de compte pour vérification
+	TypeEntite                  string    `json:"typeEntite"`   // "Interdit", "Blacklisté", "PEP", "Surveillé"
 	InformationsSupplementaires string    `json:"informationsSupplementaires"`
 	DateAjout                   time.Time `json:"dateAjout"`
 }

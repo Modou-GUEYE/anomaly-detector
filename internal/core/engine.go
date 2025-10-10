@@ -1,5 +1,33 @@
 package core
 
+// Schéma visuel de l'architecture (Mermaid)
+// Schéma d'architecture minimal (Mermaid)
+//
+// ```mermaid
+// graph TD
+//     API[API] --> Engine[Engine]
+//     API --> Store[Store]
+//     Store --> DB[Base de données]
+//     Engine --> Store
+//     DB --> Utilisateur[(Utilisateur)]
+//     DB --> Transaction[(Transaction)]
+//     DB --> Alerte[(Alerte)]
+//     DB --> Blacklist[(Blacklist)]
+// ```
+//
+// graph TD
+//     API[API (server.go)] --> Store[Store (accès DB)]
+//     Store --> DB[Base de données]
+//     API --> Engine[Engine (logique métier)]
+//     Engine --> Store
+//     Store --> Engine
+//
+// Explication :
+// - L'API reçoit la requête et utilise le Store pour lire/écrire en base.
+// - Le Store fournit les données nécessaires à l'Engine.
+// - L'Engine applique la logique métier en utilisant les méthodes du Store.
+// - Les résultats sont renvoyés à l'API, puis à l'utilisateur.
+
 import (
 	"anomaly-detector/internal/models"
 	"anomaly-detector/internal/store"
@@ -21,7 +49,7 @@ func (re *RulesEngine) AnalyzeTransaction(ctx context.Context, tx *models.Transa
 	// --- 1. CONTRÔLE BLACKLIST  ---
 	err := re.checkBlacklist(ctx, tx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("impossible de récupérer les règles pour la transaction: %w", err)
 	}
 
 	// --- 2. APPLICATION DES RÈGLES MÉTIER ---
@@ -47,7 +75,7 @@ func (re *RulesEngine) applyRulesForAccount(ctx context.Context, tx *models.Tran
 	var alertes []*models.Alerte
 	regles, err := re.store.GetReglesForNumeroCompte(ctx, numeroCompte)
 	if err != nil {
-		return nil, fmt.Errorf("impossible de récupérer les règles pour le compte %s: %w", numeroCompte, err)
+		return nil, err
 	}
 
 	for _, regle := range regles {
@@ -99,15 +127,13 @@ func (re *RulesEngine) checkBlacklist(ctx context.Context, tx *models.Transactio
 
 	switch statusPayeur {
 	case "Interdits", "Blacklist":
-		// Règle : Refuser la transaction et renseigner un suivi (même si refusé).
 		re.store.CreateSuiviBlacklist(ctx, tx.ID, tx.NumeroComptePayeur, statusPayeur)
 		return fmt.Errorf("%w: le payeur est sur la liste '%s'", ErrTransactionRefused, statusPayeur)
 	case "PEP", "Surveillés":
-		// Règle : Valider et renseigner un état de suivi.
 		re.store.CreateSuiviBlacklist(ctx, tx.ID, tx.NumeroComptePayeur, statusPayeur)
 	}
 
-	// Analyser le payé (s'il existe)
+	// Analyser le payé
 	if tx.NumeroComptePaye != "" {
 		statusPaye, err := re.store.IsKycOnBlacklist(ctx, tx.NumeroComptePaye)
 		if err != nil {

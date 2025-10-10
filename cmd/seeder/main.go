@@ -7,12 +7,10 @@ import (
 	"context"
 	"fmt"
 	"log"
-
-	"github.com/go-faker/faker/v4"
 )
 
 func main() {
-	connStr := "postgresql://anomaly_user:passer@123@localhost:5432/anomaly_db?sslmode=disable"
+	connStr := "postgresql://anomaly_user:passer@localhost:5432/anomaly_db?sslmode=disable"
 	dbStore, err := store.NewStore(connStr)
 	if err != nil {
 		log.Fatalf("❌ Impossible d'initialiser le store: %v", err)
@@ -60,34 +58,66 @@ func seedData(ctx context.Context, s *store.Store) {
 	fmt.Println("- 2 Règles de Contrôle créées")
 
 	// --- Peuplement de la Blacklist ---
-	s.CreateBlacklistEntry(ctx, &models.EntiteBlacklist{Nom: "KYC_INTERDIT_01", TypeEntite: "Interdit"})
-	fmt.Println("- 1 entrée 'Interdit' créée dans la blacklist")
+	s.CreateBlacklistEntry(ctx, &models.EntiteBlacklist{
+		Nom:          "Madiambal Diagne",
+		NumeroCompte: "SN01100010012345678901234",
+		TypeEntite:   "Interdits",
+	})
+	s.CreateBlacklistEntry(ctx, &models.EntiteBlacklist{
+		Nom:          "Fatou Diop",
+		NumeroCompte: "SN01100020098765432109876",
+		TypeEntite:   "Blacklist",
+	})
+	s.CreateBlacklistEntry(ctx, &models.EntiteBlacklist{
+		Nom:          "Ousmane Sonko",
+		NumeroCompte: "SN01100030011223344556677",
+		TypeEntite:   "PEP",
+	})
+	s.CreateBlacklistEntry(ctx, &models.EntiteBlacklist{
+		Nom:          "Aminata Fall",
+		NumeroCompte: "SN01100040099887766554433",
+		TypeEntite:   "Surveillés",
+	})
 
-	// --- Création des Clients ---
-	// Créer un client entreprise pour la règle de cumul
-	clientEntreprise, _ := s.CreateClient(ctx, &models.Client{KycID: "KYC_ENTREPRISE_TEST", TypeClient: "Entreprise", ProfilClientID: p2.ID})
-	fmt.Println("- 1 Client Entreprise créé")
-
-	// Créer 10 clients particuliers
-	for i := 0; i < 10; i++ {
-		s.CreateClient(ctx, &models.Client{KycID: faker.UUIDHyphenated(), TypeClient: "Particulier", ProfilClientID: p1.ID})
-	}
-	fmt.Println("- 10 Clients Particuliers créés")
+	fmt.Println("- 4 entrées créées dans la blacklist (Interdits, Blacklist, PEP, Surveillés)")
 
 	// --- Création de Transactions ---
 	fmt.Println("Création d'un historique de transactions...")
-	// Créons 2 transactions pour notre client Entreprise
 	s.CreateTransaction(ctx, &models.Transaction{
-		NumeroComptePayeur: clientEntreprise.KycID,
+		NumeroComptePayeur: "SN01100020098765432109876", // Fatou Diop (Blacklist)
+		NomPayeur:          "Fatou Diop",
+		TypeComptePayeur:   "Particulier",
+		CategoriePayeur:    "Commerçant",
+		PaysPayeur:         "Sénégal",
+		VillePayeur:        "Dakar",
+		AdressePayeur:      "Rue 12",
+		NumeroComptePaye:   "SN01100040099887766554433", // Aminata Fall (Surveillés)
+		NomPaye:            "Aminata Fall",
+		TypeComptePaye:     "Entreprise",
+		CategoriePaye:      "Importateur",
+		PaysPaye:           "Sénégal",
+		VillePaye:          "Thiès",
+		AdressePaye:        "Avenue 7",
 		Montant:            150000.0,
 		Portee:             "NATIONAL",
-		PaysPaye:           "Sénégal",
 	})
 	s.CreateTransaction(ctx, &models.Transaction{
-		NumeroComptePayeur: clientEntreprise.KycID,
+		NumeroComptePayeur: "SN01100010012345678901234", // Madiambal Diagne (Interdits)
+		NomPayeur:          "Madiambal Diagne",
+		TypeComptePayeur:   "Particulier",
+		CategoriePayeur:    "Journaliste",
+		PaysPayeur:         "Sénégal",
+		VillePayeur:        "Saint-Louis",
+		AdressePayeur:      "Rue 5",
+		NumeroComptePaye:   "SN01100030011223344556677", // Ousmane Sonko (PEP)
+		NomPaye:            "Ousmane Sonko",
+		TypeComptePaye:     "Particulier",
+		CategoriePaye:      "Politicien",
+		PaysPaye:           "Sénégal",
+		VillePaye:          "Ziguinchor",
+		AdressePaye:        "Boulevard 3",
 		Montant:            250000.0,
 		Portee:             "NATIONAL",
-		PaysPaye:           "Sénégal",
 	})
 	fmt.Println("- 2 transactions créées pour le client Entreprise")
 }

@@ -219,6 +219,51 @@ func (server *Server) handleAnalyzeTransaction(ctx *gin.Context) {
 		return
 	}
 
+	// Création automatique du client payeur si inexistant
+	if tx.NumeroComptePayeur != "" {
+		clientPayeur, err := server.store.GetClientByNumeroCompte(ctx, tx.NumeroComptePayeur)
+		if err != nil || clientPayeur.ID == "" {
+			_, errCreate := server.store.CreateClient(ctx, &models.Client{
+				NomClient:      tx.NomPayeur,
+				NumeroCompte:   tx.NumeroComptePayeur,
+				TypeCompte:     tx.TypeComptePayeur,
+				TypeClient:     tx.TypeClientPayeur,
+				Categorie:      tx.CategoriePayeur,
+				Pays:           tx.PaysPayeur,
+				Ville:          tx.VillePayeur,
+				Adresse:        tx.AdressePayeur,
+				ProfilClientID: "",
+				DateCreation:   time.Now(),
+			})
+			if errCreate != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors de la création du client payeur", "details": errCreate.Error()})
+				return
+			}
+		}
+	}
+	// Création automatique du client payé si inexistant
+	if tx.NumeroComptePaye != "" {
+		clientPaye, err := server.store.GetClientByNumeroCompte(ctx, tx.NumeroComptePaye)
+		if err != nil || clientPaye.ID == "" {
+			_, errCreate := server.store.CreateClient(ctx, &models.Client{
+				NomClient:      tx.NomPaye,
+				NumeroCompte:   tx.NumeroComptePaye,
+				TypeCompte:     tx.TypeComptePaye,
+				TypeClient:     tx.TypeClientPaye,
+				Categorie:      tx.CategoriePaye,
+				Pays:           tx.PaysPaye,
+				Ville:          tx.VillePaye,
+				Adresse:        tx.AdressePaye,
+				ProfilClientID: "",
+				DateCreation:   time.Now(),
+			})
+			if errCreate != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors de la création du client payé", "details": errCreate.Error()})
+				return
+			}
+		}
+	}
+
 	// 1. On enregistre d'abord la transaction pour avoir un ID
 	createdTx, err := server.store.CreateTransaction(ctx, &tx)
 	if err != nil {
@@ -292,7 +337,8 @@ func (server *Server) handleUpdateAlerteStatus(ctx *gin.Context) {
 	analysteID, _ := ctx.Get("userID")
 	alerte, err := server.store.UpdateAlerteStatus(ctx, alerteID, analysteID.(string), req.Statut)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de mettre à jour l'alerte"})
+		// On ajoute err.Error() au message de retour
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de mettre à jour l'alerte", "details": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, alerte)
