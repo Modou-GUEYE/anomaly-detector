@@ -5,6 +5,7 @@ import (
 )
 
 // Utilisateur représente un acteur du système (admin, analyste).
+// @Description Utilisateur du système (admin ou analyste)
 type Utilisateur struct {
 	ID             string    `json:"id"`
 	NomUtilisateur string    `json:"nomUtilisateur"`
@@ -16,6 +17,7 @@ type Utilisateur struct {
 }
 
 // Client représente une personne physique ou morale.
+// @Description Client du système (personne physique ou morale) obtenu lors de l'analyse des transactions
 type Client struct {
 	ID             string    `json:"id"`
 	NumeroCompte   string    `json:"numeroCompte"`
@@ -31,6 +33,7 @@ type Client struct {
 }
 
 // Transaction représente une opération financière.
+// @Description Transaction financière entre deux entités
 type Transaction struct {
 	ID                 string    `json:"id,omitempty"`
 	DateOperation      time.Time `json:"date_operation"`
@@ -55,6 +58,7 @@ type Transaction struct {
 }
 
 // EntiteBlacklist représente une entité sous surveillance.
+// @Description Entité sous surveillance (Blacklist, PEP, etc.)
 type EntiteBlacklist struct {
 	ID                          string    `json:"id"`
 	Nom                         string    `json:"nom"`
@@ -65,6 +69,7 @@ type EntiteBlacklist struct {
 }
 
 // ProfilClient représente un segment de clientèle avec des règles spécifiques.
+// @Description Profil de client avec règles spécifiques
 type ProfilClient struct {
 	ID          string `json:"id"`
 	NomProfil   string `json:"nomProfil"`
@@ -72,19 +77,22 @@ type ProfilClient struct {
 }
 
 // RegleControle est une condition métier pour détecter des anomalies.
+// @Description Règle de contrôle pour la détection d'anomalies
 type RegleControle struct {
-	ID               string  `json:"id"`
-	NomRegle         string  `json:"nomRegle"`
-	Description      string  `json:"description"`
-	TypeRegle        string  `json:"typeRegle"` // Ex: "montant", "frequence"
-	Criticite        string  `json:"criticite"`
-	Seuil            float64 `json:"seuil"`
-	PeriodeReference string  `json:"periodeReference"`
-	Active           bool    `json:"active"`
-	ProfilClientID   string  `json:"profilClientId"`
+	ID               string   `json:"id"`
+	NomRegle         string   `json:"nomRegle"`
+	Description      string   `json:"description"`
+	TypeRegle        string   `json:"typeRegle"` // Ex: "montant", "frequence"
+	Criticite        string   `json:"criticite"`
+	Seuil            float64  `json:"seuil"`
+	PeriodeReference string   `json:"periodeReference"`
+	Active           bool     `json:"active"`
+	ProfilClientID   string   `json:"profilClientId"`
+	ListePays        []string `json:"listePays"`
 }
 
 // Alerte est générée lorsqu'une règle est déclenchée.
+// @Description Alerte générée lors du déclenchement d'une règle
 type Alerte struct {
 	ID                string    `json:"id"`
 	TransactionID     string    `json:"transactionId"`
@@ -98,6 +106,7 @@ type Alerte struct {
 }
 
 // LogAudit trace les actions critiques effectuées dans le système.
+// @Description Log d'audit des actions critiques
 type LogAudit struct {
 	ID              int64     `json:"id"`
 	DateHeure       time.Time `json:"dateHeure"`

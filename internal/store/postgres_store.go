@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"log"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -59,7 +60,6 @@ func (s *Store) CreateUser(ctx context.Context, user *models.Utilisateur) (strin
 }
 
 // GetUserByEmail récupère un utilisateur par son adresse email.
-// C'est la première étape essentielle du processus de connexion.
 func (s *Store) GetUserByEmail(ctx context.Context, email string) (*models.Utilisateur, error) {
 	var user models.Utilisateur
 	query := `SELECT id, nom_utilisateur, email, mot_de_passe_hash, role, actif, date_creation FROM utilisateurs WHERE email = $1`
@@ -195,7 +195,28 @@ func (s *Store) GetBlacklistStatusForClient(ctx context.Context, clientID string
 }
 
 // --- Méthodes pour Profils Clients ---
-// Ces méthodes permettent de gérer les profils clients et leurs règles associées.
+
+// Mapping automatique des codes type client vers le nom du profil
+func (s *Store) GetProfilClientIDByCode(ctx context.Context, code string) (string, error) {
+	var nomProfil string
+	switch code {
+	case "P":
+		nomProfil = "Particulier"
+	case "M":
+		nomProfil = "Entreprise"
+	case "C":
+		nomProfil = "Commerçant"
+	case "B":
+		nomProfil = "Business"
+	default:
+		nomProfil = "Particulier"
+	}
+	var id string
+	query := `SELECT id FROM profils_clients WHERE nom_profil = $1 LIMIT 1`
+	err := s.db.QueryRow(ctx, query, nomProfil).Scan(&id)
+	return id, err
+}
+
 // CreateProfilClient insère un nouveau profil client dans la base de données.
 func (s *Store) CreateProfilClient(ctx context.Context, profil *models.ProfilClient) (*models.ProfilClient, error) {
 	query := `INSERT INTO profils_clients (nom_profil, description) VALUES ($1, $2) RETURNING id, nom_profil, description`
@@ -323,8 +344,8 @@ func (s *Store) CreateClient(ctx context.Context, client *models.Client) (*model
 		profilID = client.ProfilClientID
 	}
 	err := s.db.QueryRow(ctx, query,
-		client.NumeroCompte, // numero_compte
-		client.TypeClient,   // type_client
+		client.NumeroCompte,
+		client.TypeClient,
 		profilID,
 		client.DateCreation,
 		client.NomClient,
@@ -510,7 +531,7 @@ func (s *Store) CreateSuiviBlacklist(ctx context.Context, transactionID, kycID, 
 // IsPaysARisque vérifie si un pays est dans la table des pays à risque.
 func (s *Store) IsPaysARisque(ctx context.Context, pays string) (bool, error) {
 	var exists bool
-	query := `SELECT EXISTS(SELECT 1 FROM pays_a_risque WHERE nom_pays = $1)`
+	query := `SELECT EXISTS(SELECT 1 FROM pays_a_risque WHERE LOWER(nom_pays) = LOWER($1))`
 	err := s.db.QueryRow(ctx, query, pays).Scan(&exists)
 	return exists, err
 }
@@ -556,4 +577,98 @@ func (s *Store) UpdateAlerteStatus(ctx context.Context, alerteID string, analyst
 		alerte.AnalysteAssignéID = returnedAnalysteID.String
 	}
 	return &alerte, err
+}
+
+// GetReglePaysRisqueID retourne l'UUID d'une règle pays_risque active.
+func (s *Store) GetReglePaysRisqueID(ctx context.Context) (string, error) {
+	var id string
+	query := `SELECT id FROM regles_controle WHERE type_regle = 'pays_risque' AND active = true LIMIT 1`
+	err := s.db.QueryRow(ctx, query).Scan(&id)
+	return id, err
+}
+
+// GetReglePaysRisqueActive retourne la règle pays_risque active avec la liste des pays.
+func (s *Store) GetReglePaysRisqueActive(ctx context.Context) (*models.RegleControle, error) {
+	var regle models.RegleControle
+	var listePaysJSON string
+	var profilClientID sql.NullString
+	query := `SELECT id, nom_regle, description, type_regle, criticite, seuil, periode_reference, active, profil_client_id, liste_pays FROM regles_controle WHERE type_regle = 'pays_risque' AND active = true LIMIT 1`
+	err := s.db.QueryRow(ctx, query).Scan(&regle.ID, &regle.NomRegle, &regle.Description, &regle.TypeRegle, &regle.Criticite, &regle.Seuil, &regle.PeriodeReference, &regle.Active, &profilClientID, &listePaysJSON)
+	if err != nil {
+		return nil, err
+	}
+	if profilClientID.Valid {
+		regle.ProfilClientID = profilClientID.String
+	} else {
+		regle.ProfilClientID = ""
+	}
+	err = json.Unmarshal([]byte(listePaysJSON), &regle.ListePays)
+	if err != nil {
+		return nil, err
+	}
+	return &regle, nil
+}
+
+// AddPaysRisque ajoute un pays à la liste des pays à risque de la règle pays_risque.
+func (s *Store) AddPaysRisque(ctx context.Context, pays string) error {
+	regle, err := s.GetReglePaysRisqueActive(ctx)
+	if err != nil {
+		// Si la règle n'existe pas, on la crée
+		insertQuery := `INSERT INTO regles_controle (
+			nom_regle, description, type_regle, criticite, seuil, periode_reference, active, profil_client_id, liste_pays
+		) VALUES (
+			$1, $2, $3, $4, $5, $6, $7, $8, $9
+		)`
+		paysList := []string{pays}
+		jsonPays, _ := json.Marshal(paysList)
+		_, errInsert := s.db.Exec(ctx, insertQuery,
+			"Pays à risque", "Liste des pays à haut risque", "pays_risque", "Élevée", 0, "", true, nil, string(jsonPays))
+		return errInsert
+	}
+	// Vérifie si le pays existe déjà (insensible à la casse)
+	for _, p := range regle.ListePays {
+		if strings.EqualFold(p, pays) {
+			return nil
+		}
+	}
+	regle.ListePays = append(regle.ListePays, pays)
+	jsonPays, err := json.Marshal(regle.ListePays)
+	if err != nil {
+		return err
+	}
+	query := `UPDATE regles_controle SET liste_pays = $1 WHERE type_regle = 'pays_risque' AND active = true AND profil_client_id IS NULL`
+	_, err = s.db.Exec(ctx, query, string(jsonPays))
+	return err
+}
+
+// RemovePaysRisque retire un pays de la liste des pays à risque de la règle pays_risque.
+func (s *Store) RemovePaysRisque(ctx context.Context, pays string) error {
+	regle, err := s.GetReglePaysRisqueActive(ctx)
+	if err != nil {
+		return err
+	}
+	var nouvelleListe []string
+	for _, p := range regle.ListePays {
+		if !strings.EqualFold(p, pays) {
+			nouvelleListe = append(nouvelleListe, p)
+		}
+	}
+	jsonPays, err := json.Marshal(nouvelleListe)
+	if err != nil {
+		return err
+	}
+	query := `UPDATE regles_controle SET liste_pays = $1 WHERE type_regle = 'pays_risque' AND active = true AND profil_client_id IS NULL`
+	_, err = s.db.Exec(ctx, query, string(jsonPays))
+	return err
+}
+
+// UpdatePaysRisque met à jour la liste complète des pays à risque de la règle universelle.
+func (s *Store) UpdatePaysRisque(ctx context.Context, pays []string) error {
+	jsonPays, err := json.Marshal(pays)
+	if err != nil {
+		return err
+	}
+	query := `UPDATE regles_controle SET liste_pays = $1 WHERE type_regle = 'pays_risque' AND active = true AND profil_client_id IS NULL`
+	_, err = s.db.Exec(ctx, query, string(jsonPays))
+	return err
 }

@@ -9,9 +9,14 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
+        "termsOfService": "https://gsietechnology.com/terms",
         "contact": {
             "name": "Modou GUEYE",
             "email": "modou.gueye@gsietechnology.com"
+        },
+        "license": {
+            "name": "MIT",
+            "url": "https://opensource.org/licenses/MIT"
         },
         "version": "{{.Version}}"
     },
@@ -339,6 +344,29 @@ const docTemplate = `{
                 }
             }
         },
+        "/demo/logs": {
+            "get": {
+                "description": "Retourne une liste de logs d'audit pour exposer le modèle LogAudit dans Swagger",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Administration - Démo"
+                ],
+                "summary": "Lister les logs d'audit (exemple)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.LogAudit"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/login": {
             "post": {
                 "description": "Authentifie un utilisateur avec email et mot de passe et renvoie un token JWT.",
@@ -649,6 +677,240 @@ const docTemplate = `{
                 }
             }
         },
+        "/regle/pays_risque/pays": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Récupère la liste actuelle des pays à risque de la règle universelle.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Administration - Règles"
+                ],
+                "summary": "Obtenir la liste des pays à risque",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "liste_pays": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Permet à un admin de modifier la liste des pays à risque de la règle universelle.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Administration - Règles"
+                ],
+                "summary": "Mettre à jour la liste des pays à risque",
+                "parameters": [
+                    {
+                        "description": "Nouvelle liste des pays à risque",
+                        "name": "pays",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "liste_pays": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Permet à un admin d'ajouter un pays à la liste sans écraser les autres.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Administration - Règles"
+                ],
+                "summary": "Ajouter un pays à la liste des pays à risque",
+                "parameters": [
+                    {
+                        "description": "Pays à ajouter",
+                        "name": "pays",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "pays": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Permet à un admin de retirer un pays de la liste sans toucher aux autres.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Administration - Règles"
+                ],
+                "summary": "Retirer un pays de la liste des pays à risque",
+                "parameters": [
+                    {
+                        "description": "Pays à retirer",
+                        "name": "pays",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "pays": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/regles": {
             "post": {
                 "security": [
@@ -797,7 +1059,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Soumet une transaction pour analyse par le moteur de détection d'anomalies.",
+                "description": "Soumet une transaction pour analyse par le MDA, en appliquant les règles à la fois pour le client source et le client destinataire.",
                 "consumes": [
                     "application/json"
                 ],
@@ -807,7 +1069,7 @@ const docTemplate = `{
                 "tags": [
                     "Moteur de Détection"
                 ],
-                "summary": "Analyser une transaction",
+                "summary": "Analyser une transaction (bidirectionnel)",
                 "parameters": [
                     {
                         "description": "Détails de la transaction à analyser",
@@ -830,14 +1092,14 @@ const docTemplate = `{
                         }
                     },
                     "201": {
-                        "description": "Anomalie détectée et alerte créée",
+                        "description": "Anomalie(s) détectée(s) et alerte(s) créée(s)",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "403": {
-                        "description": "Transaction refusée (ex: client sur blacklist)",
+                        "description": "Transaction refusée (client interdit)",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -897,6 +1159,7 @@ const docTemplate = `{
     },
     "definitions": {
         "models.Alerte": {
+            "description": "Alerte générée lors du déclenchement d'une règle",
             "type": "object",
             "properties": {
                 "analysteAssigneId": {
@@ -930,9 +1193,13 @@ const docTemplate = `{
             }
         },
         "models.Client": {
+            "description": "Client du système (personne physique ou morale) obtenu lors de l'analyse des transactions",
             "type": "object",
             "properties": {
-                "activiteEconomique": {
+                "adresse": {
+                    "type": "string"
+                },
+                "categorie": {
                     "type": "string"
                 },
                 "dateCreation": {
@@ -941,10 +1208,13 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
-                "kycId": {
+                "nomClient": {
                     "type": "string"
                 },
-                "niveauRisqueIntrinseque": {
+                "numeroCompte": {
+                    "type": "string"
+                },
+                "pays": {
                     "type": "string"
                 },
                 "profilClientId": {
@@ -953,12 +1223,16 @@ const docTemplate = `{
                 "typeClient": {
                     "type": "string"
                 },
-                "zoneGeographique": {
+                "typeCompte": {
+                    "type": "string"
+                },
+                "ville": {
                     "type": "string"
                 }
             }
         },
         "models.EntiteBlacklist": {
+            "description": "Entité sous surveillance (Blacklist, PEP, etc.)",
             "type": "object",
             "properties": {
                 "dateAjout": {
@@ -973,13 +1247,42 @@ const docTemplate = `{
                 "nom": {
                     "type": "string"
                 },
+                "numeroCompte": {
+                    "description": "Numéro de compte pour vérification",
+                    "type": "string"
+                },
                 "typeEntite": {
                     "description": "\"Interdit\", \"Blacklisté\", \"PEP\", \"Surveillé\"",
                     "type": "string"
                 }
             }
         },
+        "models.LogAudit": {
+            "description": "Log d'audit des actions critiques",
+            "type": "object",
+            "properties": {
+                "actionEffectuee": {
+                    "type": "string"
+                },
+                "dateHeure": {
+                    "type": "string"
+                },
+                "details": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "resultat": {
+                    "type": "string"
+                },
+                "utilisateurId": {
+                    "type": "string"
+                }
+            }
+        },
         "models.ProfilClient": {
+            "description": "Profil de client avec règles spécifiques",
             "type": "object",
             "properties": {
                 "description": {
@@ -994,6 +1297,7 @@ const docTemplate = `{
             }
         },
         "models.RegleControle": {
+            "description": "Règle de contrôle pour la détection d'anomalies",
             "type": "object",
             "properties": {
                 "active": {
@@ -1008,11 +1312,16 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "listePays": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "nomRegle": {
                     "type": "string"
                 },
                 "periodeReference": {
-                    "description": "Ex: \"24h\", \"7d\"",
                     "type": "string"
                 },
                 "profilClientId": {
@@ -1028,15 +1337,22 @@ const docTemplate = `{
             }
         },
         "models.Transaction": {
+            "description": "Transaction financière entre deux entités",
             "type": "object",
             "properties": {
-                "clientDestId": {
+                "adresse_paye": {
                     "type": "string"
                 },
-                "clientSourceId": {
+                "adresse_payeur": {
                     "type": "string"
                 },
-                "dateTransaction": {
+                "categorie_paye": {
+                    "type": "string"
+                },
+                "categorie_payeur": {
+                    "type": "string"
+                },
+                "date_operation": {
                     "type": "string"
                 },
                 "id": {
@@ -1045,12 +1361,49 @@ const docTemplate = `{
                 "montant": {
                     "type": "number"
                 },
-                "typeTransaction": {
+                "nom_paye": {
+                    "type": "string"
+                },
+                "nom_payeur": {
+                    "type": "string"
+                },
+                "numero_compte_paye": {
+                    "type": "string"
+                },
+                "numero_compte_payeur": {
+                    "type": "string"
+                },
+                "pays_paye": {
+                    "type": "string"
+                },
+                "pays_payeur": {
+                    "type": "string"
+                },
+                "portee": {
+                    "type": "string"
+                },
+                "type_client_paye": {
+                    "type": "string"
+                },
+                "type_client_payeur": {
+                    "type": "string"
+                },
+                "type_compte_paye": {
+                    "type": "string"
+                },
+                "type_compte_payeur": {
+                    "type": "string"
+                },
+                "ville_paye": {
+                    "type": "string"
+                },
+                "ville_payeur": {
                     "type": "string"
                 }
             }
         },
         "models.Utilisateur": {
+            "description": "Utilisateur du système (admin ou analyste)",
             "type": "object",
             "properties": {
                 "actif": {
@@ -1069,7 +1422,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "password": {
-                    "description": "Le mot de passe ne doit jamais être exposé en JSON",
                     "type": "string"
                 },
                 "role": {
@@ -1080,10 +1432,11 @@ const docTemplate = `{
     },
     "securityDefinitions": {
         "BearerAuth": {
-            "description": "\"Type 'Bearer' suivi par un espace et un token JWT.\"",
+            "description": "Type 'Bearer' suivi par un espace et un token JWT.",
             "type": "apiKey",
             "name": "Authorization",
-            "in": "header"
+            "in": "header",
+            "x-logo": "https://gsietechnology.com/logo.png"
         }
     }
 }`
@@ -1093,7 +1446,7 @@ var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "localhost:8080",
 	BasePath:         "/api/v1",
-	Schemes:          []string{},
+	Schemes:          []string{"http"},
 	Title:            "API du Moteur de Détection d'Anomalies",
 	Description:      "Backend pour le projet MDA de GSIE Technology, conçu pour la détection de fraudes LBC/FT.",
 	InfoInstanceName: "swagger",

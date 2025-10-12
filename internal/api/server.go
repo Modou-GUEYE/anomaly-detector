@@ -47,6 +47,7 @@ func NewServer(store *store.Store) *Server {
 		authRoutes.POST("/transactions/analyze", server.handleAnalyzeTransaction)
 		authRoutes.GET("/alertes", server.handleGetAlertes)
 		authRoutes.PUT("/alertes/:id/status", server.handleUpdateAlerteStatus)
+		authRoutes.GET("/regle/pays_risque/pays", server.handleGetPaysRisque)
 	}
 
 	// --- Routes Admin (protégées par auth ET admin middlewares) ---
@@ -73,6 +74,11 @@ func NewServer(store *store.Store) *Server {
 
 		// Clients
 		adminRoutes.POST("/clients", server.handleCreateClient)
+
+		// Pays à risque (règle universelle)
+		adminRoutes.PUT("/regle/pays_risque/pays", server.handleUpdatePaysRisque)
+		adminRoutes.POST("/regle/pays_risque/pays", server.handleAddPaysRisque)
+		adminRoutes.DELETE("/regle/pays_risque/pays", server.handleRemovePaysRisque)
 	}
 
 	server.router = router
@@ -211,7 +217,6 @@ func (server *Server) handleGetProfile(ctx *gin.Context) {
 // @Security     BearerAuth
 // @Router       /transactions/analyze [post]
 // dans internal/api/server.go
-
 func (server *Server) handleAnalyzeTransaction(ctx *gin.Context) {
 	var tx models.Transaction
 	if err := ctx.ShouldBindJSON(&tx); err != nil {
@@ -223,6 +228,7 @@ func (server *Server) handleAnalyzeTransaction(ctx *gin.Context) {
 	if tx.NumeroComptePayeur != "" {
 		clientPayeur, err := server.store.GetClientByNumeroCompte(ctx, tx.NumeroComptePayeur)
 		if err != nil || clientPayeur.ID == "" {
+			profilID, _ := server.store.GetProfilClientIDByCode(ctx, tx.TypeClientPayeur)
 			_, errCreate := server.store.CreateClient(ctx, &models.Client{
 				NomClient:      tx.NomPayeur,
 				NumeroCompte:   tx.NumeroComptePayeur,
@@ -232,7 +238,7 @@ func (server *Server) handleAnalyzeTransaction(ctx *gin.Context) {
 				Pays:           tx.PaysPayeur,
 				Ville:          tx.VillePayeur,
 				Adresse:        tx.AdressePayeur,
-				ProfilClientID: "",
+				ProfilClientID: profilID,
 				DateCreation:   time.Now(),
 			})
 			if errCreate != nil {
@@ -245,6 +251,7 @@ func (server *Server) handleAnalyzeTransaction(ctx *gin.Context) {
 	if tx.NumeroComptePaye != "" {
 		clientPaye, err := server.store.GetClientByNumeroCompte(ctx, tx.NumeroComptePaye)
 		if err != nil || clientPaye.ID == "" {
+			profilID, _ := server.store.GetProfilClientIDByCode(ctx, tx.TypeClientPaye)
 			_, errCreate := server.store.CreateClient(ctx, &models.Client{
 				NomClient:      tx.NomPaye,
 				NumeroCompte:   tx.NumeroComptePaye,
@@ -254,7 +261,7 @@ func (server *Server) handleAnalyzeTransaction(ctx *gin.Context) {
 				Pays:           tx.PaysPaye,
 				Ville:          tx.VillePaye,
 				Adresse:        tx.AdressePaye,
-				ProfilClientID: "",
+				ProfilClientID: profilID,
 				DateCreation:   time.Now(),
 			})
 			if errCreate != nil {
@@ -673,4 +680,112 @@ func (server *Server) adminMiddleware() gin.HandlerFunc {
 		}
 		ctx.Next()
 	}
+}
+
+// @Summary      Ajouter un pays à la liste des pays à risque
+// @Description  Permet à un admin d'ajouter un pays à la liste sans écraser les autres.
+// @Tags         Administration - Règles
+// @Accept       json
+// @Produce      json
+// @Param        pays  body      object{pays=string}  true  "Pays à ajouter"
+// @Success      200   {object}  map[string]string
+// @Failure      400   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /regle/pays_risque/pays [post]
+func (server *Server) handleAddPaysRisque(ctx *gin.Context) {
+	var req struct {
+		Pays string `json:"pays" binding:"required"`
+	}
+	if err := ctx.ShouldBindJSON(&req); err != nil || strings.TrimSpace(req.Pays) == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "JSON invalide ou pays manquant"})
+		return
+	}
+	err := server.store.AddPaysRisque(ctx, req.Pays)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible d'ajouter le pays", "details": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "Pays ajouté à la liste des pays à risque"})
+}
+
+// @Summary      Retirer un pays de la liste des pays à risque
+// @Description  Permet à un admin de retirer un pays de la liste sans toucher aux autres.
+// @Tags         Administration - Règles
+// @Accept       json
+// @Produce      json
+// @Param        pays  body      object{pays=string}  true  "Pays à retirer"
+// @Success      200   {object}  map[string]string
+// @Failure      400   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /regle/pays_risque/pays [delete]
+func (server *Server) handleRemovePaysRisque(ctx *gin.Context) {
+	var req struct {
+		Pays string `json:"pays" binding:"required"`
+	}
+	if err := ctx.ShouldBindJSON(&req); err != nil || strings.TrimSpace(req.Pays) == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "JSON invalide ou pays manquant"})
+		return
+	}
+	err := server.store.RemovePaysRisque(ctx, req.Pays)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de retirer le pays", "details": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "Pays retiré de la liste des pays à risque"})
+}
+
+// @Summary      Mettre à jour la liste des pays à risque
+// @Description  Permet à un admin de modifier la liste des pays à risque de la règle universelle.
+// @Tags         Administration - Règles
+// @Accept       json
+// @Produce      json
+// @Param        pays  body      object{liste_pays=[]string}  true  "Nouvelle liste des pays à risque"
+// @Success      200   {object}  map[string]string
+// @Failure      400   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /regle/pays_risque/pays [put]
+func (server *Server) handleUpdatePaysRisque(ctx *gin.Context) {
+	var req struct {
+		ListePays []string `json:"liste_pays" binding:"required"`
+	}
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "JSON invalide ou liste manquante"})
+		return
+	}
+	err := server.store.UpdatePaysRisque(ctx, req.ListePays)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de mettre à jour la liste des pays à risque", "details": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "Liste des pays à risque mise à jour avec succès"})
+}
+
+// @Summary      Obtenir la liste des pays à risque
+// @Description  Récupère la liste actuelle des pays à risque de la règle universelle.
+// @Tags         Administration - Règles
+// @Produce      json
+// @Success      200   {object}  object{liste_pays=[]string}
+// @Failure      500   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /regle/pays_risque/pays [get]
+func (server *Server) handleGetPaysRisque(ctx *gin.Context) {
+	regle, err := server.store.GetReglePaysRisqueActive(ctx)
+	if err != nil || regle == nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de récupérer la liste des pays à risque", "details": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"liste_pays": regle.ListePays})
+}
+
+// @Summary      Lister les logs d'audit (exemple)
+// @Description  Retourne une liste de logs d'audit pour exposer le modèle LogAudit dans Swagger
+// @Tags         Administration - Démo
+// @Produce      json
+// @Success      200   {array}  models.LogAudit
+// @Router       /demo/logs [get]
+func (server *Server) handleDemoGetLogs(ctx *gin.Context) {
+	ctx.JSON(200, []models.LogAudit{})
 }

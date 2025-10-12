@@ -1,39 +1,12 @@
 package core
 
-// Schéma visuel de l'architecture (Mermaid)
-// Schéma d'architecture minimal (Mermaid)
-//
-// ```mermaid
-// graph TD
-//     API[API] --> Engine[Engine]
-//     API --> Store[Store]
-//     Store --> DB[Base de données]
-//     Engine --> Store
-//     DB --> Utilisateur[(Utilisateur)]
-//     DB --> Transaction[(Transaction)]
-//     DB --> Alerte[(Alerte)]
-//     DB --> Blacklist[(Blacklist)]
-// ```
-//
-// graph TD
-//     API[API (server.go)] --> Store[Store (accès DB)]
-//     Store --> DB[Base de données]
-//     API --> Engine[Engine (logique métier)]
-//     Engine --> Store
-//     Store --> Engine
-//
-// Explication :
-// - L'API reçoit la requête et utilise le Store pour lire/écrire en base.
-// - Le Store fournit les données nécessaires à l'Engine.
-// - L'Engine applique la logique métier en utilisant les méthodes du Store.
-// - Les résultats sont renvoyés à l'API, puis à l'utilisateur.
-
 import (
 	"anomaly-detector/internal/models"
 	"anomaly-detector/internal/store"
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 var ErrTransactionRefused = errors.New("transaction refusée")
@@ -49,7 +22,7 @@ func (re *RulesEngine) AnalyzeTransaction(ctx context.Context, tx *models.Transa
 	// --- 1. CONTRÔLE BLACKLIST  ---
 	err := re.checkBlacklist(ctx, tx)
 	if err != nil {
-		return nil, fmt.Errorf("impossible de récupérer les règles pour la transaction: %w", err)
+		return nil, fmt.Errorf("impossible d'analyser la transaction: %w", err)
 	}
 
 	// --- 2. APPLICATION DES RÈGLES MÉTIER ---
@@ -67,10 +40,53 @@ func (re *RulesEngine) AnalyzeTransaction(ctx context.Context, tx *models.Transa
 		alertesGenerees = append(alertesGenerees, alertesPaye...)
 	}
 
+	// --- 3. REGLE PAYS_A_RISQUE ---
+	reglePaysRisque, err := re.store.GetReglePaysRisqueActive(ctx)
+	if err != nil || reglePaysRisque == nil {
+		fmt.Printf("Erreur récupération règle pays_risque: %v\n", err)
+	} else {
+		for _, pays := range reglePaysRisque.ListePays {
+			if strings.EqualFold(tx.PaysPayeur, pays) {
+				alerte := &models.Alerte{
+					TransactionID:     tx.ID,
+					RegleDeclencheeID: reglePaysRisque.ID,
+					NiveauCriticite:   reglePaysRisque.Criticite,
+					ScoreRisque:       calculerScoreRisque(reglePaysRisque, tx),
+					RaisonDetection:   fmt.Sprintf("Transaction depuis un pays à haut risque: %s", tx.PaysPayeur),
+				}
+				alertesGenerees = append(alertesGenerees, alerte)
+			}
+			if strings.EqualFold(tx.PaysPaye, pays) {
+				alerte := &models.Alerte{
+					TransactionID:     tx.ID,
+					RegleDeclencheeID: reglePaysRisque.ID,
+					NiveauCriticite:   reglePaysRisque.Criticite,
+					ScoreRisque:       calculerScoreRisque(reglePaysRisque, tx),
+					RaisonDetection:   fmt.Sprintf("Transaction vers un pays à haut risque: %s", tx.PaysPaye),
+				}
+				alertesGenerees = append(alertesGenerees, alerte)
+			}
+		}
+	}
+
 	return alertesGenerees, nil
 }
 
-// applyRulesForAccount est une fonction helper qui applique les règles pour un numéro de compte donné.
+// calculerScoreRisque calcule le score de risque pour une règle et une transaction donnée.
+func calculerScoreRisque(regle *models.RegleControle, tx *models.Transaction) float64 {
+	switch regle.TypeRegle {
+	case "montant":
+		return 0.8
+	case "frequence":
+		return 0.7
+	case "pays_risque":
+		return 1.0
+	default:
+		return 0.5
+	}
+}
+
+// applyRulesForAccount applique les règles métier pour un compte spécifique.
 func (re *RulesEngine) applyRulesForAccount(ctx context.Context, tx *models.Transaction, numeroCompte string) ([]*models.Alerte, error) {
 	var alertes []*models.Alerte
 	regles, err := re.store.GetReglesForNumeroCompte(ctx, numeroCompte)
@@ -83,7 +99,10 @@ func (re *RulesEngine) applyRulesForAccount(ctx context.Context, tx *models.Tran
 		var raison = ""
 
 		switch regle.TypeRegle {
+
 		case "montant":
+			// Vérification du seuil sur la période de référence
+			// Exemple: Si la période de référence est "7d", on vérifie le cumul sur 7 jours
 			if regle.PeriodeReference == "7d" {
 				total, _ := re.store.GetTransactionSumForPeriod(ctx, numeroCompte, 7)
 				if total > regle.Seuil {
@@ -91,6 +110,8 @@ func (re *RulesEngine) applyRulesForAccount(ctx context.Context, tx *models.Tran
 				}
 			}
 		case "frequence":
+			// Vérification de la fréquence sur la période de référence
+			// Exemple: Si la période de référence est "24h", on vérifie le nombre de transactions sur 24h
 			if regle.PeriodeReference == "24h" {
 				count, _ := re.store.GetTransactionCountForPeriod(ctx, numeroCompte, 1)
 				if count > int64(regle.Seuil) {
@@ -98,8 +119,13 @@ func (re *RulesEngine) applyRulesForAccount(ctx context.Context, tx *models.Tran
 				}
 			}
 		case "pays_risque":
-			isRisky, _ := re.store.IsPaysARisque(ctx, tx.PaysPaye)
-			if isRisky {
+			// Vérification des pays à risque
+			// Exemple: Si le pays du payeur est à risque on génère une alerte mais on ne bloque pas la transaction
+			isRiskyPayeur, _ := re.store.IsPaysARisque(ctx, tx.PaysPayeur)
+			isRiskyPaye, _ := re.store.IsPaysARisque(ctx, tx.PaysPaye)
+			if isRiskyPayeur {
+				violation, raison = true, fmt.Sprintf("Transaction depuis un pays à haut risque: %s", tx.PaysPayeur)
+			} else if isRiskyPaye {
 				violation, raison = true, fmt.Sprintf("Transaction vers un pays à haut risque: %s", tx.PaysPaye)
 			}
 		}
@@ -109,6 +135,7 @@ func (re *RulesEngine) applyRulesForAccount(ctx context.Context, tx *models.Tran
 				TransactionID:     tx.ID,
 				RegleDeclencheeID: regle.ID,
 				NiveauCriticite:   regle.Criticite,
+				ScoreRisque:       calculerScoreRisque(&regle, tx),
 				RaisonDetection:   raison,
 			}
 			alertes = append(alertes, alerte)
@@ -126,9 +153,11 @@ func (re *RulesEngine) checkBlacklist(ctx context.Context, tx *models.Transactio
 	}
 
 	switch statusPayeur {
+	// Refuser immédiatement si "Interdits" ou "Blacklist" et ajouter une entrée de suivi
 	case "Interdits", "Blacklist":
 		re.store.CreateSuiviBlacklist(ctx, tx.ID, tx.NumeroComptePayeur, statusPayeur)
 		return fmt.Errorf("%w: le payeur est sur la liste '%s'", ErrTransactionRefused, statusPayeur)
+		// Ajouter une entrée de suivi si "PEP" ou "Surveillés" et ne pas bloquer la transaction
 	case "PEP", "Surveillés":
 		re.store.CreateSuiviBlacklist(ctx, tx.ID, tx.NumeroComptePayeur, statusPayeur)
 	}

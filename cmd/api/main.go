@@ -10,18 +10,19 @@ import (
 // @title           API du Moteur de Détection d'Anomalies
 // @version         1.0
 // @description     Backend pour le projet MDA de GSIE Technology, conçu pour la détection de fraudes LBC/FT.
-
-// @contact.name   Modou GUEYE
-// @contact.email  modou.gueye@gsietechnology.com
-
-// @host      localhost:8080
-// @BasePath  /api/v1
-
+// @termsOfService  https://gsietechnology.com/terms
+// @contact.name    Modou GUEYE
+// @contact.email   modou.gueye@gsietechnology.com
+// @license.name    MIT
+// @license.url     https://opensource.org/licenses/MIT
+// @host            localhost:8080
+// @BasePath        /api/v1
+// @schemes         http
 // @securityDefinitions.apikey  BearerAuth
 // @in                          header
 // @name                        Authorization
-// @description               "Type 'Bearer' suivi par un espace et un token JWT."
-
+// @description                 Type 'Bearer' suivi par un espace et un token JWT.
+// @x-logo                      https://gsietechnology.com/logo.png
 func main() {
 	connStr := "postgresql://anomaly_user:passer@localhost:5432/anomaly_db?sslmode=disable"
 
