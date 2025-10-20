@@ -1,0 +1,57 @@
+<div class="login-page">
+  <!-- Colonne gauche (image pleine hauteur) -->
+  <div class="login__left" role="img" aria-label="Illustration d'arrière-plan"></div>
+
+  <!-- Colonne droite (panneau) -->
+  <div class="login__right">
+    <div class="panel">
+      <h1 class="panel__title">CONNEXION</h1>
+      <p class="panel__desc">
+        Ce moteur aide à détecter les anomalies et à lutter contre le blanchiment et le financement du terrorisme (LBC/FT).
+      </p>
+
+      <form (ngSubmit)="onSubmit()" #loginForm="ngForm" class="form">
+        <div class="form__group">
+          <label for="email" class="form__label">Email</label>
+          <input type="email"
+                 id="email"
+                 name="email"
+                 [(ngModel)]="email"
+                 placeholder="Votre adresse email"
+                 required
+                 class="form__control" />
+        </div>
+
+        <div class="form__group">
+          <label for="password" class="form__label">Password</label>
+          <input type="password"
+                 id="password"
+                 name="password"
+                 [(ngModel)]="password"
+                 placeholder="Votre mot de passe"
+                 required
+                 class="form__control" />
+        </div>
+
+        <div class="form__row">
+          <label class="form__remember">
+            <input type="checkbox" name="remember" />
+            <span>Se souvenir de moi</span>
+          </label>
+          <a href="#" class="form__link">Mot de passe oublié ?</a>
+        </div>
+
+        <button type="submit" class="btn" [disabled]="!loginForm.form.valid">
+          SE CONNECTER →
+        </button>
+        <div *ngIf="message" [ngClass]="success ? 'msg-success' : 'msg-error'" style="margin-top:16px; text-align:center;">
+          {{ message }}
+        </div>
+      </form>
+
+      <div class="panel__foot">
+        <a href="#" class="panel__create">Créer un compte</a>
+      </div>
+    </div>
+  </div>
+</div>
