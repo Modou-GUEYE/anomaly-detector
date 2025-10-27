@@ -1,0 +1,179 @@
+.control-rules-page {
+  padding: 24px;
+}
+
+.control-rules-page h1 {
+  color: #2E6CF2;
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 24px;
+}
+
+.rules-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.btn-primary {
+  background: #2E6CF2;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background: #1f4db8;
+}
+
+.rules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.rule-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(36, 99, 222, 0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.rule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.rule-header h3 {
+  color: #0f172a;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.rule-status {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: #EEF2FF;
+  color: #6366F1;
+}
+
+.rule-status.active {
+  background: #DBEAFE;
+  color: #2E6CF2;
+}
+
+.rule-description {
+  color: #475569;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  margin-bottom: 12px;
+}
+
+.rule-details {
+  background: #F7F8FA;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 0.9rem;
+}
+
+.detail-item .label {
+  color: #64748B;
+  font-weight: 600;
+}
+
+.detail-item .value {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.rule-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.btn-edit, .btn-delete {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #E3E3E1;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-edit {
+  background: #EFF6FF;
+  color: #2E6CF2;
+}
+
+.btn-edit:hover {
+  background: #2E6CF2;
+  color: #fff;
+}
+
+.btn-delete {
+  background: #FEF2F2;
+  color: #DC2626;
+}
+
+.btn-delete:hover {
+  background: #DC2626;
+  color: #fff;
+}
+
+.loading {
+  text-align: center;
+  padding: 32px;
+  color: #475569;
+  font-size: 1rem;
+}
+
+.error {
+  background: #FEE2E2;
+  color: #991B1B;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  background: #F7F8FA;
+  border-radius: 12px;
+}
+
+.empty-state p {
+  color: #64748B;
+  font-size: 1rem;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 768px) {
+  .rules-grid {
+    grid-template-columns: 1fr;
+  }
+}

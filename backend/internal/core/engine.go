@@ -32,35 +32,38 @@ func NewRulesEngine(store *store.Store) *RulesEngine {
 func (re *RulesEngine) AnalyzeTransaction(ctx context.Context, tx *models.Transaction) ([]*models.Alerte, error) {
 	var alertesGenerees []*models.Alerte
 
-	const bisCodeBank = "SN079"
-	isPayeurBIS := len(tx.NumeroComptePayeur) >= 5 && tx.NumeroComptePayeur[:5] == bisCodeBank
-	isPayeBIS := len(tx.NumeroComptePaye) >= 5 && tx.NumeroComptePaye[:5] == bisCodeBank
+	// Code banque du partenaire principal (à configurer via base de données)
+	const partnerBankCode = "SN079"
+	isPayerPartner := len(tx.NumeroComptePayeur) >= 5 && tx.NumeroComptePayeur[:5] == partnerBankCode
+	isPayeePartner := len(tx.NumeroComptePaye) >= 5 && tx.NumeroComptePaye[:5] == partnerBankCode
 
 	// --- 1. CONTRÔLE BLACKLIST  ---
-	if isPayeurBIS {
+	if isPayerPartner {
 		alertesBlacklist, err := re.checkBlacklist(ctx, tx, true, false)
 		if err != nil {
-			return nil, err
+			// Préserver les alertes déjà générées même en cas de refus
+			return append(alertesGenerees, alertesBlacklist...), err
 		}
 		alertesGenerees = append(alertesGenerees, alertesBlacklist...)
 	}
-	if isPayeBIS && tx.NumeroComptePaye != "" {
+	if isPayeePartner && tx.NumeroComptePaye != "" {
 		alertesBlacklist, err := re.checkBlacklist(ctx, tx, false, true)
 		if err != nil {
-			return nil, err
+			// Préserver les alertes déjà générées même en cas de refus
+			return append(alertesGenerees, alertesBlacklist...), err
 		}
 		alertesGenerees = append(alertesGenerees, alertesBlacklist...)
 	}
 
 	// --- 2. APPLICATION DES RÈGLES MÉTIER ---
-	if isPayeurBIS {
+	if isPayerPartner {
 		alertesPayeur, err := re.applyRulesForAccount(ctx, tx, tx.NumeroComptePayeur)
 		if err != nil {
 			return nil, err
 		}
 		alertesGenerees = append(alertesGenerees, alertesPayeur...)
 	}
-	if isPayeBIS && tx.NumeroComptePaye != "" {
+	if isPayeePartner && tx.NumeroComptePaye != "" {
 		alertesPaye, err := re.applyRulesForAccount(ctx, tx, tx.NumeroComptePaye)
 		if err != nil {
 			return nil, err
@@ -84,7 +87,7 @@ func (re *RulesEngine) AnalyzeTransaction(ctx context.Context, tx *models.Transa
 				}
 			}
 			for _, pays := range paysList {
-				if isPayeurBIS && strings.EqualFold(tx.PaysPayeur, pays) {
+				if isPayerPartner && strings.EqualFold(tx.PaysPayeur, pays) {
 					paysRisque := pays
 					regleID := reglePaysRisque.ID
 					alerte := &models.Alerte{
@@ -103,7 +106,7 @@ func (re *RulesEngine) AnalyzeTransaction(ctx context.Context, tx *models.Transa
 					}
 					alertesGenerees = append(alertesGenerees, alerte)
 				}
-				if isPayeBIS && strings.EqualFold(tx.PaysPaye, pays) {
+				if isPayeePartner && strings.EqualFold(tx.PaysPaye, pays) {
 					paysRisque := pays
 					regleID := reglePaysRisque.ID
 					alerte := &models.Alerte{
@@ -238,7 +241,7 @@ func (re *RulesEngine) applyRulesForAccount(ctx context.Context, tx *models.Tran
 }
 
 // checkBlacklist centralise la logique de la blacklist conformément aux spécifications.
-// Seul le compte BIS sélectionné (payeur ou payé) est vérifié selon les flags.
+// Seul le compte partenaire sélectionné (payeur ou payé) est vérifié selon les flags.
 func (re *RulesEngine) checkBlacklist(ctx context.Context, tx *models.Transaction, checkPayeur bool, checkPaye bool) ([]*models.Alerte, error) {
 	var alertes []*models.Alerte
 	if checkPayeur {
@@ -279,9 +282,9 @@ func (re *RulesEngine) checkBlacklist(ctx context.Context, tx *models.Transactio
 			}
 			if statusPayeur == "Interdit" || statusPayeur == "Blacklist" {
 				if meta == nil {
-					return nil, fmt.Errorf("%w: meta-donnée d'alerte introuvable pour %s", ErrTransactionRefused, statusPayeur)
+					return alertes, fmt.Errorf("%w: meta-donnée d'alerte introuvable pour %s", ErrTransactionRefused, statusPayeur)
 				}
-				return nil, fmt.Errorf("%w: %s", ErrTransactionRefused, meta.Message)
+				return alertes, fmt.Errorf("%w: %s", ErrTransactionRefused, meta.Message)
 			}
 		}
 	}
@@ -323,9 +326,9 @@ func (re *RulesEngine) checkBlacklist(ctx context.Context, tx *models.Transactio
 			}
 			if statusPaye == "Interdit" || statusPaye == "Blacklist" {
 				if meta == nil {
-					return nil, fmt.Errorf("%w: meta-donnée d'alerte introuvable pour %s", ErrTransactionRefused, statusPaye)
+					return alertes, fmt.Errorf("%w: meta-donnée d'alerte introuvable pour %s", ErrTransactionRefused, statusPaye)
 				}
-				return nil, fmt.Errorf("%w: %s", ErrTransactionRefused, meta.Message)
+				return alertes, fmt.Errorf("%w: %s", ErrTransactionRefused, meta.Message)
 			}
 		}
 	}

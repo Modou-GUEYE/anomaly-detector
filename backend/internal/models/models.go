@@ -123,8 +123,8 @@ func (RegleControle) TableName() string { return "regles_controle" }
 type Alerte struct {
 	ID                string    `json:"id" gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
 	TransactionID     string    `json:"transactionId"`
-	Code              string    `json:"code"`
-	Type              string    `json:"type"`
+	Code              string    `json:"code"` // Code d'alerte unique
+	Type              string    `json:"type"` // Type d'alerte (ex: "Montant", "Pays à risque", "Surveillé", etc.)
 	Statut            string    `json:"statut"`
 	Message           string    `json:"message"`
 	NiveauCriticite   string    `json:"niveauCriticite"`
@@ -137,10 +137,12 @@ type Alerte struct {
 	RegleDeclencheeID *string   `json:"regleDeclencheeID,omitempty"`
 	// Documentation des codes d'alerte (exemple)
 	// A001 : Montant suspect
-	// A002 : Pays à risque
-	// A003 : Client blacklisté
-	// A004 : Transaction inhabituelle
-	// A005 : Profil client à surveiller
+	// A002 : Fréquence
+	// A003 : Pays à risque
+	// A004A : Interdit
+	// A004B : PEP
+	// A004C : Blacklist
+	// A004D : Surveillés
 	// ...
 }
 

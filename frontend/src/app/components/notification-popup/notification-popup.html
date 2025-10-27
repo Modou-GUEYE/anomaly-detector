@@ -1,0 +1,39 @@
+<!-- Popup Notifications -->
+<div class="notification-popup" *ngIf="isOpen">
+  <div class="popup-header">
+    <h3>Notifications</h3>
+    <button class="popup-close" (click)="onClose()">×</button>
+  </div>
+  
+  <div class="popup-content">
+    <div *ngIf="displayedAnomalies.length === 0" class="empty-state">
+      Aucune anomalie en attente
+    </div>
+    
+    <div *ngFor="let anomaly of displayedAnomalies" class="notification-card">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="anomaly-code">{{ anomaly.code }}</span>
+          <span class="anomaly-title">{{ anomaly.type }} Detecté</span>
+        </div>
+        <button class="card-action-btn consult" (click)="onAssign(anomaly.id)">Consulter</button>
+      </div>
+      
+      <p class="card-message">{{ anomaly.message }}</p>
+      
+      <div class="card-footer">
+        <span class="card-date">{{ anomaly.dateGeneration | date:'dd/MM/yyyy HH:mm' }}</span>
+        <span class="card-criticite" [ngClass]="'criticite-' + (anomaly.niveauCriticite || 'moyenne').toLowerCase()">
+          {{ anomaly.niveauCriticite || 'Moyenne' }}
+        </span>
+      </div>
+    </div>
+  </div>
+  
+  <div class="popup-footer" *ngIf="displayedAnomalies.length > 0">
+    <small>{{ displayedAnomalies.length }} anomalie(s) en attente</small>
+  </div>
+</div>
+
+<!-- Overlay pour fermer le popup -->
+<div class="notification-overlay" *ngIf="isOpen" (click)="getOverlayClick()"></div>

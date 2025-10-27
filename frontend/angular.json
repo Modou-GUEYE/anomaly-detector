@@ -70,7 +70,8 @@
               "buildTarget": "anomaly-frontend:build:production"
             },
             "development": {
-              "buildTarget": "anomaly-frontend:build:development"
+              "buildTarget": "anomaly-frontend:build:development",
+              "proxyConfig": "proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"

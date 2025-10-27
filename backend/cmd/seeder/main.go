@@ -52,16 +52,21 @@ func seedData(ctx context.Context, s *store.Store) {
 	// --- Création des utilisateurs ---
 	// Ajout d'un utilisateur admin
 	adminPass, _ := api.HashPassword("admin123")
-	s.CreateUser(ctx, &models.Utilisateur{NomUtilisateur: "admin", Email: "admin@gsie.sn", MotDePasseHash: adminPass, Role: "admin", Actif: true})
+	s.CreateUser(ctx, &models.Utilisateur{NomUtilisateur: "admin", Email: "admin@gsie.sn", MotDePasseHash: adminPass, Role: "admin", Actif: true, DateCreation: time.Now()})
 	fmt.Println("- Utilisateur Admin créé")
 
 	// Ajout d'un utilisateur analyste
 	analystePass, _ := api.HashPassword("analyste123")
-	s.CreateUser(ctx, &models.Utilisateur{NomUtilisateur: "analyste", Email: "analyste@gsie.sn", MotDePasseHash: analystePass, Role: "analyste", Actif: true})
+	s.CreateUser(ctx, &models.Utilisateur{NomUtilisateur: "analyste", Email: "analyste@gsie.sn", MotDePasseHash: analystePass, Role: "analyste", Actif: true, DateCreation: time.Now()})
 	fmt.Println("- Utilisateur Analyste créé")
 
+	// Ajout d'un utilisateur modou (analyste)
+	modouPass, _ := api.HashPassword("modou123")
+	s.CreateUser(ctx, &models.Utilisateur{NomUtilisateur: "modou", Email: "modou@gsie.sn", MotDePasseHash: modouPass, Role: "analyste", Actif: true, DateCreation: time.Now()})
+	fmt.Println("- Utilisateur Modou créé")
+
 	// --- Peuplement de la Blacklist ---
-	// Ajout de 4 entités à la blacklist avec différents statuts
+	// Ajout de 4 entités à la blacklist avec différents types
 	s.CreateBlacklistEntry(ctx, &models.EntiteBlacklist{
 		Nom:          "Madiambal Diagne",
 		NumeroCompte: "SN07900010012345678901234",
@@ -80,39 +85,39 @@ func seedData(ctx context.Context, s *store.Store) {
 	s.CreateBlacklistEntry(ctx, &models.EntiteBlacklist{
 		Nom:          "Aminata Fall",
 		NumeroCompte: "SN07900040099887766554433",
-		TypeEntite:   "Surveillés",
+		TypeEntite:   "Surveillée",
 	})
 
-	fmt.Println("- 4 entrées créées dans la blacklist (Interdits, Blacklist, PEP, Surveillés)")
+	fmt.Println("- 4 entrées créées dans la blacklist (Interdit, Blacklist, PEP, Surveillée)")
 
-	// --- Création de comptes BIS (code banque SN079) ---
-	fmt.Println("Création de comptes BIS (code banque SN079)...")
+	// --- Création de comptes partenaires (code banque SN079) ---
+	fmt.Println("Création de comptes partenaires (code banque SN079)...")
 
-	// Récupère l'ID du profil client pour les comptes BIS
+	// Récupère l'ID du profil client pour les comptes partenaires
 	profilID, _ := s.GetProfilClientIDByCode(ctx, "M")
 	s.CreateCompte(ctx, &models.Compte{
 		NumeroCompte:   "SN07900010000000000001",
-		NomClient:      "BIS Partenaire 1",
+		NomClient:      "Partenaire 1",
 		TypeClient:     "M",
 		TypeCompte:     "Entreprise",
 		Categorie:      "Banque",
 		Pays:           "Sénégal",
 		Ville:          "Dakar",
-		Adresse:        "Avenue BIS 1",
+		Adresse:        "Avenue Partenaire 1",
 		ProfilClientID: profilID,
 		DateCreation:   time.Now(),
 	})
 	s.CreateCompte(ctx, &models.Compte{
 		NumeroCompte:   "SN07900020000000000002",
-		NomClient:      "BIS Partenaire 2",
+		NomClient:      "Partenaire 2",
 		TypeClient:     "M",
 		TypeCompte:     "Entreprise",
 		Categorie:      "Banque",
 		Pays:           "Sénégal",
 		Ville:          "Dakar",
-		Adresse:        "Avenue BIS 2",
+		Adresse:        "Avenue Partenaire 2",
 		ProfilClientID: profilID,
 		DateCreation:   time.Now(),
 	})
-	fmt.Println("- 2 comptes BIS créés pour les tests")
+	fmt.Println("- 2 comptes partenaires créés pour les tests")
 }

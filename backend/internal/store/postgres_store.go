@@ -445,6 +445,27 @@ func (s *Store) GetReglePaysRisqueID(ctx context.Context) (string, error) {
 	return regle.ID, nil
 }
 
+// ===================== SUIVI BLACKLIST =====================
+// GetComptesSurveillesCount retourne le nombre de comptes uniques dans la table suivi_blacklist.
+func (s *Store) GetComptesSurveillesCount(ctx context.Context) (int64, error) {
+	var count int64
+	err := s.gormDB.WithContext(ctx).
+		Table("suivi_blacklist").
+		Select("COUNT(DISTINCT numero_compte)").
+		Scan(&count).Error
+	return count, err
+}
+
+// GetComptesSurveilles retourne la liste des comptes uniques dans suivi_blacklist.
+func (s *Store) GetComptesSurveilles(ctx context.Context) ([]string, error) {
+	var comptes []string
+	err := s.gormDB.WithContext(ctx).
+		Table("suivi_blacklist").
+		Distinct("numero_compte").
+		Pluck("numero_compte", &comptes).Error
+	return comptes, err
+}
+
 // GetReglePaysRisqueActive retourne la règle pays_risque active avec la liste des pays.
 func (s *Store) GetReglePaysRisqueActive(ctx context.Context) (*models.RegleControle, error) {
 	var regle models.RegleControle
@@ -567,6 +588,37 @@ func (s *Store) GetAlertes(ctx context.Context) ([]models.Alerte, error) {
 	return alertes, nil
 }
 
+// GetAlertCountsByMonthAndType retourne le nombre d'alertes par type pour les derniers 12 mois.
+// Retourne une map: type -> [{year: YYYY, month: M, count: N}, ...]
+func (s *Store) GetAlertCountsByMonthAndType(ctx context.Context, months int) (map[string][]map[string]int64, error) {
+	// On utilise une requête SQL brute pour grouper par type, année et mois
+	type Row struct {
+		Type  string
+		Year  int
+		Month int
+		Count int64
+	}
+	rows := []Row{}
+	// PostgreSQL: extract year and month from date_generation
+	// query variable not needed; we'll use Raw with a since parameter below
+	// GORM doesn't support interval with parameter easily, so compute the since time in Go
+	since := time.Now().AddDate(0, -months, 0)
+	result := s.gormDB.WithContext(ctx).Raw(`SELECT type, EXTRACT(YEAR FROM date_generation)::int AS year, EXTRACT(MONTH FROM date_generation)::int AS month, COUNT(*) as count
+			  FROM alertes
+			  WHERE date_generation >= ?
+			  GROUP BY type, year, month
+			  ORDER BY type, year, month`, since).Scan(&rows)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	out := make(map[string][]map[string]int64)
+	for _, r := range rows {
+		key := r.Type
+		out[key] = append(out[key], map[string]int64{"year": int64(r.Year), "month": int64(r.Month), "count": r.Count})
+	}
+	return out, nil
+}
+
 // CreateAlerte insère une nouvelle alerte dans la base de données.
 func (s *Store) CreateAlerte(ctx context.Context, alerte *models.Alerte) (*models.Alerte, error) {
 	result := s.gormDB.WithContext(ctx).Create(alerte)
@@ -632,4 +684,86 @@ func (s *Store) GetAlertesBloquerActivesByCompte(ctx context.Context, numeroComp
 		return nil, err
 	}
 	return alertes, nil
+}
+
+// ===================== DASHBOARD SUMMARY (Optimisé) =====================
+// GetDashboardSummary retourne un résumé complet du dashboard en UNE SEULE requête.
+func (s *Store) GetDashboardSummary(ctx context.Context) (map[string]interface{}, error) {
+	summary := make(map[string]interface{})
+
+	// 1. Compter les transactions totales
+	var transactionCount int64
+	if err := s.gormDB.WithContext(ctx).Model(&models.Transaction{}).Count(&transactionCount).Error; err != nil {
+		return nil, err
+	}
+	summary["transactions_count"] = transactionCount
+
+	// 2. Compter les alertes totales
+	var alertCount int64
+	if err := s.gormDB.WithContext(ctx).Model(&models.Alerte{}).Count(&alertCount).Error; err != nil {
+		return nil, err
+	}
+	summary["anomalies_count"] = alertCount
+
+	// 3. Compter les alertes traitées
+	var treatedCount int64
+	if err := s.gormDB.WithContext(ctx).Model(&models.Alerte{}).
+		Where("statut ILIKE ?", "%trait%").
+		Count(&treatedCount).Error; err != nil {
+		return nil, err
+	}
+	summary["anomalies_treated"] = treatedCount
+
+	// 4. Compter les comptes surveillés uniques
+	monitoredCount, err := s.GetComptesSurveillesCount(ctx)
+	if err != nil {
+		return nil, err
+	}
+	summary["monitored_accounts"] = monitoredCount
+
+	// 5. Métriques par type d'anomalie (derniers 12 mois)
+	metrics, err := s.GetAlertCountsByMonthAndType(ctx, 12)
+	if err != nil {
+		return nil, err
+	}
+	summary["metrics"] = metrics
+
+	// 6. Dernières 10 transactions (pour le tableau)
+	var recentTransactions []models.Transaction
+	if err := s.gormDB.WithContext(ctx).
+		Order("date_operation DESC").
+		Limit(10).
+		Find(&recentTransactions).Error; err != nil {
+		return nil, err
+	}
+	summary["recent_transactions"] = recentTransactions
+
+	// 7. Toutes les alertes (pour l'affichage)
+	var recentAnomalies []models.Alerte
+	if err := s.gormDB.WithContext(ctx).
+		Order("date_generation DESC").
+		Find(&recentAnomalies).Error; err != nil {
+		return nil, err
+	}
+	summary["recent_anomalies"] = recentAnomalies
+
+	// 8. Comptages par type d'anomalie
+	typeCountMap := make(map[string]int64)
+	var types []struct {
+		Type  string
+		Count int64
+	}
+	if err := s.gormDB.WithContext(ctx).
+		Model(&models.Alerte{}).
+		Select("type, COUNT(*) as count").
+		Group("type").
+		Scan(&types).Error; err != nil {
+		return nil, err
+	}
+	for _, t := range types {
+		typeCountMap[t.Type] = t.Count
+	}
+	summary["anomalies_by_type"] = typeCountMap
+
+	return summary, nil
 }

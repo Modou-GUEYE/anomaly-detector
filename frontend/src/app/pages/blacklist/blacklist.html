@@ -1,0 +1,172 @@
+<section class="blacklist-page">
+  <h1>Blacklist - Entités sous Surveillance</h1>
+
+  <!-- Filtres -->
+  <div class="filters-section">
+    <input type="search" 
+           class="filter-search"
+           placeholder="Rechercher par Nom ou Numéro de Compte..."
+           [(ngModel)]="filters.search" 
+           (ngModelChange)="applyFilters()" />
+
+    <div class="filters-grid">
+      <select [(ngModel)]="filters.typeEntite" (change)="applyFilters()" class="filter-select">
+        <option value="">Tous les types</option>
+        <option *ngFor="let type of typeOptions" [value]="type">{{ type }}</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading">Chargement des entités...</div>
+
+  <!-- Error -->
+  <div *ngIf="error && !loading" class="error">{{ error }}</div>
+
+  <!-- Content -->
+  <div *ngIf="!loading" class="blacklist-content">
+    <!-- Header -->
+    <div class="blacklist-header">
+      <div class="entities-count">
+        <span class="count-number">{{ padNumber(filteredEntities.length) }} Entités</span>
+      </div>
+      <button class="btn-add-entity" (click)="openAddModal()">
+        ➕ Ajouter une entité
+      </button>
+    </div>
+
+    <!-- Table -->
+    <div class="blacklist-table-wrapper">
+      <table class="blacklist-table">
+        <thead>
+          <tr>
+            <th class="col-nom">Nom</th>
+            <th class="col-type">Type</th>
+            <th class="col-compte">Numéro de Compte</th>
+            <th class="col-date">Date d'Ajout</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <ng-container *ngFor="let entity of paginatedEntities; let i = index">
+            <!-- Main Row -->
+            <tr class="entity-row" [class.expanded]="entity.expanded">
+              <td class="col-nom">{{ entity.nom }}</td>
+              <td class="col-type">
+                <span class="type-badge" [class]="'type-' + entity.typeEntite.toLowerCase()">
+                  {{ entity.typeEntite }}
+                </span>
+              </td>
+              <td class="col-compte">{{ entity.numeroCompte }}</td>
+              <td class="col-date">{{ entity.dateAjout | date:'dd/MM/yyyy' }}</td>
+              <td class="col-actions">
+                <button class="btn-expand" (click)="toggleExpand(entity)">
+                  {{ entity.expanded ? '▼' : '▶' }}
+                </button>
+              </td>
+            </tr>
+
+            <!-- Expanded Row -->
+            <tr class="expanded-row" *ngIf="entity.expanded">
+              <td colspan="5">
+                <div class="expanded-content">
+                  <div class="expanded-header">
+                    <h4>Détails de l'entité</h4>
+                  </div>
+                  <div class="expanded-body">
+                    <div class="detail-column">
+                      <div class="detail-item">
+                        <span class="label">Nom:</span>
+                        <span class="value">{{ entity.nom }}</span>
+                      </div>
+                      <div class="detail-item">
+                        <span class="label">Numéro de Compte:</span>
+                        <span class="value">{{ entity.numeroCompte }}</span>
+                      </div>
+                      <div class="detail-item">
+                        <span class="label">Type:</span>
+                        <span class="value">{{ entity.typeEntite }}</span>
+                      </div>
+                      <div class="detail-item">
+                        <span class="label">Date d'Ajout:</span>
+                        <span class="value">{{ entity.dateAjout | date:'dd/MM/yyyy HH:mm' }}</span>
+                      </div>
+                    </div>
+                    <div class="detail-column">
+                      <div class="detail-item" *ngIf="entity.informationsSupplementaires">
+                        <span class="label">Informations Supplémentaires:</span>
+                        <span class="value">{{ entity.informationsSupplementaires }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="expanded-actions">
+                    <button class="btn-action edit" (click)="openEditModal(entity)">
+                      ✎ Modifier
+                    </button>
+                    <button class="btn-action delete" (click)="deleteEntity(entity.id)">
+                      🗑 Supprimer
+                    </button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </ng-container>
+        </tbody>
+      </table>
+
+      <div *ngIf="paginatedEntities.length === 0" class="empty-state">
+        <p>Aucune entité trouvée avec ces critères.</p>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div *ngIf="totalPages > 1" class="pagination">
+      <button class="pagination-btn" (click)="prevPage()" [disabled]="currentPage === 1">← Précédent</button>
+      <span class="pagination-info">Page {{ currentPage }} / {{ totalPages }}</span>
+      <button class="pagination-btn" (click)="nextPage()" [disabled]="currentPage === totalPages">Suivant →</button>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ isEditMode ? 'Modifier l\'entité' : 'Ajouter une nouvelle entité' }}</h3>
+        <button class="btn-close" (click)="closeModal()">✕</button>
+      </div>
+
+      <form class="modal-form" (ngSubmit)="saveEntity()">
+        <div class="form-group">
+          <label>Nom *</label>
+          <input type="text" [(ngModel)]="formData.nom" name="nom" class="form-input" required>
+        </div>
+
+        <div class="form-group">
+          <label>Numéro de Compte *</label>
+          <input type="text" [(ngModel)]="formData.numeroCompte" name="numeroCompte" class="form-input" required>
+        </div>
+
+        <div class="form-group">
+          <label>Type d'Entité *</label>
+          <select [(ngModel)]="formData.typeEntite" name="typeEntite" class="form-input" required>
+            <option value="">-- Sélectionner un type --</option>
+            <option *ngFor="let type of typeOptions" [value]="type">{{ type }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Informations Supplémentaires</label>
+          <textarea [(ngModel)]="formData.informationsSupplementaires" 
+                    name="informationsSupplementaires" 
+                    class="form-textarea"
+                    placeholder="Ajouter des commentaires..."></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-cancel" (click)="closeModal()">Annuler</button>
+          <button type="submit" class="btn-save">{{ isEditMode ? 'Mettre à jour' : 'Ajouter' }}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>

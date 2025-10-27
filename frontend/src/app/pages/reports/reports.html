@@ -1,0 +1,62 @@
+<section class="reports-page">
+  <h1>Rapports</h1>
+
+  <div class="reports-header">
+    <div class="filter-section">
+      <select [(ngModel)]="filters.type" class="filter-select">
+        <option value="">Tous les types</option>
+        <option value="Quotidien">Quotidien</option>
+        <option value="Hebdomadaire">Hebdomadaire</option>
+        <option value="Mensuel">Mensuel</option>
+        <option value="Trimestriel">Trimestriel</option>
+      </select>
+      <select [(ngModel)]="filters.status" class="filter-select">
+        <option value="">Tous les statuts</option>
+        <option value="Généré">Généré</option>
+        <option value="En cours">En cours</option>
+        <option value="Programmé">Programmé</option>
+      </select>
+    </div>
+    <button class="btn-primary" (click)="generateReport()">+ Générer un rapport</button>
+  </div>
+
+  <div *ngIf="loading" class="loading">Chargement des rapports...</div>
+  <div *ngIf="error" class="error">{{ error }}</div>
+
+  <div *ngIf="!loading" class="reports-table-wrapper">
+    <table class="reports-table">
+      <thead>
+        <tr>
+          <th>Nom du rapport</th>
+          <th>Type</th>
+          <th>Date</th>
+          <th>Anomalies</th>
+          <th>Transactions</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let report of filteredReports" class="report-row">
+          <td class="name">{{ report.name }}</td>
+          <td class="type">{{ report.type }}</td>
+          <td class="date">{{ report.date | date:'dd/MM/yyyy' }}</td>
+          <td class="count">{{ report.anomalies }}</td>
+          <td class="count">{{ report.transactions }}</td>
+          <td>
+            <span class="status-badge" [class.generated]="report.status === 'Généré'">
+              {{ report.status }}
+            </span>
+          </td>
+          <td class="actions">
+            <button class="btn-view" (click)="viewReport(report)" title="Afficher">👁️</button>
+            <button class="btn-download" (click)="downloadReport(report)" title="Télécharger">⬇️</button>
+          </td>
+        </tr>
+        <tr *ngIf="filteredReports.length === 0">
+          <td colspan="7" class="empty">Aucun rapport trouvé.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

@@ -1,198 +1,155 @@
-<div class="dashboard-layout">
-  <!-- SIDEBAR -->
-  <aside class="dashboard-sidebar" aria-label="Menu latéral">
-    <div class="sidebar-user">
-      <img src="../../../assets/avatar.png" alt="Photo de profil" class="sidebar-avatar" />
-      <div class="sidebar-username">{{ profile?.nomUtilisateur || 'Utilisateur' }}</div>
-      <div class="sidebar-role">{{ profile?.role || 'Administrateur' }}</div>
-      <div class="sidebar-email">{{ profile?.email || '' }}</div>
-      <div class="sidebar-status" *ngIf="profile?.actif">
-        <span class="status-active">● Actif</span>
+<!-- CONTENU -->
+<section class="dashboard-page" *ngIf="!loading; else loadingTpl">
+
+  <!-- Cartes KPI -->
+  <div class="dashboard-cards">
+    <div class="dashboard-card kpi">
+      <div class="kpi-top">
+        <div class="kpi-title">Transactions Analysées</div>
+        <div class="kpi-dot dot-blue"></div>
+      </div>
+      <div class="kpi-value">{{ kpi.transactions | number:'1.0-0' }}</div>
+      <button class="card-btn" (click)="go('transactions')">Voir détails</button>
+    </div>
+
+    <div class="dashboard-card kpi">
+      <div class="kpi-top">
+        <div class="kpi-title">Anomalies Détectées</div>
+        <div class="kpi-dot dot-red"></div>
+      </div>
+      <div class="kpi-value">{{ kpi.anomaliesDetectees | number:'1.0-0' }}</div>
+      <button class="card-btn" (click)="go('alertes')">Voir détails</button>
+    </div>
+
+    <div class="dashboard-card kpi">
+      <div class="kpi-top">
+        <div class="kpi-title">Anomalies Traitées</div>
+        <div class="kpi-dot dot-lilac"></div>
+      </div>
+      <div class="kpi-value">{{ kpi.anomaliesTraitees | number:'1.0-0' }}</div>
+      <button class="card-btn" (click)="go('alertes?statut=traitees')">Voir détails</button>
+    </div>
+
+    <div class="dashboard-card kpi">
+      <div class="kpi-top">
+        <div class="kpi-title">Comptes Surveillés</div>
+        <div class="kpi-dot dot-blue"></div>
+      </div>
+      <div class="kpi-value">{{ kpi.comptesSurveilles | number:'1.0-0' }}</div>
+      <button class="card-btn" (click)="go('blacklist')">Voir détails</button>
+    </div>
+  </div>
+
+  <!-- Deux colonnes -->
+  <div class="dashboard-section">
+    <!-- Transactions récentes -->
+    <div class="dashboard-provider">
+      <h2>Transactions récentes</h2>
+
+      <input type="search" class="provider-search"
+             placeholder="Rechercher une transaction…"
+             [(ngModel)]="filters.search" (ngModelChange)="applyFilters(); currentPage = 1" (keyup.enter)="applyFilters()" />
+
+      <div class="provider-filters provider-filters-grid">
+        <div class="filter-row">
+          <select [(ngModel)]="filters.pays" (change)="applyFilters()" class="filter-select">
+            <option value="">Filtrer par Pays</option>
+            <option *ngFor="let p of pays" [value]="p">{{ p }}</option>
+          </select>
+          <select [(ngModel)]="filters.portee" (change)="applyFilters()" class="filter-select">
+            <option value="">Filtrer par Portée</option>
+            <option value="national">National</option>
+            <option value="international">International</option>
+          </select>
+        </div>
+        <div class="filter-row">
+          <select [(ngModel)]="filters.periode" (change)="applyFilters(); currentPage = 1" (ngModelChange)="applyFilters(); currentPage = 1" class="filter-select">
+            <option value="Aujourd'hui">Filtrer par Période</option>
+            <option value="Aujourd'hui">Aujourd'hui</option>
+            <option value="7 derniers jours">7 derniers jours</option>
+            <option value="30 derniers jours">30 derniers jours</option>
+          </select>
+          <select [(ngModel)]="filters.typeClient" (change)="applyFilters()" class="filter-select">
+            <option value="">Filtrer par Type de Client</option>
+            <option *ngFor="let opt of typeClientOptions" [value]="opt.label">{{ opt.label }}</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="provider-table-scroll">
+        <table class="provider-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Payeur</th>
+              <th>Payé</th>
+              <th>Montant</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let t of paginatedTransactions">
+              <td>{{ t.date_operation | date:'dd/MM/yyyy' }}</td>
+              <td class="nom-payeur">
+                {{ t.nom_payeur }}
+                <br><small>{{ t.numero_compte_payeur.slice(0,10) + '***' }}</small>
+                <br><small>{{ getTypeClientLabel(t.type_client_payeur) }}</small>
+                <br><small>{{ t.pays_payeur }}</small>
+              </td>
+              <td class="nom-beneficiaire">
+                {{ t.nom_paye }}
+                <br><small>{{ t.numero_compte_paye.slice(0,12) + '***' }}</small>
+                <br><small>{{ getTypeClientLabel(t.type_client_paye) }}</small>
+                <br><small>{{ t.pays_paye }}</small>
+              </td>
+              <td>{{ t.montant | number:'1.0-0' }} FCFA</td>
+            </tr>
+            <tr *ngIf="(paginatedTransactions?.length || 0) === 0">
+              <td colspan="4" class="empty">Aucune transaction trouvée pour ces filtres.</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <!-- Pagination -->
+        <div class="pagination" *ngIf="totalPages > 1">
+          <button class="pagination-btn" (click)="prevPage()" [disabled]="currentPage === 1">← Précédent</button>
+          <span class="pagination-info">Page {{ currentPage }} / {{ totalPages }}</span>
+          <button class="pagination-btn" (click)="nextPage()" [disabled]="currentPage === totalPages">Suivant →</button>
+        </div>
       </div>
     </div>
 
-    <nav class="sidebar-menu">
-      <a class="sidebar-link active">Tableau de bord</a>
-      <a class="sidebar-link">Transactions</a>
-      <a class="sidebar-link">Comptes</a>
-      <a class="sidebar-link">Alertes</a>
-      <a class="sidebar-link">Règles de contrôle</a>
-      <a class="sidebar-link">Blacklist</a>
-      <a class="sidebar-link">Reports</a>
-    </nav>
-  </aside>
+    <!-- Anomalies -->
+    <div class="dashboard-anomalies">
+      <h2>Anomalies détectées</h2>
 
-  <!-- MAIN -->
-  <main class="dashboard-main">
-    <!-- HEADER -->
-    <header class="dashboard-header">
-      <div class="header-left">
-        <img src="../../../assets/faviconBis.png" alt="Logo BIS" class="header-logo" />
-        <div class="dashboard-title">
-          <span class="dashboard-welcome">Bienvenue {{ profile?.nomUtilisateur || 'Modou' }} !</span>
-          <span class="dashboard-system">Moteur de détection d’anomalie - BIS</span>
-        </div>
+      <div class="anomalies-tabs">
+        <button class="tab" [class.active]="activeTab==='overview'" (click)="activeTab='overview'">Vue d'ensemble</button>
+        <button class="tab" [class.active]="activeTab==='type'" (click)="activeTab='type'">Par type d'anomalie</button>
+        <button class="tab" [class.active]="activeTab==='criticite'" (click)="activeTab='criticite'">Par criticité</button>
       </div>
 
-      <!-- Barre de recherche supprimée -->
-
-      <div class="header-right">
-        <button class="dashboard-logout" (click)="onLogout()">Déconnexion</button>
-
-        <div class="notification-icon" aria-label="Notifications" role="button" tabindex="0">
-          <!-- Bell -->
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-          </svg>
-          <span class="notification-badge">{{ kpi.notifications }}</span>
-        </div>
-
-        <img src="../../../assets/avatar.png" alt="Avatar" class="header-avatar" />
-      </div>
-    </header>
-
-    <!-- CONTENU -->
-    <section class="dashboard-page" *ngIf="!loading; else loadingTpl">
-
-      <!-- Cartes KPI -->
-      <div class="dashboard-cards">
-        <div class="dashboard-card kpi">
-          <div class="kpi-top">
-            <div class="kpi-title">Transactions Analysées</div>
-            <div class="kpi-dot dot-blue"></div>
-          </div>
-          <div class="kpi-value">{{ kpi.transactions | number:'1.0-0' }}</div>
-          <button class="card-btn" (click)="go('transactions')">Voir détails</button>
-        </div>
-
-        <div class="dashboard-card kpi">
-          <div class="kpi-top">
-            <div class="kpi-title">Anomalies Détectées</div>
-            <div class="kpi-dot dot-red"></div>
-          </div>
-          <div class="kpi-value">{{ kpi.anomaliesDetectees | number:'1.0-0' }}</div>
-          <button class="card-btn" (click)="go('alertes')">Voir détails</button>
-        </div>
-
-        <div class="dashboard-card kpi">
-          <div class="kpi-top">
-            <div class="kpi-title">Anomalies Traitées</div>
-            <div class="kpi-dot dot-lilac"></div>
-          </div>
-          <div class="kpi-value">{{ kpi.anomaliesTraitees | number:'1.0-0' }}</div>
-          <button class="card-btn" (click)="go('alertes?statut=traitees')">Voir détails</button>
-        </div>
-
-        <div class="dashboard-card kpi">
-          <div class="kpi-top">
-            <div class="kpi-title">Comptes Surveillés</div>
-            <div class="kpi-dot dot-blue"></div>
-          </div>
-          <div class="kpi-value">{{ kpi.comptesSurveilles | number:'1.0-0' }}</div>
-          <button class="card-btn" (click)="go('blacklist')">Voir détails</button>
-        </div>
+      <div class="anomalies-graph">
+        <app-anomaly-chart [mode]="activeTab"></app-anomaly-chart>
       </div>
 
-      <!-- Deux colonnes -->
-      <div class="dashboard-section">
-        <!-- Transactions récentes -->
-        <div class="dashboard-provider">
-          <h2>Transactions récentes</h2>
-
-          <input type="search" class="provider-search"
-                 placeholder="Rechercher une transaction…"
-                 [(ngModel)]="filters.search" (ngModelChange)="applyFilters()" />
-
-          <div class="provider-filters provider-filters-grid">
-            <div class="filter-row">
-              <select [(ngModel)]="filters.pays" (ngModelChange)="applyFilters()">
-                <option value="">Pays</option>
-                <option *ngFor="let p of pays" [value]="p">{{ p }}</option>
-              </select>
-              <select [(ngModel)]="filters.portee" (ngModelChange)="applyFilters()">
-                <option value="">Portée</option>
-                <option>P2P</option>
-                <option>National</option>
-                <option>International</option>
-              </select>
-            </div>
-            <div class="filter-row">
-              <select [(ngModel)]="filters.periode" (ngModelChange)="applyFilters()">
-                <option value="">Période</option>
-                <option>Aujourd’hui</option>
-                <option>7 derniers jours</option>
-                <option>30 derniers jours</option>
-              </select>
-              <select [(ngModel)]="filters.typeClient" (ngModelChange)="applyFilters()">
-                <option value="">Type de client</option>
-                <option *ngFor="let opt of typeClientOptions" [value]="opt.label">{{ opt.label }}</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="provider-table-scroll">
-            <table class="provider-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Payeur</th>
-                  <th>Pays</th>
-                  <th>Payé</th>
-                  <th>Pays</th>
-                  <th>Montant</th>
-                  <th>Portée</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let t of filteredTransactions">
-                  <td>{{ t.date_operation | date:'dd/MM/yyyy' }}</td>
-                  <td class="nom-payeur">{{ t.nom_payeur }}<br><small>{{ t.numero_compte_payeur.slice(0,10) + '***' }}</small><br><small>{{ getTypeClientLabel(t.type_client_payeur) }}</small></td>
-                  <td>{{ t.pays_payeur }}</td>
-                  <td class="nom-beneficiaire">{{ t.nom_paye }}<br><small>{{ t.numero_compte_paye.slice(0,10) + '***' }}</small><br><small>{{ getTypeClientLabel(t.type_client_paye) }}</small></td>
-                  <td>{{ t.pays_paye }}</td>
-                  <td>{{ t.montant | number:'1.0-0' }} FCFA</td>
-                  <td>{{ t.portee }}</td>
-                  <!-- <td><span class="status-normal">Normal</span></td> -->
-                </tr>
-                <tr *ngIf="(filteredTransactions?.length || 0) === 0">
-                  <td colspan="7" class="empty">Aucune transaction trouvée pour ces filtres.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Anomalies -->
-        <div class="dashboard-anomalies">
-          <h2>Anomalies détectées</h2>
-
-          <div class="anomalies-tabs">
-            <button class="tab" [class.active]="activeTab==='overview'" (click)="activeTab='overview'">Vue d'ensemble</button>
-            <button class="tab" [class.active]="activeTab==='type'" (click)="activeTab='type'">Par type d’anomalie</button>
-            <button class="tab" [class.active]="activeTab==='criticite'" (click)="activeTab='criticite'">Par criticité</button>
-          </div>
-
-          <div class="anomalies-graph">
-            <app-anomaly-chart [mode]="activeTab"></app-anomaly-chart>
-          </div>
-
-          <div class="legend">
-            <div class="legend-item"><span class="legend-box" style="background:#2463DE"></span> Montant Suspect</div>
-            <div class="legend-item"><span class="legend-box" style="background:#ED6A01"></span> Fréquence Anormale</div>
-            <div class="legend-item"><span class="legend-box" style="background:#EF4444"></span> Entités Blacklistées</div>
-            <div class="legend-item"><span class="legend-box" style="background:#6D5AE0"></span> Pays à Risque</div>
-          </div>
+      <div class="legend-container">
+        <div class="legend">
+          <div class="legend-item"><span class="legend-box" style="background:#EF4444"></span> Comptes Blacklistés</div>
+          <div class="legend-item"><span class="legend-box" style="background:#6D5AE0"></span> Pays à Risque</div>
+          <div class="legend-item"><span class="legend-box" style="background:#F59E0B"></span> Comptes Interdits</div>
+          <div class="legend-item"><span class="legend-box" style="background:#8B5CF6"></span> Compte Surveillés</div>
+          <div class="legend-item"><span class="legend-box" style="background:#2463DE"></span> Montant Suspect</div>
+          <div class="legend-item"><span class="legend-box" style="background:#ED6A01"></span> Fréquence Anormale</div>
+          <div class="legend-item"><span class="legend-box" style="background:#10B981"></span> PEP</div> 
         </div>
       </div>
-    </section>
+    </div>
+  </div>
+</section>
 
-    <!-- Loading / Error -->
-    <ng-template #loadingTpl>
-      <div class="loading">Chargement du tableau de bord…</div>
-    </ng-template>
+<!-- Loading / Error -->
+<ng-template #loadingTpl>
+  <div class="loading">Chargement du tableau de bord…</div>
+</ng-template>
 
-    <div class="error" *ngIf="error">{{ error }}</div>
-  </main>
-</div>
+<div class="error" *ngIf="error">{{ error }}</div>
