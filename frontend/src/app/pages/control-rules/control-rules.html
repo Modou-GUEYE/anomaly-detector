@@ -22,13 +22,16 @@
           <span class="label">Type:</span>
           <span class="value">{{ rule.type }}</span>
         </div>
-        <div class="detail-item" *ngIf="rule.threshold > 0">
+        <div class="detail-item" *ngIf="rule.threshold && rule.threshold > 0">
           <span class="label">Seuil:</span>
           <span class="value">{{ rule.threshold | number }}</span>
         </div>
       </div>
 
       <div class="rule-actions">
+        <button class="btn-toggle" (click)="toggleRuleStatus(rule)" [class.inactive]="rule.status === 'Inactif'">
+          {{ rule.status === 'Actif' ? 'Désactiver' : 'Activer' }}
+        </button>
         <button class="btn-edit" (click)="editRule(rule)">Éditer</button>
         <button class="btn-delete" (click)="deleteRule(rule.id)">Supprimer</button>
       </div>
@@ -40,3 +43,77 @@
     <button class="btn-primary" (click)="addRule()">Créer une règle</button>
   </div>
 </section>
+
+<!-- Modal -->
+<div *ngIf="showModal" class="modal-overlay" (click)="closeModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ isEditMode ? 'Éditer une règle' : 'Ajouter une nouvelle règle' }}</h2>
+      <button class="close-btn" (click)="closeModal()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="ruleName">Nom de la règle *</label>
+        <input 
+          id="ruleName"
+          type="text" 
+          [(ngModel)]="formData.name" 
+          placeholder="Ex: Montant Maximum"
+          class="form-input"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="ruleDescription">Description *</label>
+        <textarea 
+          id="ruleDescription"
+          [(ngModel)]="formData.description" 
+          placeholder="Décrivez la règle et ses conditions d'application..."
+          class="form-textarea"
+          rows="3"
+        ></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="ruleType">Type de règle *</label>
+        <select 
+          id="ruleType"
+          [(ngModel)]="formData.type" 
+          class="form-select"
+        >
+          <option value="">-- Sélectionnez un type --</option>
+          <option *ngFor="let type of ruleTypes" [value]="type">{{ type }}</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="ruleThreshold">Seuil (optionnel)</label>
+        <input 
+          id="ruleThreshold"
+          type="number" 
+          [(ngModel)]="formData.threshold" 
+          placeholder="0"
+          class="form-input"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="ruleStatus">Statut</label>
+        <select 
+          id="ruleStatus"
+          [(ngModel)]="formData.status" 
+          class="form-select"
+        >
+          <option value="Actif">Actif</option>
+          <option value="Inactif">Inactif</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closeModal()">Annuler</button>
+      <button class="btn-submit" (click)="saveRule()">{{ isEditMode ? 'Mettre à jour' : 'Créer' }}</button>
+    </div>
+  </div>
+</div>
