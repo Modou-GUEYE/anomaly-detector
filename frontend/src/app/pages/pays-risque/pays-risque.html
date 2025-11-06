@@ -1,0 +1,198 @@
+<section class="pays-risque-page">
+  <h1>Pays à Risque</h1>
+
+  <!-- Filtres -->
+  <div class="filters-section">
+    <input type="search"
+           class="filter-search"
+           placeholder="Rechercher un pays..."
+           [(ngModel)]="searchTerm"
+           (ngModelChange)="onSearch()" />
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading">Chargement des pays...</div>
+
+  <!-- Error -->
+  <div *ngIf="error && !loading" class="error">{{ error }}</div>
+
+  <!-- Success -->
+  <div *ngIf="success && !loading" class="success">{{ success }}</div>
+
+  <!-- Content -->
+  <div *ngIf="!loading" class="pays-risque-content">
+    <!-- Header avec compteur et boutons -->
+    <div class="pays-risque-header">
+      <div class="pays-count">
+        <span class="count-number">{{ filteredPays.length }} Pays</span>
+      </div>
+      <div class="header-actions">
+        <button class="btn-add-pays" (click)="toggleForm()">
+          {{ showForm ? '✕ Annuler' : '➕ Ajouter un pays' }}
+        </button>
+        <button class="btn-import-pays" (click)="toggleImportForm()">
+          {{ showImportForm ? '✕ Annuler' : '📥 Importer' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Formulaire d'ajout -->
+    <div *ngIf="showForm" class="form-section add-form">
+      <h3>Ajouter un nouveau pays</h3>
+      <div class="form-group">
+        <input
+          type="text"
+          placeholder="Nom du pays..."
+          [(ngModel)]="newPaysName"
+          (keyup.enter)="addPays()"
+          class="form-input"
+        />
+        <button
+          class="btn-submit"
+          (click)="addPays()"
+          [disabled]="submitting || !newPaysName.trim()"
+        >
+          {{ submitting ? 'Ajout en cours...' : 'Ajouter' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Formulaire d'édition -->
+    <div *ngIf="showEditForm && editingPays" class="form-section edit-form">
+      <h3>Éditer le pays</h3>
+      <p class="info-text">Ancien nom: <strong>{{ editingPays }}</strong></p>
+      <div class="form-group">
+        <input
+          type="text"
+          placeholder="Nouveau nom du pays..."
+          [(ngModel)]="editedPaysName"
+          (keyup.enter)="savePaysEdit()"
+          class="form-input"
+        />
+        <button
+          class="btn-submit"
+          (click)="savePaysEdit()"
+          [disabled]="submitting || !editedPaysName.trim()"
+        >
+          {{ submitting ? 'Mise à jour...' : 'Mettre à jour' }}
+        </button>
+        <button
+          class="btn-cancel"
+          (click)="cancelEdit()"
+          [disabled]="submitting"
+        >
+          Annuler
+        </button>
+      </div>
+    </div>
+
+    <!-- Formulaire d'import -->
+    <div *ngIf="showImportForm" class="form-section import-form">
+      <h3>Importer des pays</h3>
+      <p class="info-text">
+        Formats acceptés: CSV, JSON ou Excel (.xlsx, .xls). Le fichier doit contenir une colonne "nom_pays" ou être un tableau de noms.
+      </p>
+      <p class="info-text">
+        <strong>Pour Excel :</strong> Les noms de pays doivent être dans la première colonne. La première ligne peut contenir un en-tête (nom_pays, pays, country, etc.).
+      </p>
+      <div class="form-group">
+        <input
+          type="file"
+          accept=".csv,.json,.txt,.xlsx,.xls"
+          (change)="onFileSelected($event)"
+          class="form-input"
+        />
+        <button
+          class="btn-submit"
+          (click)="importPays()"
+          [disabled]="submitting || !selectedFile"
+        >
+          {{ submitting ? 'Import en cours...' : 'Importer' }}
+        </button>
+      </div>
+      <div *ngIf="importMessage" class="message-box success-box">
+        {{ importMessage }}
+      </div>
+      <div *ngIf="importError" class="message-box error-box">
+        {{ importError }}
+      </div>
+    </div>
+
+    <!-- Tableau des pays -->
+    <div class="pays-risque-table-wrapper">
+      <div *ngIf="paginatedPays.length === 0" class="empty-state">
+        <p>Aucun pays trouvé</p>
+      </div>
+
+      <table *ngIf="paginatedPays.length > 0" class="pays-risque-table">
+        <thead>
+          <tr>
+            <th class="col-pays">Pays</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of paginatedPays" class="pays-row">
+            <td class="col-pays">{{ p }}</td>
+            <td class="col-actions">
+              <div class="action-buttons">
+                <button
+                  class="btn-edit"
+                  (click)="startEdit(p)"
+                  title="Éditer"
+                >
+                  ✏️ Éditer
+                </button>
+                <button
+                  class="btn-delete"
+                  (click)="deletePays(p)"
+                  title="Supprimer"
+                >
+                  🗑️ Supprimer
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Pagination -->
+      <div *ngIf="totalPages > 1" class="pagination">
+        <button
+          class="btn-pagination"
+          (click)="goToPage(currentPage - 1)"
+          [disabled]="currentPage === 1"
+        >
+          ← Précédent
+        </button>
+        <span class="page-info">
+          Page {{ currentPage }} / {{ totalPages }}
+        </span>
+        <button
+          class="btn-pagination"
+          (click)="goToPage(currentPage + 1)"
+          [disabled]="currentPage === totalPages"
+        >
+          Suivant →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Accès Refusé -->
+  <div *ngIf="showAccessDeniedModal" class="modal-overlay" (click)="closeAccessDeniedModal()">
+    <div class="modal-content modal-access-denied" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>⛔ Accès Refusé</h2>
+        <button class="close-btn" (click)="closeAccessDeniedModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>{{ adminOnlyMessage }}</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" (click)="closeAccessDeniedModal()">Fermer</button>
+      </div>
+    </div>
+  </div>
+</section>
+

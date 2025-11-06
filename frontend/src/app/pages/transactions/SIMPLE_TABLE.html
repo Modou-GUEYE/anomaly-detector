@@ -1,0 +1,49 @@
+<!-- Version SIMPLE du tableau (TEMPORAIRE pour tester) -->
+<!-- Commentez le tableau complexe et activez celui-ci -->
+
+<table class="simple-transactions-table" *ngIf="!loading && !error">
+  <thead>
+    <tr>
+      <th style="width: 80px;">Date</th>
+      <th style="width: 100px;">Montant</th>
+      <th style="flex: 1;">Payeur</th>
+      <th style="flex: 1;">Bénéficiaire</th>
+      <th style="width: 80px;">Portée</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr *ngFor="let tx of paginatedTransactions">
+      <td>{{ formatDate(tx.date_operation) }}</td>
+      <td>{{ formatMontant(tx.montant) }}</td>
+      <td>{{ tx.nom_payeur }}</td>
+      <td>{{ tx.nom_paye }}</td>
+      <td>{{ tx.portee }}</td>
+    </tr>
+  </tbody>
+</table>
+
+<style>
+.simple-transactions-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  margin: 20px 0;
+}
+
+.simple-transactions-table thead {
+  background: #f3f4f6;
+  position: sticky;
+  top: 0;
+}
+
+.simple-transactions-table th,
+.simple-transactions-table td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.simple-transactions-table tbody tr:hover {
+  background: #f9fafb;
+}
+</style>

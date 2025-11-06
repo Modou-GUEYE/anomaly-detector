@@ -7,6 +7,8 @@ import { TransactionsComponent } from './pages/transactions/transactions';
 import { BlacklistComponent } from './pages/blacklist/blacklist';
 import { ControlRulesComponent } from './pages/control-rules/control-rules';
 import { ReportsComponent } from './pages/reports/reports';
+import { PaysRisqueComponent } from './pages/pays-risque/pays-risque';
+import { TrackingComponent } from './pages/tracking/tracking';
 import { AuthGuard } from './guards/auth.guard';
 import { LayoutComponent } from './layouts/layout/layout';
 
@@ -23,7 +25,9 @@ export const routes: Routes = [
       { path: 'anomalies', component: AnomaliesComponent },
       { path: 'control-rules', component: ControlRulesComponent },
       { path: 'blacklist', component: BlacklistComponent },
+      { path: 'pays-risque', component: PaysRisqueComponent },
       { path: 'reports', component: ReportsComponent },
+      { path: 'tracking', component: TrackingComponent },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   },

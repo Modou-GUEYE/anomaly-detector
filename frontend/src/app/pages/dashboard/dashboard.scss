@@ -47,18 +47,12 @@
     width: 100%;
   }
 }
-.provider-table td.nom-payeur, .provider-table td.nom-beneficiaire {
-  white-space: nowrap;
-  overflow: visible;
-  text-overflow: clip;
-  max-width: none;
-}
 /* Scrollable table container for transactions */
 @media (min-width: 981px) {
   .dashboard-section {
     align-items: stretch;
   }
-  .dashboard-provider, .dashboard-anomalies {
+  .dashboard-provider {
   height: 65vh;
   display: flex;
   flex-direction: column;
@@ -116,7 +110,7 @@
   border-radius: 0;
   padding: 0;
 }
-.dashboard-provider, .dashboard-anomalies{
+.dashboard-provider{
   flex: 1 1 0;
   min-width: 0;
   width: auto;
@@ -126,7 +120,7 @@
   padding:20px;
   box-sizing: border-box;
 }
-.dashboard-provider h2, .dashboard-anomalies h2{ color:#2E6CF2; font-size:1.2rem; margin-bottom:14px; }
+.dashboard-provider h2{ color:#2E6CF2; font-size:1.2rem; margin-bottom:14px; }
 
 /* Filters + table */
 .provider-search{ width:100%; padding:10px 14px; border-radius:8px; border:1px solid #E3E3E1; margin-bottom:10px; }
@@ -150,15 +144,26 @@
    width: 100%;
    border-collapse: separate; /* permet l'espacement entre les lignes */
    border-spacing: 0 10px;    /* espace vertical entre les lignes */
-   table-layout: fixed;
+   table-layout: auto; /* Tableau dynamique selon le contenu */
  }
 .provider-table th, .provider-table td{
-  padding: 8px 10px;
+  padding: 8px 4px;
   border-bottom: none; /* pas de trait, on utilise l'espacement */
   font-size: 0.9rem;
   line-height: 1.2;
   text-align: center;
+  vertical-align: middle;
+  white-space: nowrap; /* Empêche le retour à la ligne automatique */
 }
+
+/* Alignement spécifique pour chaque colonne */
+.provider-table th:nth-child(1), .provider-table td:nth-child(1) { text-align: left; }   /* Date & Heure */
+.provider-table th:nth-child(2), .provider-table td:nth-child(2) { text-align: left; }   /* Émetteur */
+.provider-table th:nth-child(3), .provider-table td:nth-child(3) { text-align: left; }   /* Bénéficiaire */
+.provider-table th:nth-child(4), .provider-table td:nth-child(4) { text-align: right; }  /* Montant */
+.provider-table th:nth-child(5), .provider-table td:nth-child(5) { text-align: center; } /* Portée */
+.provider-table th:nth-child(6), .provider-table td:nth-child(6) { text-align: center; } /* Statut */
+.provider-table th:nth-child(7), .provider-table td:nth-child(7) { text-align: center; } /* Actions */
 /* Date en bleu (1ère colonne) */
 .provider-table tbody td:first-child{
   color:#2E6CF2;
@@ -260,35 +265,161 @@
 .status-alert{ background:#EF4444; }
 .status-warning{ background:#F59E0B; }
 
-/* Anomalies */
-.anomalies-tabs{ display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
-.tab{
-  background:#E9EAF6; color:#2E6CF2; border:none; border-radius:8px 8px 0 0; padding:8px 14px;
-  font-weight:700; cursor:pointer;
-}
-.tab.active, .tab:hover{ background:#2E6CF2; color:#fff; }
-.anomalies-graph{
-  background:#F7F8FA; 
-  border-radius:12px; 
-  min-height:200px; display:flex; 
-  align-items:start; 
-  justify-content:start;
-  margin-top:6px;
-}
-
-.legend{ 
-  display:grid; 
-  grid-template-columns:1fr 1fr; 
-  gap:6px; 
-  margin-top:125px; 
-  color:#374151; 
-}
-.legend-item{ display:flex; align-items:center; gap:8px; font-size:.9rem; }
-.legend-box{ width:12px; height:12px; background:#CBD5E1; border-radius:2px; display:inline-block; }
-
 /* Helpers */
 .loading{ padding:32px; text-align:center; color:#475569; }
 .error{ margin:10px 24px; color:#B91C1C; font-weight:700; }
+
+/* Enhanced Transaction Table Styles */
+.transaction-date {
+  .date-main {
+    font-weight: 700;
+    color: #2E6CF2;
+    font-size: 0.95rem;
+  }
+  .date-time {
+    color: #6b7280;
+    font-size: 0.8rem;
+    margin-top: 2px;
+  }
+}
+
+.nom-payeur, .nom-beneficiaire {
+  white-space: normal; /* Permet le retour à la ligne pour ces colonnes */
+  max-width: 200px; /* Largeur maximale pour éviter que ça devienne trop large */
+  .client-name {
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 4px;
+  }
+  .client-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    .account-number {
+      color: #6b7280;
+      font-family: monospace;
+      font-size: 0.8rem;
+    }
+    .client-type {
+      color: #4f46e5;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .client-country {
+      color: #059669;
+      font-size: 0.8rem;
+    }
+  }
+}
+
+.transaction-amount {
+  .amount-main {
+    font-weight: 700;
+    color: #059669;
+    font-size: 0.95rem;
+  }
+  .amount-details {
+    margin-top: 2px;
+    .amount-flag {
+      color: #d97706;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+  }
+}
+
+.transaction-scope {
+  .scope-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-block;
+    white-space: nowrap;
+    
+    &.scope-national {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    
+    &.scope-international {
+      background: #fef3c7;
+      color: #d97706;
+    }
+  }
+}
+
+.transaction-status {
+  .status-badge {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-block;
+    
+    &.status-completed {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    
+    &.status-pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    
+    &.status-failed {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+  }
+}
+
+.transaction-actions {
+  .action-btn {
+    background: none;
+    border: none;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 4px 6px;
+    margin: 0 2px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      background: #f3f4f6;
+      transform: scale(1.1);
+    }
+    
+    &.view-btn:hover {
+      background: #dbeafe;
+    }
+    
+    &.analyze-btn:hover {
+      background: #fef3c7;
+    }
+  }
+}
+
+/* Styles pour les statuts de transaction dynamiques */
+.status-success {
+  background: #d1fae5 !important;
+  color: #065f46 !important;
+}
+
+.status-failure {
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+}
+
+/* Suppression des largeurs fixes - le tableau s'adapte au contenu */
+.provider-table {
+  /* Largeurs minimales pour certaines colonnes */
+  th:nth-child(1) { min-width: 100px; } /* Date & Heure */
+  th:nth-child(4) { min-width: 120px; } /* Montant */
+  th:nth-child(5) { min-width: 110px; } /* Portée */
+  th:nth-child(6) { min-width: 90px; }  /* Statut */
+  th:nth-child(7) { min-width: 80px; }  /* Actions */
+}
 
 /* Responsive */
 @media (max-width: 980px){

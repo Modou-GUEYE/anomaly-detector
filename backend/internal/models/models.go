@@ -121,20 +121,21 @@ func (RegleControle) TableName() string { return "regles_controle" }
 // Alerte est générée lorsqu'une règle est déclenchée.
 // @Description Alerte générée lors du déclenchement d'une règle
 type Alerte struct {
-	ID                string    `json:"id" gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
-	TransactionID     string    `json:"transactionId"`
-	Code              string    `json:"code"` // Code d'alerte unique
-	Type              string    `json:"type"` // Type d'alerte (ex: "Montant", "Pays à risque", "Surveillé", etc.)
-	Statut            string    `json:"statut"`
-	Message           string    `json:"message"`
-	NiveauCriticite   string    `json:"niveauCriticite"`
-	ScoreRisque       float64   `json:"scoreRisque"`
-	AnalysteAssigneID *string   `json:"analysteAssigneID"`
-	DateGeneration    time.Time `json:"dateGeneration"`
-	Action            string    `json:"action"`
-	NumeroCompte      string    `json:"numeroCompte"`
-	PaysRisque        *string   `json:"paysRisque,omitempty"`
-	RegleDeclencheeID *string   `json:"regleDeclencheeID,omitempty"`
+	ID                string     `json:"id" gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
+	TransactionID     string     `json:"transactionId"`
+	Code              string     `json:"code"` // Code d'alerte unique
+	Type              string     `json:"type"` // Type d'alerte (ex: "Montant", "Pays à risque", "Surveillé", etc.)
+	Statut            string     `json:"statut"`
+	Message           string     `json:"message"`
+	NiveauCriticite   string     `json:"niveauCriticite"`
+	ScoreRisque       float64    `json:"scoreRisque"`
+	AnalysteAssigneID *string    `json:"analysteAssigneID"`
+	DateGeneration    time.Time  `json:"dateGeneration"`
+	DateTraitement    *time.Time `json:"dateTraitement,omitempty"` // Date de traitement/résolution
+	Action            string     `json:"action"`
+	NumeroCompte      string     `json:"numeroCompte"`
+	PaysRisque        *string    `json:"paysRisque,omitempty"`
+	RegleDeclencheeID *string    `json:"regleDeclencheeID,omitempty"`
 	// Documentation des codes d'alerte (exemple)
 	// A001 : Montant suspect
 	// A002 : Fréquence
@@ -160,12 +161,14 @@ type AlertMeta struct {
 
 // ===================== SUIVI BLACKLIST =====================
 
-// SuiviBlacklist représente une trace de transaction impliquant une entité sous surveillance.
+// SuiviBlacklist trace les transactions liées aux entités blacklistées.
+// @Description Suivi des transactions liées aux entités blacklistées
 type SuiviBlacklist struct {
 	ID            string    `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
 	TransactionID string    `gorm:"type:uuid;not null" json:"transaction_id"`
 	NumeroCompte  string    `gorm:"not null" json:"numero_compte"`
 	StatutSuivi   string    `gorm:"not null" json:"statut_suivi"`
+	Raison        string    `gorm:"default:''" json:"raison"` // Source du surveillance (ex: PEP, Blacklist, Montant, etc.)
 	DateDetection time.Time `gorm:"column:date_detection;autoCreateTime" json:"date_detection"`
 }
 
@@ -190,10 +193,19 @@ func (PaysARisque) TableName() string {
 // LogAudit trace les actions critiques effectuées dans le système.
 // @Description Log d'audit des actions critiques
 type LogAudit struct {
-	ID              int64     `json:"id"`
-	DateHeure       time.Time `json:"dateHeure"`
-	UtilisateurID   string    `json:"utilisateurId"`
-	ActionEffectuee string    `json:"actionEffectuee"`
-	Details         string    `json:"details"`
-	Resultat        string    `json:"resultat"`
+	ID              string    `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
+	DateHeure       time.Time `gorm:"column:date_heure;autoCreateTime" json:"date_heure"`
+	UtilisateurID   string    `gorm:"column:utilisateur_id" json:"utilisateur_id"`
+	ActionEffectuee string    `gorm:"column:action_effectuee" json:"action_effectuee"`
+	Details         string    `gorm:"column:details" json:"details"`
+	Resultat        string    `gorm:"column:resultat" json:"resultat"`
+	// Champs additionnels pour la conformité LBC/FT
+	TypeAction string `gorm:"column:type_action" json:"type_action"` // "alerte", "transaction", "regle", "blacklist"
+	EntityID   string `gorm:"column:entity_id" json:"entity_id"`     // ID de l'entité concernée
+	AdresseIP  string `gorm:"column:adresse_ip" json:"adresse_ip"`
+	Role       string `gorm:"column:role" json:"role"` // Rôle de l'utilisateur
+}
+
+func (LogAudit) TableName() string {
+	return "logs_audit"
 }

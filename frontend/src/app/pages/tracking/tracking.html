@@ -1,0 +1,256 @@
+<section class="tracking-page">
+  <h1>Audit & Traçabilité</h1>
+
+  
+  <div *ngIf="loading" class="loading">Chargement des données...</div>
+
+  
+  <div *ngIf="error && !loading" class="error">{{ error }}</div>
+
+  
+  <div *ngIf="!loading" class="tracking-content">
+
+    
+    <div class="kpis-grid">
+      <div class="kpi-card">
+        <div class="kpi-icon">📝</div>
+        <div class="kpi-content">
+          <div class="kpi-value">{{ stats.totalEvents | number }}</div>
+          <div class="kpi-label">Événements Totaux</div>
+        </div>
+      </div>
+      
+      <div class="kpi-card">
+        <div class="kpi-icon">🚨</div>
+        <div class="kpi-content">
+          <div class="kpi-value">{{ stats.criticalEvents | number }}</div>
+          <div class="kpi-label">Événements Critiques</div>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon">✅</div>
+        <div class="kpi-content">
+          <div class="kpi-value">{{ stats.complianceRate | number:'1.1-1' }}%</div>
+          <div class="kpi-label">Taux de Conformité</div>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon">👥</div>
+        <div class="kpi-content">
+          <div class="kpi-value">{{ stats.activeUsers | number }}</div>
+          <div class="kpi-label">Utilisateurs Actifs</div>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="events-controls">
+      <div class="controls-row">
+        <input type="search" 
+               class="provider-search"
+               placeholder="Rechercher par utilisateur, description..."
+               [(ngModel)]="filters.search" 
+               (ngModelChange)="applyFilters()">
+
+        <div class="actions-group">
+          <button class="btn-export" (click)="exportData('csv')">📄 Export</button>
+          <button class="btn-refresh" (click)="refreshData()">🔄</button>
+        </div>
+      </div>
+
+      <div class="provider-filters-grid">
+        <div class="filter-row">
+          <select [(ngModel)]="filters.eventType" (ngModelChange)="applyFilters()">
+            <option value="">Tous les types d'action</option>
+            <option *ngFor="let type of eventTypeOptions" [value]="type">
+              {{ type }}
+            </option>
+          </select>
+
+          <select [(ngModel)]="filters.severity" (ngModelChange)="applyFilters()">
+            <option value="">Tous les résultats</option>
+            <option *ngFor="let severity of severityOptions" [value]="severity">
+              {{ severity.toUpperCase() }}
+            </option>
+          </select>
+
+          <select [(ngModel)]="filters.module" (ngModelChange)="applyFilters()">
+            <option value="">Tous les modules</option>
+            <option *ngFor="let module of moduleOptions" [value]="module">
+              {{ module }}
+            </option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="tracking-data">
+      <div class="provider-table-container">
+        <table class="provider-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Type Action</th>
+              <th>Utilisateur</th>
+              <th>Événement</th>
+              <th>Résultat</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let event of paginatedEvents; trackBy: trackByEventId" 
+                class="provider-row"
+                [class]="getSeverityClass(event['resultat'] || event['severity'])">
+              <td>
+                <div class="timestamp-cell">
+                  <div>{{ event['date_heure'] || event['timestamp'] | date:'dd/MM/yyyy' }}</div>
+                  <div class="time-detail">{{ event['date_heure'] || event['timestamp'] | date:'HH:mm' }}</div>
+                </div>
+              </td>
+              <td>
+                <span class="tag module-tag">
+                  {{ event['type_action'] || 'N/A' }}
+                </span>
+              </td>
+              <td>
+                <div class="user-cell">
+                  <div class="user-name">{{ event['nom_utilisateur'] || event['userName'] || 'N/A' }}</div>
+                  <div class="user-role">{{ event['role'] || event['userRole'] || 'N/A' }}</div>
+                </div>
+              </td>
+              <td>
+                <div class="event-cell">
+                  <span>{{ event['action_effectuee'] || event['eventType'] || 'Action' }}</span>
+                </div>
+              </td>
+              <td>
+                <span class="tag result-tag" [class]="getComplianceClass(event['resultat'] || 'unknown')">
+                  {{ (event['resultat'] || 'N/A').toUpperCase() }}
+                </span>
+              </td>
+              <td>
+                <button class="card-btn" (click)="selectEvent(event)">
+                  Détails
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    
+    <div class="pagination-container" *ngIf="totalPages > 1">
+      <div class="pagination-info">
+        {{ filteredEvents.length }} événements trouvés
+      </div>
+      <div class="pagination">
+        <button class="pagination-btn" 
+                (click)="previousPage()" 
+                [disabled]="currentPage === 1">
+          ← Précédent
+        </button>
+        <span class="page-numbers">
+          Page {{ currentPage }} / {{ totalPages }}
+        </span>
+        <button class="pagination-btn" 
+                (click)="nextPage()" 
+                [disabled]="currentPage === totalPages">
+          Suivant →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  
+  <div *ngIf="selectedEvent" class="modal-overlay" (click)="closeEventDetails()">
+    <div class="modal-content dashboard-card" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>
+          {{ getEventTypeIcon(selectedEvent['action_effectuee'] || selectedEvent['eventType']) }} 
+          {{ (selectedEvent['action_effectuee'] || selectedEvent['eventType'] || 'Action').replace('_', ' ') }}
+        </h3>
+        <button class="card-btn" (click)="closeEventDetails()">✖️ Fermer</button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="detail-grid">
+          
+          <div class="detail-section">
+            <h4>📋 Informations Générales</h4>
+            <div class="detail-item">
+              <label>Date & Heure :</label>
+              <span>{{ selectedEvent['date_heure'] | date:'dd/MM/yyyy HH:mm:ss' }}</span>
+            </div>
+            <div class="detail-item">
+              <label>ID Événement :</label>
+              <span>{{ selectedEvent['id'] }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Action Effectuée :</label>
+              <span>{{ selectedEvent['action_effectuee'] }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Détails :</label>
+              <span class="detail-full">{{ selectedEvent['details'] }}</span>
+            </div>
+          </div>
+
+          
+          <div class="detail-section">
+            <h4>✅ Résultat et Module</h4>
+            <div class="detail-item">
+              <label>Résultat :</label>
+              <span class="tag result-tag" [class]="getComplianceClass(selectedEvent['resultat'])">
+                {{ selectedEvent['resultat'].toUpperCase() }}
+              </span>
+            </div>
+            <div class="detail-item">
+              <label>Type d'Action :</label>
+              <span class="tag module-tag">{{ selectedEvent['type_action'] }}</span>
+            </div>
+          </div>
+
+          
+          <div class="detail-section">
+            <h4>👤 Informations Utilisateur</h4>
+            <div class="detail-item">
+              <label>ID Utilisateur :</label>
+              <span>{{ selectedEvent['utilisateur_id'] }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Nom Utilisateur :</label>
+              <span class="user-highlight">{{ selectedEvent['nom_utilisateur'] }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Rôle :</label>
+              <span>{{ selectedEvent['role'] }}</span>
+            </div>
+          </div>
+
+          
+          <div class="detail-section">
+            <h4>🏢 Entité et Système</h4>
+            <div class="detail-item">
+              <label>ID Entité :</label>
+              <span>{{ selectedEvent['entity_id'] }}</span>
+            </div>
+            <div class="detail-item" *ngIf="selectedEvent['adresse_ip'] && selectedEvent['adresse_ip'].trim()">
+              <label>Adresse IP :</label>
+              <span>{{ selectedEvent['adresse_ip'] }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Source :</label>
+              <span>{{ getEventSource(selectedEvent['nom_utilisateur']) }}</span>
+            </div>
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

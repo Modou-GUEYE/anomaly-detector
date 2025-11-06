@@ -1,7 +1,4 @@
-<!-- CONTENU -->
 <section class="dashboard-page" *ngIf="!loading; else loadingTpl">
-
-  <!-- Cartes KPI -->
   <div class="dashboard-cards">
     <div class="dashboard-card kpi">
       <div class="kpi-top">
@@ -40,15 +37,15 @@
     </div>
   </div>
 
-  <!-- Deux colonnes -->
   <div class="dashboard-section">
-    <!-- Transactions récentes -->
     <div class="dashboard-provider">
       <h2>Transactions récentes</h2>
 
       <input type="search" class="provider-search"
              placeholder="Rechercher une transaction…"
-             [(ngModel)]="filters.search" (ngModelChange)="applyFilters(); currentPage = 1" (keyup.enter)="applyFilters()" />
+             [(ngModel)]="filters.search" 
+             (ngModelChange)="applyFilters(); currentPage = 1" 
+             (keyup.enter)="applyFilters()" />
 
       <div class="provider-filters provider-filters-grid">
         <div class="filter-row">
@@ -63,8 +60,8 @@
           </select>
         </div>
         <div class="filter-row">
-          <select [(ngModel)]="filters.periode" (change)="applyFilters(); currentPage = 1" (ngModelChange)="applyFilters(); currentPage = 1" class="filter-select">
-            <option value="Aujourd'hui">Filtrer par Période</option>
+          <select [(ngModel)]="filters.periode" (change)="applyFilters(); currentPage = 1" class="filter-select">
+            <option value="">Filtrer par Période</option>
             <option value="Aujourd'hui">Aujourd'hui</option>
             <option value="7 derniers jours">7 derniers jours</option>
             <option value="30 derniers jours">30 derniers jours</option>
@@ -80,36 +77,61 @@
         <table class="provider-table">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Payeur</th>
-              <th>Payé</th>
+              <th>Date & Heure</th>
+              <th>Émetteur</th>
+              <th>Bénéficiaire</th>
               <th>Montant</th>
+              <th>Portée</th>
+              <th>Statut</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let t of paginatedTransactions">
-              <td>{{ t.date_operation | date:'dd/MM/yyyy' }}</td>
+              <td class="transaction-date">
+                <div class="date-main">{{ t.date_operation | date:'dd/MM/yyyy' }}</div>
+                <div class="date-time">{{ t.date_operation | date:'HH:mm' }}</div>
+              </td>
               <td class="nom-payeur">
-                {{ t.nom_payeur }}
-                <br><small>{{ t.numero_compte_payeur.slice(0,10) + '***' }}</small>
-                <br><small>{{ getTypeClientLabel(t.type_client_payeur) }}</small>
-                <br><small>{{ t.pays_payeur }}</small>
+                <div class="client-name">{{ t.nom_payeur }}</div>
+                <div class="client-details">
+                  <small class="account-number">{{ t.numero_compte_payeur }}</small>
+                  <small class="client-type">{{ getTypeClientLabel(t.type_client_payeur) }}</small>
+                  <small class="client-country">📍 {{ t.pays_payeur }}</small>
+                </div>
               </td>
               <td class="nom-beneficiaire">
-                {{ t.nom_paye }}
-                <br><small>{{ t.numero_compte_paye.slice(0,12) + '***' }}</small>
-                <br><small>{{ getTypeClientLabel(t.type_client_paye) }}</small>
-                <br><small>{{ t.pays_paye }}</small>
+                <div class="client-name">{{ t.nom_paye }}</div>
+                <div class="client-details">
+                  <small class="account-number">{{ t.numero_compte_paye }}</small>
+                  <small class="client-type">{{ getTypeClientLabel(t.type_client_paye) }}</small>
+                  <small class="client-country">📍 {{ t.pays_paye }}</small>
+                </div>
               </td>
-              <td>{{ t.montant | number:'1.0-0' }} FCFA</td>
+              <td class="transaction-amount">
+                <div class="amount-main">{{ t.montant | number:'1.0-0' }} FCFA</div>
+              </td>
+              <td class="transaction-scope">
+                <span class="scope-badge" [class.scope-national]="t.pays_payeur === t.pays_paye" 
+                      [class.scope-international]="t.pays_payeur !== t.pays_paye">
+                  {{ t.pays_payeur === t.pays_paye ? 'National' : 'International' }}
+                </span>
+              </td>
+              <td class="transaction-status">
+                <span class="status-badge" [ngClass]="getTransactionStatusClass(t)">
+                  {{ getTransactionStatus(t) === 'Succès' ? 'Succès' : 'Échec' }}
+                </span>
+              </td>
+              <td class="transaction-actions">
+                <button class="action-btn view-btn" title="Voir détails">Voir</button>
+              </td>
             </tr>
             <tr *ngIf="(paginatedTransactions?.length || 0) === 0">
-              <td colspan="4" class="empty">Aucune transaction trouvée pour ces filtres.</td>
+              <td colspan="7" class="empty">Aucune transaction trouvée pour ces filtres.</td>
             </tr>
           </tbody>
         </table>
         
-        <!-- Pagination -->
         <div class="pagination" *ngIf="totalPages > 1">
           <button class="pagination-btn" (click)="prevPage()" [disabled]="currentPage === 1">← Précédent</button>
           <span class="pagination-info">Page {{ currentPage }} / {{ totalPages }}</span>
@@ -117,37 +139,9 @@
         </div>
       </div>
     </div>
-
-    <!-- Anomalies -->
-    <div class="dashboard-anomalies">
-      <h2>Anomalies détectées</h2>
-
-      <div class="anomalies-tabs">
-        <button class="tab" [class.active]="activeTab==='overview'" (click)="activeTab='overview'">Vue d'ensemble</button>
-        <button class="tab" [class.active]="activeTab==='type'" (click)="activeTab='type'">Par type d'anomalie</button>
-        <button class="tab" [class.active]="activeTab==='criticite'" (click)="activeTab='criticite'">Par criticité</button>
-      </div>
-
-      <div class="anomalies-graph">
-        <app-anomaly-chart [mode]="activeTab"></app-anomaly-chart>
-      </div>
-
-      <div class="legend-container">
-        <div class="legend">
-          <div class="legend-item"><span class="legend-box" style="background:#EF4444"></span> Comptes Blacklistés</div>
-          <div class="legend-item"><span class="legend-box" style="background:#6D5AE0"></span> Pays à Risque</div>
-          <div class="legend-item"><span class="legend-box" style="background:#F59E0B"></span> Comptes Interdits</div>
-          <div class="legend-item"><span class="legend-box" style="background:#8B5CF6"></span> Compte Surveillés</div>
-          <div class="legend-item"><span class="legend-box" style="background:#2463DE"></span> Montant Suspect</div>
-          <div class="legend-item"><span class="legend-box" style="background:#ED6A01"></span> Fréquence Anormale</div>
-          <div class="legend-item"><span class="legend-box" style="background:#10B981"></span> PEP</div> 
-        </div>
-      </div>
-    </div>
   </div>
 </section>
 
-<!-- Loading / Error -->
 <ng-template #loadingTpl>
   <div class="loading">Chargement du tableau de bord…</div>
 </ng-template>

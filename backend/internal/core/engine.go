@@ -59,14 +59,14 @@ func (re *RulesEngine) AnalyzeTransaction(ctx context.Context, tx *models.Transa
 	if isPayerPartner {
 		alertesPayeur, err := re.applyRulesForAccount(ctx, tx, tx.NumeroComptePayeur)
 		if err != nil {
-			return nil, err
+			return append(alertesGenerees, alertesPayeur...), err
 		}
 		alertesGenerees = append(alertesGenerees, alertesPayeur...)
 	}
 	if isPayeePartner && tx.NumeroComptePaye != "" {
 		alertesPaye, err := re.applyRulesForAccount(ctx, tx, tx.NumeroComptePaye)
 		if err != nil {
-			return nil, err
+			return append(alertesGenerees, alertesPaye...), err
 		}
 		alertesGenerees = append(alertesGenerees, alertesPaye...)
 	}
@@ -74,22 +74,23 @@ func (re *RulesEngine) AnalyzeTransaction(ctx context.Context, tx *models.Transa
 	// --- 3. REGLE PAYS_A_RISQUE ---
 	reglePaysRisque, err := re.store.GetReglePaysRisqueActive(ctx)
 	if err != nil || reglePaysRisque == nil {
-		fmt.Printf("Erreur récupération règle pays_risque: %v\n", err)
+		// Règle pas active, pas d'alerte
 	} else {
 		meta, err := re.store.GetAlertMetaByType(ctx, "Pays à risque")
 		if err != nil || meta == nil {
-			fmt.Printf("Erreur récupération meta pays à risque: %v\n", err)
+			// Meta pas trouvée, pas d'alerte
 		} else {
 			var paysList []string
 			if len(reglePaysRisque.ListePays) > 0 {
 				if err := json.Unmarshal(reglePaysRisque.ListePays, &paysList); err != nil {
-					fmt.Printf("Erreur unmarshal liste_pays: %v\n", err)
+					// Unmarshal erreur, continue
 				}
 			}
 			for _, pays := range paysList {
 				if isPayerPartner && strings.EqualFold(tx.PaysPayeur, pays) {
 					paysRisque := pays
 					regleID := reglePaysRisque.ID
+					action := actionFromCriticite(meta.NiveauCriticite)
 					alerte := &models.Alerte{
 						TransactionID:     tx.ID,
 						Code:              meta.Code,
@@ -99,16 +100,21 @@ func (re *RulesEngine) AnalyzeTransaction(ctx context.Context, tx *models.Transa
 						NiveauCriticite:   meta.NiveauCriticite,
 						ScoreRisque:       calculerScoreRisque(reglePaysRisque, tx),
 						DateGeneration:    tx.DateOperation,
-						Action:            actionFromCriticite(meta.NiveauCriticite),
+						Action:            action,
 						NumeroCompte:      tx.NumeroComptePayeur,
 						PaysRisque:        &paysRisque,
 						RegleDeclencheeID: &regleID,
 					}
 					alertesGenerees = append(alertesGenerees, alerte)
+					// Si l'action est "bloquer", refuser la transaction
+					if action == "bloquer" {
+						return alertesGenerees, fmt.Errorf("%w: transaction bloquée - pays à risque détecté (%s)", ErrTransactionRefused, pays)
+					}
 				}
 				if isPayeePartner && strings.EqualFold(tx.PaysPaye, pays) {
 					paysRisque := pays
 					regleID := reglePaysRisque.ID
+					action := actionFromCriticite(meta.NiveauCriticite)
 					alerte := &models.Alerte{
 						TransactionID:     tx.ID,
 						Code:              meta.Code,
@@ -118,12 +124,16 @@ func (re *RulesEngine) AnalyzeTransaction(ctx context.Context, tx *models.Transa
 						NiveauCriticite:   meta.NiveauCriticite,
 						ScoreRisque:       calculerScoreRisque(reglePaysRisque, tx),
 						DateGeneration:    tx.DateOperation,
-						Action:            actionFromCriticite(meta.NiveauCriticite),
+						Action:            action,
 						NumeroCompte:      tx.NumeroComptePaye,
 						PaysRisque:        &paysRisque,
 						RegleDeclencheeID: &regleID,
 					}
 					alertesGenerees = append(alertesGenerees, alerte)
+					// Si l'action est "bloquer", refuser la transaction
+					if action == "bloquer" {
+						return alertesGenerees, fmt.Errorf("%w: transaction bloquée - pays à risque détecté (%s)", ErrTransactionRefused, pays)
+					}
 				}
 			}
 		}
@@ -184,6 +194,7 @@ func (re *RulesEngine) applyRulesForAccount(ctx context.Context, tx *models.Tran
 					if err != nil || meta == nil {
 						return nil, fmt.Errorf("meta-donnée d'alerte introuvable pour le type '%s'", regle.TypeRegle)
 					}
+					action := actionFromCriticite(meta.NiveauCriticite)
 					alerte := &models.Alerte{
 						TransactionID: tx.ID,
 						Code:          meta.Code,
@@ -195,23 +206,39 @@ func (re *RulesEngine) applyRulesForAccount(ctx context.Context, tx *models.Tran
 						ScoreRisque:       calculerScoreRisque(&regle, tx),
 						DateGeneration:    tx.DateOperation,
 						RegleDeclencheeID: &regleID,
-						Action:            actionFromCriticite(meta.NiveauCriticite),
+						Action:            action,
+						NumeroCompte:      numeroCompte,
 					}
 					alertes = append(alertes, alerte)
+					// Si l'action est "bloquer", refuser la transaction
+					if action == "bloquer" {
+						return alertes, fmt.Errorf("%w: transaction bloquée - règle de montant dépassée", ErrTransactionRefused)
+					}
 					continue
 				}
 			}
 		case "frequence":
-			if regle.PeriodeReference == "24h" {
-				count, _ := re.store.GetTransactionCountForPeriod(ctx, numeroCompte, 1)
-				if count >= int64(regle.Seuil) {
-					violation = true
-					// Ajout du suivi_blacklist pour violation de la règle de fréquence
-					meta, err := re.store.GetAlertMetaByType(ctx, regle.TypeRegle)
-					if err == nil && meta != nil {
-						action := actionFromCriticite(meta.NiveauCriticite)
-						_ = re.store.CreateSuiviBlacklist(ctx, tx.ID, numeroCompte, action)
-					}
+			// Déterminer la période basée sur periodeReference
+			var days int
+			switch regle.PeriodeReference {
+			case "24h":
+				days = 1
+			case "7d":
+				days = 7
+			case "30d":
+				days = 30
+			default:
+				days = 1
+			}
+
+			count, _ := re.store.GetTransactionCountForPeriod(ctx, numeroCompte, days)
+			if count >= int64(regle.Seuil) {
+				violation = true
+				// Ajout du suivi_blacklist pour violation de la règle de fréquence
+				meta, err := re.store.GetAlertMetaByType(ctx, regle.TypeRegle)
+				if err == nil && meta != nil {
+					action := actionFromCriticite(meta.NiveauCriticite)
+					_ = re.store.CreateSuiviBlacklist(ctx, tx.ID, numeroCompte, action, regle.TypeRegle)
 				}
 			}
 		}
@@ -221,6 +248,7 @@ func (re *RulesEngine) applyRulesForAccount(ctx context.Context, tx *models.Tran
 			if err != nil || meta == nil {
 				return nil, fmt.Errorf("meta-donnée d'alerte introuvable pour le type '%s'", regle.TypeRegle)
 			}
+			action := actionFromCriticite(meta.NiveauCriticite)
 			alerte := &models.Alerte{
 				TransactionID:     tx.ID,
 				Code:              meta.Code,
@@ -230,18 +258,22 @@ func (re *RulesEngine) applyRulesForAccount(ctx context.Context, tx *models.Tran
 				NiveauCriticite:   meta.NiveauCriticite,
 				ScoreRisque:       calculerScoreRisque(&regle, tx),
 				DateGeneration:    tx.DateOperation,
-				Action:            actionFromCriticite(meta.NiveauCriticite),
+				Action:            action,
 				RegleDeclencheeID: &regleID,
 				NumeroCompte:      numeroCompte,
 			}
 			alertes = append(alertes, alerte)
+			// Si l'action est "bloquer", refuser la transaction
+			if action == "bloquer" {
+				return alertes, fmt.Errorf("%w: transaction bloquée - règle de %s dépassée", ErrTransactionRefused, regle.TypeRegle)
+			}
 		}
 	}
 	return alertes, nil
 }
 
 // checkBlacklist centralise la logique de la blacklist conformément aux spécifications.
-// Seul le compte partenaire sélectionné (payeur ou payé) est vérifié selon les flags.
+// Seul le compte BIS sélectionné (payeur ou payé) est vérifié selon les flags.
 func (re *RulesEngine) checkBlacklist(ctx context.Context, tx *models.Transaction, checkPayeur bool, checkPaye bool) ([]*models.Alerte, error) {
 	var alertes []*models.Alerte
 	if checkPayeur {

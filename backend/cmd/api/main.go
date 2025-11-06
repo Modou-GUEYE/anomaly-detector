@@ -31,13 +31,10 @@ func main() {
 	// Connexion à la base Postgres
 	connStr := "postgresql://anomaly_user:passer@localhost:5432/anomaly_db?sslmode=disable"
 
-	// Configuration du logger pour afficher l'heure et le fichier
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-
 	// Initialisation de la couche de persistance (store)
 	dbStore, err := store.NewStore(connStr)
 	if err != nil {
-		log.Fatalf("❌ Impossible d'initialiser le store: %v", err)
+		log.Fatalf("Impossible d'initialiser le store: %v", err)
 	}
 	defer dbStore.Close()
 
@@ -45,8 +42,7 @@ func main() {
 	server := api.NewServer(dbStore)
 
 	// Démarrage du serveur HTTP sur le port 8080
-	log.Println("🚀 Démarrage du serveur sur le port 8080")
 	if err := server.Start(":8080"); err != nil {
-		log.Fatalf("❌ Impossible de démarrer le serveur: %v", err)
+		log.Fatalf("Impossible de démarrer le serveur: %v", err)
 	}
 }

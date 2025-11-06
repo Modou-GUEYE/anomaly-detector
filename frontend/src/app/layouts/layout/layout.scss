@@ -1,7 +1,8 @@
 .app-layout {
   display: flex;
-  height: 100vh;
+  height: 100vh; /* Hauteur fixe pour éviter le scroll global */
   background: #F7F8FA;
+  overflow: hidden; /* Empêche le scroll sur le layout principal */
 }
 
 /* Sidebar */
@@ -13,7 +14,8 @@
   align-items: center;
   padding: 28px 0 16px;
   box-shadow: 2px 0 16px rgba(36, 99, 222, 0.06);
-  overflow-y: auto;
+  overflow-y: auto; /* Scroll seulement si le contenu dépasse */
+  height: 100vh; /* Hauteur fixe */
 }
 
 .sidebar-user {
@@ -23,13 +25,38 @@
   margin-bottom: 20px;
 }
 
+.sidebar-avatar-container {
+  position: relative;
+  margin-bottom: 8px;
+}
+
 .sidebar-avatar {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  margin-bottom: 8px;
   background: #fff;
   object-fit: cover;
+}
+
+.status-indicator {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  background: #10B981;
+  border-radius: 50%;
 }
 
 .sidebar-username {
@@ -41,23 +68,6 @@
 .sidebar-role {
   color: #ED6A01;
   font-size: 0.95rem;
-}
-
-.sidebar-email {
-  color: #475569;
-  font-size: 0.85rem;
-  margin-top: 4px;
-}
-
-.sidebar-status {
-  color: #475569;
-  font-size: 0.9rem;
-  margin-top: 8px;
-}
-
-.status-active {
-  color: #10B981;
-  font-weight: 600;
 }
 
 .sidebar-menu {
@@ -95,7 +105,8 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: hidden; /* Empêche le scroll sur le conteneur principal */
+  height: 100vh; /* Hauteur fixe */
 }
 
 /* Header */
@@ -108,6 +119,7 @@
   border-radius: 0 0 18px 18px;
   box-shadow: 0 4px 24px rgba(36, 99, 222, 0.08);
   color: #fff;
+  flex-shrink: 0; /* Empêche le header de se rétrécir */
 }
 
 .header-left {
@@ -230,14 +242,17 @@
 
 .layout-content {
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto; /* Seul le contenu peut scroller */
+  overflow-x: hidden;
   padding: 0;
+  min-height: 0; /* Important pour que le contenu enfant puisse scroller */
 }
 
 /* Responsive */
 @media (max-width: 980px) {
   .app-layout {
     flex-direction: column;
+    height: 100vh; /* Maintient la hauteur fixe même en responsive */
   }
 
   .dashboard-sidebar {
@@ -247,6 +262,10 @@
     border-bottom: 1px solid #e5e7eb;
     padding: 16px;
     display: none;
+  }
+
+  .layout-main {
+    height: calc(100vh - 60px); /* Ajuste selon la hauteur de la sidebar mobile */
   }
 
   .dashboard-header {

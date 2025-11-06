@@ -2,13 +2,14 @@
   <!-- SIDEBAR -->
   <aside class="dashboard-sidebar" aria-label="Menu latéral">
     <div class="sidebar-user">
-      <img src="../../../assets/avatar.png" alt="Photo de profil" class="sidebar-avatar" />
-      <div class="sidebar-username">{{ profile?.nomUtilisateur || 'Utilisateur' }}</div>
-      <div class="sidebar-role">{{ profile?.role || 'Administrateur' }}</div>
-      <div class="sidebar-email">{{ profile?.email || '' }}</div>
-      <div class="sidebar-status" *ngIf="profile?.actif">
-        <span class="status-active">● Actif</span>
+      <div class="sidebar-avatar-container">
+        <img src="../../../assets/avatar.png" alt="Photo de profil" class="sidebar-avatar" />
+        <div class="status-indicator" *ngIf="profile?.actif">
+          <span class="status-dot"></span>
+        </div>
       </div>
+      <div class="sidebar-username">{{ profile?.nomUtilisateur || 'Utilisateur' }}</div>
+      <div class="sidebar-role">{{ profile?.role || 'Role' }}</div>
     </div>
 
     <nav class="sidebar-menu">
@@ -17,8 +18,10 @@
       <a class="sidebar-link" [class.active]="router.url === '/comptes'" (click)="navigateTo('comptes')">Comptes</a>
       <a class="sidebar-link" [class.active]="router.url === '/anomalies'" (click)="navigateTo('anomalies')">Anomalies</a>
       <a class="sidebar-link" [class.active]="router.url === '/control-rules'" (click)="navigateTo('control-rules')">Règles de contrôle</a>
+      <a class="sidebar-link" [class.active]="router.url === '/pays-risque'" (click)="navigateTo('pays-risque')">Pays à risque</a>
       <a class="sidebar-link" [class.active]="router.url === '/blacklist'" (click)="navigateTo('blacklist')">Blacklist</a>
-      <a class="sidebar-link" [class.active]="router.url === '/reports'" (click)="navigateTo('reports')">Reports</a>
+      <a class="sidebar-link" [class.active]="router.url === '/reports'" (click)="navigateTo('reports')">Rapports</a>
+      <a class="sidebar-link" [class.active]="router.url === '/tracking'" (click)="navigateTo('tracking')"><span>Tracking</span></a>
     </nav>
   </aside>
 
@@ -29,7 +32,7 @@
       <div class="header-left">
         <img src="../../../assets/faviconBis.png" alt="Logo BIS" class="header-logo" />
         <div class="dashboard-title">
-          <span class="dashboard-welcome">Bienvenue {{ profile?.nomUtilisateur || 'Modou' }} !</span>
+          <span class="dashboard-welcome">Bienvenue {{ profile?.nomUtilisateur || 'User' }} !</span>
           <span class="dashboard-system">Moteur de détection d'anomalie</span>
         </div>
       </div>

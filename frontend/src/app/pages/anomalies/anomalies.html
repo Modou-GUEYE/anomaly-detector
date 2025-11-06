@@ -12,17 +12,27 @@
     <div class="filters-grid">
       <select [(ngModel)]="filters.type" (change)="applyFilters()" class="filter-select">
         <option value="">Tous les types</option>
-        <option *ngFor="let type of typeOptions" [value]="type">{{ type }}</option>
+        <option value="Montant">Montant</option>
+        <option value="frequence">Fréquence</option>
+        <option value="Pays à risque">Pays à risque</option>
+        <option value="Blacklist">Blacklist</option>
+        <option value="Interdit">Interdit</option>
+        <option value="PEP">PEP</option>
+        <option value="Surveillés">Surveillés</option>
       </select>
 
       <select [(ngModel)]="filters.severite" (change)="applyFilters()" class="filter-select">
         <option value="">Tous les niveaux</option>
-        <option *ngFor="let sev of severiteOptions" [value]="sev">{{ sev }}</option>
+        <option value="Critique">Critique</option>
+        <option value="Haute">Haute</option>
+        <option value="Moyenne">Moyenne</option>
+        <option value="Basse">Basse</option>
       </select>
 
       <select [(ngModel)]="filters.statut" (change)="applyFilters()" class="filter-select">
         <option value="">Tous les statuts</option>
-        <option *ngFor="let stat of statutOptions" [value]="stat">{{ stat }}</option>
+        <option value="Traité">Traité</option>
+        <option value="En cours">En cours</option>
       </select>
     </div>
   </div>
@@ -38,7 +48,7 @@
     <!-- Header with action button -->
     <div class="anomalies-header">
       <div class="anomalies-count">
-        <span class="count-number">{{ padNumber(filteredAnomalies.length) }} Anomalies détectées</span>
+        <span class="count-number">{{ filteredAnomalies.length }} Anomalies détectées</span>
       </div>
     </div>
 
@@ -63,13 +73,13 @@
               <td class="col-code">{{ anomaly.code }}</td>
               <td class="col-type">{{ anomaly.type }}</td>
               <td class="col-severite">
-                <span class="severity-badge" [class]="getSeveriteClass(anomaly.niveauCriticite)">
+                <span class="severity-badge" [class]="'severite-' + anomaly.niveauCriticite.toLowerCase()">
                   {{ anomaly.niveauCriticite }}
                 </span>
               </td>
               <td class="col-date">{{ anomaly.dateGeneration | date:'dd/MM/yyyy' }}</td>
               <td class="col-statut">
-                <span class="status-badge" [class]="getStatutClass(anomaly.statut)">
+                <span class="status-badge" [class]="'statut-' + anomaly.statut.toLowerCase().replace(' ', '-')">
                   {{ anomaly.statut }}
                 </span>
               </td>

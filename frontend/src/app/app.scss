@@ -1,1 +1,19 @@
-// App styles - empty, all styling is in components
+// App styles - Full height scrollable
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+}
+
+app-root {
+  display: block;
+  height: auto;
+  overflow: visible;
+}
+
+:host {
+  display: block;
+  height: auto;
+  overflow: visible;
+}

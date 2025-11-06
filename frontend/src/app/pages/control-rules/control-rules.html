@@ -2,7 +2,9 @@
   <h1>Règles de Contrôle</h1>
 
   <div class="rules-header">
-    <button class="btn-primary" (click)="addRule()">+ Ajouter une règle</button>
+    <button class="btn-primary" (click)="addRule()" [title]="!isAdmin ? adminOnlyMessage : ''">
+      + Ajouter une règle
+    </button>
   </div>
 
   <div *ngIf="loading" class="loading">Chargement des règles...</div>
@@ -11,8 +13,8 @@
   <div *ngIf="!loading && rules.length > 0" class="rules-grid">
     <div *ngFor="let rule of rules" class="rule-card">
       <div class="rule-header">
-        <h3>{{ rule.name }}</h3>
-        <span class="rule-status" [class.active]="rule.status === 'Actif'">{{ rule.status }}</span>
+        <h3>{{ rule.nomRegle }}</h3>
+        <span class="rule-status" [class.active]="rule.active">{{ rule.active ? 'Actif' : 'Inactif' }}</span>
       </div>
       
       <p class="rule-description">{{ rule.description }}</p>
@@ -20,20 +22,24 @@
       <div class="rule-details">
         <div class="detail-item">
           <span class="label">Type:</span>
-          <span class="value">{{ rule.type }}</span>
+          <span class="value">{{ rule.typeRegle }}</span>
         </div>
-        <div class="detail-item" *ngIf="rule.threshold && rule.threshold > 0">
+        <div class="detail-item" *ngIf="rule.seuil && rule.seuil > 0">
           <span class="label">Seuil:</span>
-          <span class="value">{{ rule.threshold | number }}</span>
+          <span class="value">{{ rule.seuil | number }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Profil:</span>
+          <span class="value">{{ getProfilName(rule.profilClientId) }}</span>
         </div>
       </div>
 
       <div class="rule-actions">
-        <button class="btn-toggle" (click)="toggleRuleStatus(rule)" [class.inactive]="rule.status === 'Inactif'">
-          {{ rule.status === 'Actif' ? 'Désactiver' : 'Activer' }}
+        <button class="btn-toggle" (click)="toggleRuleStatus(rule)" [class.inactive]="!rule.active" [title]="!isAdmin ? adminOnlyMessage : ''">
+          {{ rule.active ? 'Désactiver' : 'Activer' }}
         </button>
-        <button class="btn-edit" (click)="editRule(rule)">Éditer</button>
-        <button class="btn-delete" (click)="deleteRule(rule.id)">Supprimer</button>
+        <button class="btn-edit" (click)="editRule(rule)" [title]="!isAdmin ? adminOnlyMessage : ''">Éditer</button>
+        <button class="btn-delete" (click)="deleteRule(rule.id)" [title]="!isAdmin ? adminOnlyMessage : ''">Supprimer</button>
       </div>
     </div>
   </div>
@@ -58,7 +64,7 @@
         <input 
           id="ruleName"
           type="text" 
-          [(ngModel)]="formData.name" 
+          [(ngModel)]="formData.nomRegle" 
           placeholder="Ex: Montant Maximum"
           class="form-input"
         />
@@ -79,7 +85,8 @@
         <label for="ruleType">Type de règle *</label>
         <select 
           id="ruleType"
-          [(ngModel)]="formData.type" 
+          [(ngModel)]="formData.typeRegle" 
+          (change)="onRuleTypeChange()"
           class="form-select"
         >
           <option value="">-- Sélectionnez un type --</option>
@@ -92,21 +99,48 @@
         <input 
           id="ruleThreshold"
           type="number" 
-          [(ngModel)]="formData.threshold" 
+          [(ngModel)]="formData.seuil" 
           placeholder="0"
           class="form-input"
         />
+      </div>
+
+      <div class="form-group" *ngIf="formData.typeRegle === 'montant' || formData.typeRegle === 'frequence'">
+        <label for="rulePeriode">Période de Référence</label>
+        <select 
+          id="rulePeriode"
+          [(ngModel)]="formData.periodeReference" 
+          class="form-select"
+        >
+          <option *ngIf="formData.typeRegle === 'montant'" value="7d">7 Jours</option>
+          <option *ngIf="formData.typeRegle === 'montant'" value="24h">24 Heures</option>
+          <option *ngIf="formData.typeRegle === 'montant'" value="30d">30 Jours</option>
+          <option *ngIf="formData.typeRegle === 'frequence'" value="24h">24 Heures</option>
+          <option *ngIf="formData.typeRegle === 'frequence'" value="7d">7 Jours</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="ruleProfil">Profil Client (optionnel)</label>
+        <select 
+          id="ruleProfil"
+          [(ngModel)]="formData.profilClientId" 
+          class="form-select"
+        >
+          <option value="">-- Aucun profil --</option>
+          <option *ngFor="let profil of profils" [value]="profil.id">{{ profil.label }}</option>
+        </select>
       </div>
 
       <div class="form-group">
         <label for="ruleStatus">Statut</label>
         <select 
           id="ruleStatus"
-          [(ngModel)]="formData.status" 
+          [(ngModel)]="formData.active" 
           class="form-select"
         >
-          <option value="Actif">Actif</option>
-          <option value="Inactif">Inactif</option>
+          <option [value]="true">Actif</option>
+          <option [value]="false">Inactif</option>
         </select>
       </div>
     </div>
@@ -114,6 +148,22 @@
     <div class="modal-footer">
       <button class="btn-cancel" (click)="closeModal()">Annuler</button>
       <button class="btn-submit" (click)="saveRule()">{{ isEditMode ? 'Mettre à jour' : 'Créer' }}</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Accès Refusé -->
+<div *ngIf="showAccessDeniedModal" class="modal-overlay" (click)="closeAccessDeniedModal()">
+  <div class="modal-content modal-access-denied" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>⛔ Accès Refusé</h2>
+      <button class="close-btn" (click)="closeAccessDeniedModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>{{ adminOnlyMessage }}</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closeAccessDeniedModal()">Fermer</button>
     </div>
   </div>
 </div>

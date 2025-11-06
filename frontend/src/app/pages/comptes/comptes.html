@@ -1,6 +1,150 @@
-<div class="page-container">
+<section class="comptes-page">
   <h1>Comptes</h1>
-  <div class="content">
-    <p>Page des comptes - En développement</p>
+
+  <!-- Filtres -->
+  <div class="filters-section">
+    <input type="search"
+           class="filter-search"
+           placeholder="Rechercher par numéro, nom, ville..."
+           [(ngModel)]="searchTerm"
+           (input)="applyFilters()" />
+    
+    <div class="filters-row">
+      <select [(ngModel)]="filterPays" (change)="applyFilters()" class="filter-select">
+        <option value="">Tous les pays</option>
+        <option *ngFor="let pays of getUniqueCountries()" [value]="pays">{{ pays }}</option>
+      </select>
+
+      <select [(ngModel)]="filterType" (change)="applyFilters()" class="filter-select">
+        <option value="">Tous les types</option>
+        <option *ngFor="let type of getTypeClientOptions()" [value]="type.code">
+          {{ type.label }}
+        </option>
+      </select>
+
+      <select [(ngModel)]="filterSurveilles" (change)="applyFilters()" class="filter-select">
+        <option value="">Tous les comptes</option>
+        <option value="true">Surveillés</option>
+        <option value="false">Non surveillés</option>
+      </select>
+    </div>
   </div>
-</div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading">Chargement des comptes...</div>
+
+  <!-- Error -->
+  <div *ngIf="error && !loading" class="error">{{ error }}</div>
+
+  <!-- Content -->
+  <div *ngIf="!loading" class="comptes-content">
+    <!-- Header avec compteur -->
+    <div class="comptes-header">
+      <div class="comptes-count">
+        <span class="count-number">{{ filteredComptes.length }} Comptes</span>
+        <span class="count-details">Total: {{ comptes.length }} | Surveillés: {{ getFollowedCount() }}</span>
+      </div>
+    </div>
+
+    <!-- Tableau -->
+    <div class="comptes-table-wrapper">
+      <div *ngIf="paginatedComptes.length === 0" class="empty-state">
+        <p>Aucun compte trouvé</p>
+      </div>
+
+      <table *ngIf="paginatedComptes.length > 0" class="comptes-table">
+        <thead>
+          <tr>
+            <th class="col-numero">N° Compte</th>
+            <th class="col-nom">Nom</th>
+            <th class="col-type">Type</th>
+            <th class="col-ville">Ville</th>
+            <th class="col-pays">Pays</th>
+            <th class="col-categorie">Catégorie</th>
+            <th class="col-date">Date</th>
+            <th class="col-surveillance">Surveillance</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <ng-container *ngFor="let compte of paginatedComptes">
+            <!-- Ligne principale -->
+            <tr class="compte-row" [class.expanded]="expandedAccountId === compte.id" [class.surveilled]="compte.isSurveilled">
+              <td class="col-numero">{{ compte.numeroCompte }}</td>
+              <td class="col-nom">{{ compte.nomClient }}</td>
+              <td class="col-type"><span class="badge">{{ getTypeClientLabel(compte.typeClient) }}</span></td>
+              <td class="col-ville">{{ compte.ville }}</td>
+              <td class="col-pays">{{ compte.pays }}</td>
+              <td class="col-categorie">{{ compte.categorie }}</td>
+              <td class="col-date">{{ compte.dateCreation | date: 'dd/MM/yyyy' }}</td>
+              <td class="col-surveillance">
+                <span *ngIf="compte.isSurveilled" class="badge badge-danger" title="Statut: {{ compte.suiviStatus }}">
+                  🔴 Surveillé
+                </span>
+                <span *ngIf="!compte.isSurveilled" class="text-muted">-</span>
+              </td>
+              <td class="col-actions">
+                <div class="action-buttons">
+                  <button class="btn-expand" (click)="toggleDetails(compte)">
+                    {{ expandedAccountId === compte.id ? '▼' : '▶' }}
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Ligne de détails -->
+            <tr *ngIf="expandedAccountId === compte.id" class="details-row">
+              <td [attr.colspan]="9">
+                <div class="details-box">
+                  <div class="detail-grid">
+                    <div class="detail-item">
+                      <label>Adresse:</label>
+                      <span>{{ compte.adresse }}</span>
+                    </div>
+                    <div class="detail-item">
+                      <label>Profil:</label>
+                      <span>{{ compte.profilClientId || '—' }}</span>
+                    </div>
+                    <div class="detail-item">
+                      <label>Type Compte:</label>
+                      <span>{{ compte.typeCompte }}</span>
+                    </div>
+                    <div class="detail-item" *ngIf="compte.isSurveilled">
+                      <label>Raison de la surveillance:</label>
+                      <span class="badge badge-danger">{{ compte.suiviRaison || 'Inconnue' }}</span>
+                    </div>
+                    <div class="detail-item" *ngIf="compte.isSurveilled">
+                      <label>Date de détection:</label>
+                      <span>{{ compte.suiviDate | date: 'dd/MM/yyyy à HH:mm' }}</span>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </ng-container>
+        </tbody>
+      </table>
+
+      <!-- Pagination -->
+      <div *ngIf="totalPages > 1" class="pagination">
+        <button
+          class="btn-pagination"
+          (click)="prevPage()"
+          [disabled]="currentPage === 1"
+        >
+          ← Précédent
+        </button>
+        <span class="page-info">
+          Page {{ currentPage }} / {{ totalPages }}
+        </span>
+        <button
+          class="btn-pagination"
+          (click)="nextPage()"
+          [disabled]="currentPage === totalPages"
+        >
+          Suivant →
+        </button>
+      </div>
+    </div>
+  </div>
+</section>

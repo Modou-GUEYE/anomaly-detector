@@ -28,12 +28,10 @@ export class LoginComponent {
         next: (response: any) => {
           this.success = true;
           this.message = 'Connexion réussie !';
-          if (response && response.token) {
-            localStorage.setItem('token', response.token);
-            setTimeout(() => {
-              this.router.navigate(['/dashboard']);
-            }, 1000);
-          }
+          // Le token est déjà stocké par auth.service.ts via le tap operator
+          setTimeout(() => {
+            this.router.navigate(['/dashboard']);
+          }, 1000);
         },
         error: (err: any) => {
           this.success = false;

@@ -1,6 +1,7 @@
 
-
 import { Component, OnInit } from '@angular/core';
+import * as countries from 'i18n-iso-countries';
+import fr from 'i18n-iso-countries/langs/fr.json';
 // Fonction utilitaire pour normaliser les chaînes (sans accents, minuscule)
 function normalizeStr(str: string): string {
   return str.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
@@ -10,9 +11,6 @@ import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-
-import { AnomalyChartComponent } from '../../components/anomaly-chart/anomaly-chart';
-import { NgChartsModule } from 'ng2-charts';
 
 interface Transaction {
   id?: string;
@@ -43,7 +41,7 @@ interface Transaction {
   standalone: true,
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.scss'],
-  imports: [CommonModule, FormsModule, AnomalyChartComponent, NgChartsModule]
+  imports: [CommonModule, FormsModule]
 })
 export class DashboardComponent implements OnInit {
   error = '';
@@ -53,6 +51,7 @@ export class DashboardComponent implements OnInit {
   transactions: Transaction[] = [];
   filteredTransactions: Transaction[] = [];
   paginatedTransactions: Transaction[] = [];
+  alertes: any[] = []; // Alertes pour déterminer le statut des transactions
 
   // Pagination
   currentPage = 1;
@@ -90,20 +89,8 @@ export class DashboardComponent implements OnInit {
     return this.TYPE_CLIENT_LABELS[code] || 'Particulier';
   }
 
-  // Listes pour filtres
-  pays: string[] = [
-    'Bénin',
-    'Burkina Faso',
-    'Côte d’Ivoire',
-    'Guinée-Bissau',
-    'Mali',
-    'Niger',
-    'Sénégal',
-    'Togo'
-  ];
-
-  // Onglets anomalies
-  activeTab: 'overview' | 'type' | 'criticite' = 'overview';
+  // Listes pour filtres - Tous les pays du monde en français
+  pays: string[] = [];
 
   // KPI
   kpi = {
@@ -130,7 +117,14 @@ export class DashboardComponent implements OnInit {
       return;
     }
 
-    // Charger TOUT le dashboard en UNE SEULE requête optimisée
+    // Enregistrer la locale française pour les pays
+    countries.registerLocale(fr);
+    
+    // Charger la liste complète des pays
+    const countryNames = countries.getNames('fr');
+    this.pays = Object.values(countryNames).sort();
+
+    // Charger le dashboard avec un seul endpoint optimisé
     this.dashboardService.getDashboardSummary().subscribe({
       next: (data: any) => {
         // KPIs principaux
@@ -138,9 +132,12 @@ export class DashboardComponent implements OnInit {
         this.kpi.anomaliesDetectees = data.anomalies_count || 0;
         this.kpi.anomaliesTraitees = data.anomalies_treated || 0;
         this.kpi.comptesSurveilles = data.monitored_accounts || 0;
-        // Notifications = anomalies non assignées à un analyste (sera géré par layout)
-        const recentAnomalies = data.recent_anomalies || [];
-        this.kpi.notifications = recentAnomalies.filter((a: any) => !a.analysteAssigneID).length;
+        
+        // Alertes pour déterminer le statut des transactions
+        this.alertes = data.recent_anomalies || [];
+        
+        // Notifications (anomalies non assignées)
+        this.kpi.notifications = this.alertes.filter((a: any) => !a.analysteAssigneID).length;
 
         // Comptages par type d'anomalie
         const byType = data.anomalies_by_type || {};
@@ -149,23 +146,20 @@ export class DashboardComponent implements OnInit {
         this.kpi.entitesBlacklistees = byType['Blacklist'] || 0;
         this.kpi.paysARisque = byType['Pays à risque'] || 0;
 
-        // Transactions pour le tableau
+        // Utiliser les transactions récentes du dashboard summary
         this.transactions = (data.recent_transactions || []).sort((a: any, b: any) => {
           const da = new Date(a.date_operation).getTime();
           const db = new Date(b.date_operation).getTime();
           return db - da;
         });
         
-        // Initialiser le filtre période par défaut
+        // Initialiser les filtres et pagination
         this.filters.periode = "Aujourd'hui";
-        
-        // Appliquer les filtres
         this.applyFilters();
+        this.loading = false;
       },
       error: () => {
         this.error = 'Impossible de charger le résumé du dashboard.';
-      },
-      complete: () => {
         this.loading = false;
       }
     });
@@ -183,6 +177,49 @@ export class DashboardComponent implements OnInit {
     if (statut.toLowerCase().includes('anomal') || statut.toLowerCase().includes('fraude') || statut.toLowerCase().includes('bloqué')) return 'status-alert';
     if (statut.toLowerCase().includes('trait')) return 'status-normal';
     return 'status-normal';
+  }
+
+  // Déterminer le statut d'une transaction basé sur les alertes associées
+  getTransactionStatus(transaction: Transaction): string {
+    if (!transaction.id || !this.alertes || this.alertes.length === 0) {
+      return 'Succès';
+    }
+
+    // Chercher les alertes liées à cette transaction
+    const alertesTransaction = this.alertes.filter(alerte => 
+      alerte.transactionId === transaction.id
+    );
+
+    if (alertesTransaction.length === 0) {
+      return 'Succès';
+    }
+
+    // Vérifier s'il y a des alertes de blocage
+    const alertesBlocage = alertesTransaction.filter(alerte => 
+      alerte.action && alerte.action.toLowerCase() === 'bloquer'
+    );
+
+    if (alertesBlocage.length > 0) {
+      return 'Échec';
+    }
+
+    // Vérifier les alertes critiques (entités interdites)
+    const alertesCritiques = alertesTransaction.filter(alerte => 
+      alerte.niveauCriticite && alerte.niveauCriticite.toLowerCase() === 'haute' ||
+      alerte.type === 'Interdit' || alerte.type === 'Blacklist'
+    );
+
+    if (alertesCritiques.length > 0) {
+      return 'Échec';
+    }
+
+    return 'Succès';
+  }
+
+  // Classe CSS pour le statut de transaction
+  getTransactionStatusClass(transaction: Transaction): string {
+    const status = this.getTransactionStatus(transaction);
+    return status === 'Succès' ? 'status-success' : 'status-failure';
   }
 
   // Filtrage local (appelle ceci sur (ngModelChange) si tu veux filtrage live)

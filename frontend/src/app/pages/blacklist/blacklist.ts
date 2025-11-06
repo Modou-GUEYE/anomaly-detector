@@ -44,7 +44,7 @@ export class BlacklistComponent implements OnInit {
   };
 
   // Options
-  typeOptions = ['Blacklist', 'PEP', 'Surveillée', 'Interdit'];
+  typeOptions = ['Blacklist', 'PEP', 'Surveillés', 'Interdit'];
 
   constructor(private blacklistService: BlacklistService) {}
 

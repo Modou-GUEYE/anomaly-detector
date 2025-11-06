@@ -31,6 +31,40 @@
   background: #1f4db8;
 }
 
+// Modal Accès Refusé
+.modal-access-denied {
+  max-width: 400px;
+  
+  .modal-header {
+    border-bottom: 2px solid #f59e0b;
+    h2 {
+      color: #d97706;
+    }
+  }
+  
+  .modal-body {
+    padding: 24px;
+    text-align: center;
+    
+    p {
+      font-size: 1.1rem;
+      color: #333;
+      margin: 0;
+    }
+  }
+  
+  .modal-footer {
+    border-top: 1px solid #e5e7eb;
+    
+    .btn-cancel {
+      background: #d97706;
+      
+      &:hover {
+        background: #b45309;
+      }
+    }
+  }
+}
 .rules-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -368,4 +402,20 @@
   .modal-header h2 {
     font-size: 1.1rem;
   }
+}
+
+// Boutons
+.btn-primary {
+  background: #2E6CF2;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background: #1f4db8;
 }
