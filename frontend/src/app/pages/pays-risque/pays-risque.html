@@ -40,17 +40,28 @@
     <div *ngIf="showForm" class="form-section add-form">
       <h3>Ajouter un nouveau pays</h3>
       <div class="form-group">
-        <input
-          type="text"
-          placeholder="Nom du pays..."
-          [(ngModel)]="newPaysName"
-          (keyup.enter)="addPays()"
-          class="form-input"
-        />
+        <div class="input-row">
+          <input
+            type="text"
+            placeholder="Nom du pays *"
+            [(ngModel)]="newPaysName"
+            (keyup.enter)="addPays()"
+            class="form-input form-input-name"
+          />
+          <input
+            type="text"
+            placeholder="Code ISO * (ex: SN)"
+            [(ngModel)]="newPaysCode"
+            maxlength="2"
+            (keyup.enter)="addPays()"
+            class="form-input form-input-code"
+            required
+          />
+        </div>
         <button
           class="btn-submit"
           (click)="addPays()"
-          [disabled]="submitting || !newPaysName.trim()"
+          [disabled]="submitting || !newPaysName.trim() || !newPaysCode.trim()"
         >
           {{ submitting ? 'Ajout en cours...' : 'Ajouter' }}
         </button>
@@ -60,19 +71,30 @@
     <!-- Formulaire d'édition -->
     <div *ngIf="showEditForm && editingPays" class="form-section edit-form">
       <h3>Éditer le pays</h3>
-      <p class="info-text">Ancien nom: <strong>{{ editingPays }}</strong></p>
+      <p class="info-text">Ancien: <strong>{{ editingPays.nomPays }}</strong> <span *ngIf="editingPays.code">({{ editingPays.code }})</span></p>
       <div class="form-group">
-        <input
-          type="text"
-          placeholder="Nouveau nom du pays..."
-          [(ngModel)]="editedPaysName"
-          (keyup.enter)="savePaysEdit()"
-          class="form-input"
-        />
+        <div class="input-row">
+          <input
+            type="text"
+            placeholder="Nouveau nom du pays *"
+            [(ngModel)]="editedPaysName"
+            (keyup.enter)="savePaysEdit()"
+            class="form-input form-input-name"
+          />
+          <input
+            type="text"
+            placeholder="Code ISO * (ex: SN)"
+            [(ngModel)]="editedPaysCode"
+            maxlength="2"
+            (keyup.enter)="savePaysEdit()"
+            class="form-input form-input-code"
+            required
+          />
+        </div>
         <button
           class="btn-submit"
           (click)="savePaysEdit()"
-          [disabled]="submitting || !editedPaysName.trim()"
+          [disabled]="submitting || !editedPaysName.trim() || !editedPaysCode.trim()"
         >
           {{ submitting ? 'Mise à jour...' : 'Mettre à jour' }}
         </button>
@@ -84,16 +106,14 @@
           Annuler
         </button>
       </div>
+      <p class="info-text-small">* Champs obligatoires</p>
     </div>
 
     <!-- Formulaire d'import -->
     <div *ngIf="showImportForm" class="form-section import-form">
       <h3>Importer des pays</h3>
       <p class="info-text">
-        Formats acceptés: CSV, JSON ou Excel (.xlsx, .xls). Le fichier doit contenir une colonne "nom_pays" ou être un tableau de noms.
-      </p>
-      <p class="info-text">
-        <strong>Pour Excel :</strong> Les noms de pays doivent être dans la première colonne. La première ligne peut contenir un en-tête (nom_pays, pays, country, etc.).
+        Formats acceptés: CSV, JSON ou Excel (.xlsx, .xls).
       </p>
       <div class="form-group">
         <input
@@ -128,12 +148,16 @@
         <thead>
           <tr>
             <th class="col-pays">Pays</th>
+            <th class="col-code">Code ISO *</th>
             <th class="col-actions">Actions</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let p of paginatedPays" class="pays-row">
-            <td class="col-pays">{{ p }}</td>
+          <tr *ngFor="let p of paginatedPays" class="pays-row" [class.highlight]="p.nomPays === highlightPaysNom">
+            <td class="col-pays">{{ p.nomPays }}</td>
+            <td class="col-code">
+              <span class="code-badge">{{ p.code }}</span>
+            </td>
             <td class="col-actions">
               <div class="action-buttons">
                 <button

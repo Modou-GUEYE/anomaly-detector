@@ -55,6 +55,11 @@ export class ComptesComponent implements OnInit, OnDestroy {
   // Tri
   sortBy = 'numeroCompte';
   sortOrder: 'asc' | 'desc' = 'asc';
+  private lastSortedKey = '';
+  private lastSortedOrder: 'asc' | 'desc' = 'asc';
+
+  // Cache liste pays (amélioration #3)
+  allCountries: string[] = [];
 
   private destroy$ = new Subject<void>();
 
@@ -106,11 +111,20 @@ export class ComptesComponent implements OnInit, OnDestroy {
           
           this.applyFilters();
           this.loading = false;
+          // Initialiser cache pays si pas déjà fait
+          if (this.allCountries.length === 0) {
+            try {
+              const names = countries.getNames('fr');
+              this.allCountries = Object.values(names).sort() as string[];
+            } catch {
+              this.allCountries = [];
+            }
+          }
         },
         error: (err: any) => {
           this.error = 'Erreur lors du chargement des comptes';
           this.loading = false;
-          console.error('Erreur:', err);
+          // Erreur déjà reflétée dans l'UI; log supprimé (#4)
           
           // Fallback: charger juste les comptes si suivi échoue
           this.profileService.getAccounts()
@@ -144,7 +158,11 @@ export class ComptesComponent implements OnInit, OnDestroy {
     // Filtre par pays
     if (this.filterPays) {
       const term = normalizeStr(this.filterPays);
-      filtered = filtered.filter(c => normalizeStr(c.pays || '') === term);
+      filtered = filtered.filter(c => {
+        // Convertir le code pays en nom et comparer
+        const nomPays = this.getCountryNameFromCode(c.pays);
+        return normalizeStr(nomPays) === term;
+      });
     }
 
     // Filtre par type
@@ -170,26 +188,27 @@ export class ComptesComponent implements OnInit, OnDestroy {
   }
 
   sortComptes(comptes: AccountWithSuivi[]): AccountWithSuivi[] {
+    // Optimisation (#5): ne pas re-trier si clé & ordre identiques
+    if (this.lastSortedKey === this.sortBy && this.lastSortedOrder === this.sortOrder) {
+      return comptes; // Déjà trié sur ces critères
+    }
+    const keyExtractors: Record<string, (c: AccountWithSuivi) => any> = {
+      numeroCompte: c => c.numeroCompte || '',
+      nomClient: c => c.nomClient || '',
+      dateCreation: c => new Date(c.dateCreation).getTime()
+    };
+    const extractor = keyExtractors[this.sortBy] || keyExtractors['numeroCompte'];
     const multiplier = this.sortOrder === 'asc' ? 1 : -1;
-    return comptes.sort((a, b) => {
-      let aVal: any = '';
-      let bVal: any = '';
-
-      if (this.sortBy === 'numeroCompte') {
-        aVal = a.numeroCompte || '';
-        bVal = b.numeroCompte || '';
-      } else if (this.sortBy === 'nomClient') {
-        aVal = a.nomClient || '';
-        bVal = b.nomClient || '';
-      } else if (this.sortBy === 'dateCreation') {
-        aVal = new Date(a.dateCreation).getTime();
-        bVal = new Date(b.dateCreation).getTime();
-      }
-
+    comptes.sort((a, b) => {
+      const aVal = extractor(a);
+      const bVal = extractor(b);
       if (aVal < bVal) return -1 * multiplier;
       if (aVal > bVal) return 1 * multiplier;
       return 0;
     });
+    this.lastSortedKey = this.sortBy;
+    this.lastSortedOrder = this.sortOrder;
+    return comptes;
   }
 
   updatePagination() {
@@ -231,10 +250,25 @@ export class ComptesComponent implements OnInit, OnDestroy {
     this.applyFilters();
   }
 
+  // Convertir un code pays ISO alpha-2 en nom (ex: "SN" → "Sénégal")
+  getCountryNameFromCode(code: string): string {
+    if (!code) return '';
+    const cleaned = code.trim().toUpperCase();
+    // Guard (#6): code ISO alpha-2 attendu
+    if (!/^[A-Z]{2}$/.test(cleaned)) {
+      return cleaned; // Code non standard, le retourner tel quel
+    }
+    try {
+      const name = countries.getName(cleaned, 'fr');
+      return name || cleaned;
+    } catch {
+      return cleaned;
+    }
+  }
+
   getUniqueCountries(): string[] {
-    // Utiliser la liste complète des pays de la bibliothèque i18n-iso-countries
-    const countryNames = countries.getNames('fr');
-    return Object.values(countryNames).sort() as string[];
+    // Utiliser la liste mise en cache (amélioration #3)
+    return this.allCountries;
   }
 
   getTypeClientOptions(): { code: string; label: string }[] {

@@ -32,6 +32,7 @@ interface Anomaly {
 export class AnomaliesComponent implements OnInit {
   anomalies: Anomaly[] = [];
   filteredAnomalies: Anomaly[] = [];
+  severityOptions: string[] = [];
   loading = true;
   error = '';
   currentPage = 1;
@@ -61,12 +62,22 @@ export class AnomaliesComponent implements OnInit {
     this.loading = true;
     this.alertService.getAnomalies().subscribe({
       next: (data: any) => {
-        console.log('Données reçues de l\'API:', data);
         this.anomalies = Array.isArray(data) ? data : (data.anomalies || data.data || []);
         
-        this.anomalies.forEach(anomaly => {
-          this.selectedStatus[anomaly.id] = anomaly.statut;
-        });
+          // Normaliser les libellés de sévérité et préparer les options de filtre
+          this.anomalies.forEach(anomaly => {
+            this.selectedStatus[anomaly.id] = anomaly.statut;
+            anomaly.niveauCriticite = this.normalizeSeverity(anomaly.niveauCriticite);
+          });
+
+          // Construire la liste unique d'options de sévérité dans un ordre raisonnable
+          const order = ['Critique', 'Haute', 'Moyenne', 'Faible'];
+          const uniques = Array.from(new Set(this.anomalies.map(a => a.niveauCriticite).filter(Boolean)));
+          this.severityOptions = uniques.sort((a, b) => {
+            const ia = order.indexOf(a) === -1 ? order.length : order.indexOf(a);
+            const ib = order.indexOf(b) === -1 ? order.length : order.indexOf(b);
+            return ia - ib || a.localeCompare(b);
+          });
         
         this.applyFilters();
         this.loading = false;
@@ -77,6 +88,23 @@ export class AnomaliesComponent implements OnInit {
         this.loading = false;
       }
     });
+  }
+
+  /**
+   * Normalise différents libellés/valeurs de sévérité en labels FR cohérents
+   */
+  normalizeSeverity(value?: string): string {
+    if (!value) return '';
+    const v = value.toString().trim().toLowerCase();
+    if (!v) return '';
+
+    if (['critique', 'critical', 'severe'].includes(v)) return 'Critique';
+    if (['haute', 'high'].includes(v)) return 'Haute';
+    if (['moyenne', 'medium'].includes(v)) return 'Moyenne';
+    if (['basse', 'faible', 'low'].includes(v)) return 'Faible';
+
+    // Capitaliser le premier caractère par défaut
+    return value.charAt(0).toUpperCase() + value.slice(1);
   }
 
   applyFilters() {

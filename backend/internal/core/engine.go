@@ -1,9 +1,7 @@
-// ===================== PACKAGE & IMPORTS =====================
 package core
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -78,61 +76,70 @@ func (re *RulesEngine) AnalyzeTransaction(ctx context.Context, tx *models.Transa
 	} else {
 		meta, err := re.store.GetAlertMetaByType(ctx, "Pays à risque")
 		if err != nil || meta == nil {
-			// Meta pas trouvée, pas d'alerte
 		} else {
-			var paysList []string
-			if len(reglePaysRisque.ListePays) > 0 {
-				if err := json.Unmarshal(reglePaysRisque.ListePays, &paysList); err != nil {
-					// Unmarshal erreur, continue
-				}
-			}
-			for _, pays := range paysList {
-				if isPayerPartner && strings.EqualFold(tx.PaysPayeur, pays) {
-					paysRisque := pays
-					regleID := reglePaysRisque.ID
-					action := actionFromCriticite(meta.NiveauCriticite)
-					alerte := &models.Alerte{
-						TransactionID:     tx.ID,
-						Code:              meta.Code,
-						Type:              meta.Type,
-						Statut:            meta.Statut,
-						Message:           meta.Message,
-						NiveauCriticite:   meta.NiveauCriticite,
-						ScoreRisque:       calculerScoreRisque(reglePaysRisque, tx),
-						DateGeneration:    tx.DateOperation,
-						Action:            action,
-						NumeroCompte:      tx.NumeroComptePayeur,
-						PaysRisque:        &paysRisque,
-						RegleDeclencheeID: &regleID,
+			// Récupérer les pays à risque depuis la nouvelle table
+			paysARisque, err := re.store.GetAllPaysARisque(ctx)
+			if err != nil {
+				// Erreur de récupération, continue
+			} else {
+				for _, paysRecord := range paysARisque {
+					// Comparer avec le CODE pays (ISO alpha-2), pas le nom
+					codePays := paysRecord.Code
+					if isPayerPartner && strings.EqualFold(tx.PaysPayeur, codePays) {
+						paysRisque := paysRecord.NomPays // Pour le message d'alerte
+						regleID := reglePaysRisque.ID
+						// Utiliser l'action de la règle si définie, sinon fallback sur criticité
+						action := reglePaysRisque.Action
+						if action == "" {
+							action = actionFromCriticite(meta.NiveauCriticite)
+						}
+						alerte := &models.Alerte{
+							TransactionID:     tx.ID,
+							Code:              meta.Code,
+							Type:              meta.Type,
+							Statut:            meta.Statut,
+							Message:           meta.Message,
+							NiveauCriticite:   meta.NiveauCriticite,
+							ScoreRisque:       calculerScoreRisque(reglePaysRisque, tx),
+							DateGeneration:    tx.DateOperation,
+							Action:            action,
+							NumeroCompte:      tx.NumeroComptePayeur,
+							PaysRisque:        &paysRisque,
+							RegleDeclencheeID: &regleID,
+						}
+						alertesGenerees = append(alertesGenerees, alerte)
+						// Si l'action est "bloquer", refuser la transaction
+						if action == "bloquer" {
+							return alertesGenerees, fmt.Errorf("%w: transaction bloquée - pays à risque détecté (%s)", ErrTransactionRefused, paysRisque)
+						}
 					}
-					alertesGenerees = append(alertesGenerees, alerte)
-					// Si l'action est "bloquer", refuser la transaction
-					if action == "bloquer" {
-						return alertesGenerees, fmt.Errorf("%w: transaction bloquée - pays à risque détecté (%s)", ErrTransactionRefused, pays)
-					}
-				}
-				if isPayeePartner && strings.EqualFold(tx.PaysPaye, pays) {
-					paysRisque := pays
-					regleID := reglePaysRisque.ID
-					action := actionFromCriticite(meta.NiveauCriticite)
-					alerte := &models.Alerte{
-						TransactionID:     tx.ID,
-						Code:              meta.Code,
-						Type:              meta.Type,
-						Statut:            meta.Statut,
-						Message:           meta.Message,
-						NiveauCriticite:   meta.NiveauCriticite,
-						ScoreRisque:       calculerScoreRisque(reglePaysRisque, tx),
-						DateGeneration:    tx.DateOperation,
-						Action:            action,
-						NumeroCompte:      tx.NumeroComptePaye,
-						PaysRisque:        &paysRisque,
-						RegleDeclencheeID: &regleID,
-					}
-					alertesGenerees = append(alertesGenerees, alerte)
-					// Si l'action est "bloquer", refuser la transaction
-					if action == "bloquer" {
-						return alertesGenerees, fmt.Errorf("%w: transaction bloquée - pays à risque détecté (%s)", ErrTransactionRefused, pays)
+					if isPayeePartner && strings.EqualFold(tx.PaysPaye, codePays) {
+						paysRisque := paysRecord.NomPays // Pour le message d'alerte
+						regleID := reglePaysRisque.ID
+						// Utiliser l'action de la règle si définie, sinon fallback sur criticité
+						action := reglePaysRisque.Action
+						if action == "" {
+							action = actionFromCriticite(meta.NiveauCriticite)
+						}
+						alerte := &models.Alerte{
+							TransactionID:     tx.ID,
+							Code:              meta.Code,
+							Type:              meta.Type,
+							Statut:            meta.Statut,
+							Message:           meta.Message,
+							NiveauCriticite:   meta.NiveauCriticite,
+							ScoreRisque:       calculerScoreRisque(reglePaysRisque, tx),
+							DateGeneration:    tx.DateOperation,
+							Action:            action,
+							NumeroCompte:      tx.NumeroComptePaye,
+							PaysRisque:        &paysRisque,
+							RegleDeclencheeID: &regleID,
+						}
+						alertesGenerees = append(alertesGenerees, alerte)
+						// Si l'action est "bloquer", refuser la transaction
+						if action == "bloquer" {
+							return alertesGenerees, fmt.Errorf("%w: transaction bloquée - pays à risque détecté (%s)", ErrTransactionRefused, paysRisque)
+						}
 					}
 				}
 			}
@@ -162,12 +169,10 @@ func actionFromCriticite(criticite string) string {
 	switch strings.ToLower(criticite) {
 	case "haute":
 		return "bloquer"
-	case "moyenne":
+	case "moyenne", "faible":
 		return "surveiller"
-	case "faible":
-		return "notifier"
 	default:
-		return "notifier"
+		return "surveiller"
 	}
 }
 
@@ -194,14 +199,17 @@ func (re *RulesEngine) applyRulesForAccount(ctx context.Context, tx *models.Tran
 					if err != nil || meta == nil {
 						return nil, fmt.Errorf("meta-donnée d'alerte introuvable pour le type '%s'", regle.TypeRegle)
 					}
-					action := actionFromCriticite(meta.NiveauCriticite)
+					// Utiliser l'action de la règle si définie, sinon fallback sur criticité
+					action := regle.Action
+					if action == "" {
+						action = actionFromCriticite(meta.NiveauCriticite)
+					}
 					alerte := &models.Alerte{
-						TransactionID: tx.ID,
-						Code:          meta.Code,
-						Type:          meta.Type,
-						Statut:        meta.Statut,
-						Message:       meta.Message,
-						//Message:         fmt.Sprintf("Cumul sur 7 jours dépassant le seuil autorisé. Montant cumulé: %.2f FCFA (seuil: %.2f)", total, regle.Seuil),
+						TransactionID:     tx.ID,
+						Code:              meta.Code,
+						Type:              meta.Type,
+						Statut:            meta.Statut,
+						Message:           meta.Message,
 						NiveauCriticite:   meta.NiveauCriticite,
 						ScoreRisque:       calculerScoreRisque(&regle, tx),
 						DateGeneration:    tx.DateOperation,
@@ -237,7 +245,11 @@ func (re *RulesEngine) applyRulesForAccount(ctx context.Context, tx *models.Tran
 				// Ajout du suivi_blacklist pour violation de la règle de fréquence
 				meta, err := re.store.GetAlertMetaByType(ctx, regle.TypeRegle)
 				if err == nil && meta != nil {
-					action := actionFromCriticite(meta.NiveauCriticite)
+					// Utiliser l'action de la règle si définie, sinon fallback sur criticité
+					action := regle.Action
+					if action == "" {
+						action = actionFromCriticite(meta.NiveauCriticite)
+					}
 					_ = re.store.CreateSuiviBlacklist(ctx, tx.ID, numeroCompte, action, regle.TypeRegle)
 				}
 			}
@@ -248,7 +260,11 @@ func (re *RulesEngine) applyRulesForAccount(ctx context.Context, tx *models.Tran
 			if err != nil || meta == nil {
 				return nil, fmt.Errorf("meta-donnée d'alerte introuvable pour le type '%s'", regle.TypeRegle)
 			}
-			action := actionFromCriticite(meta.NiveauCriticite)
+			// Utiliser l'action de la règle si définie, sinon fallback sur criticité
+			action := regle.Action
+			if action == "" {
+				action = actionFromCriticite(meta.NiveauCriticite)
+			}
 			alerte := &models.Alerte{
 				TransactionID:     tx.ID,
 				Code:              meta.Code,

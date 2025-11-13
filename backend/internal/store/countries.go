@@ -2,7 +2,6 @@ package store
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -12,9 +11,203 @@ import (
 	"anomaly-detector/internal/models"
 )
 
-// ===================== GESTION PAYS À RISQUE =====================
+// ===================== GESTION PAYS À RISQUE (Nouvelle Architecture) =====================
 
-// GetReglePaysRisqueActive retourne la règle pays_risque active avec la liste des pays.
+// GetAllPaysARisque récupère tous les pays à risque actifs
+func (s *Store) GetAllPaysARisque(ctx context.Context) ([]models.PaysRisque, error) {
+	var pays []models.PaysRisque
+	result := s.gormDB.WithContext(ctx).Where("active = ?", true).Order("nom_pays ASC").Find(&pays)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return pays, nil
+}
+
+// IsPaysARisque vérifie si un pays est dans la liste des pays à risque actifs (par nom)
+func (s *Store) IsPaysARisque(ctx context.Context, nomPays string) (bool, error) {
+	var count int64
+	result := s.gormDB.WithContext(ctx).Model(&models.PaysRisque{}).
+		Where("UPPER(nom_pays) = ? AND active = ?", strings.ToUpper(nomPays), true).
+		Count(&count)
+
+	if result.Error != nil {
+		return false, result.Error
+	}
+
+	return count > 0, nil
+}
+
+// IsPaysARisqueByCode vérifie si un pays est dans la liste des pays à risque actifs (par code ISO alpha-2)
+func (s *Store) IsPaysARisqueByCode(ctx context.Context, codePays string) (bool, error) {
+	var count int64
+	result := s.gormDB.WithContext(ctx).Model(&models.PaysRisque{}).
+		Where("UPPER(code) = ? AND active = ?", strings.ToUpper(codePays), true).
+		Count(&count)
+
+	if result.Error != nil {
+		return false, result.Error
+	}
+
+	return count > 0, nil
+}
+
+// AddPaysARisque ajoute un pays à la liste des pays à risque
+func (s *Store) AddPaysARisque(ctx context.Context, nomPays string, userID string) error {
+	pays := &models.PaysRisque{
+		NomPays: nomPays,
+		Active:  true,
+	}
+	return s.AddPaysARisqueWithCode(ctx, pays, userID)
+}
+
+// AddPaysARisqueWithCode ajoute un pays à risque avec son code ISO obligatoire
+func (s *Store) AddPaysARisqueWithCode(ctx context.Context, pays *models.PaysRisque, userID string) error {
+	// Validation: le code est obligatoire
+	if pays.Code == "" || len(pays.Code) != 2 {
+		return fmt.Errorf("le code pays ISO alpha-2 est obligatoire (2 caractères)")
+	}
+
+	// Vérifier si le pays existe déjà
+	var existing models.PaysRisque
+	result := s.gormDB.WithContext(ctx).Where("UPPER(nom_pays) = ?", strings.ToUpper(pays.NomPays)).First(&existing)
+
+	if result.Error == nil {
+		// Le pays existe déjà, on le réactive et met à jour le code
+		updates := map[string]interface{}{
+			"active": true,
+			"code":   pays.Code,
+		}
+		if err := s.gormDB.WithContext(ctx).Model(&existing).Updates(updates).Error; err != nil {
+			return err
+		}
+		return nil // Déjà présent
+	}
+
+	if !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return result.Error
+	}
+
+	// Créer le nouveau pays avec le code
+	if err := s.gormDB.WithContext(ctx).Select("NomPays", "Active", "Code").Create(pays).Error; err != nil {
+		// Logger l'échec si userID fourni
+		if userID != "" {
+			_ = s.LogAction(ctx, userID, fmt.Sprintf("Échec ajout pays '%s'", pays.NomPays), "Pays à Risque", "", fmt.Sprintf("Erreur: %v", err), "échec")
+		}
+		return err
+	}
+
+	// Lier explicitement au rule 'pays_risque' active si disponible
+	var regle models.RegleControle
+	regleResult := s.gormDB.WithContext(ctx).Where("type_regle = ? AND active = ?", "pays_risque", true).First(&regle)
+	if regleResult.Error == nil {
+		// Mettre à jour la FK
+		if err := s.gormDB.WithContext(ctx).Model(pays).Update("regle_controle_id", regle.ID).Error; err != nil {
+			fmt.Printf("Warn: impossible de lier le pays %s à la règle pays_risque: %v\n", pays.NomPays, err)
+		} else {
+			pays.RegleControleID = &regle.ID
+		}
+	} else if !errors.Is(regleResult.Error, gorm.ErrRecordNotFound) {
+		fmt.Printf("Warn: erreur lors de la récupération de la règle pays_risque active: %v\n", regleResult.Error)
+	}
+
+	// Logging d'audit
+	if userID != "" {
+		actionDescription := fmt.Sprintf("Ajout du pays à risque '%s'", pays.NomPays)
+		if err := s.LogAction(ctx, userID, actionDescription, "Pays à Risque", pays.ID, fmt.Sprintf("Ajout du pays: %s", pays.NomPays), "succès"); err != nil {
+			fmt.Printf("Erreur lors du logging d'audit pour l'ajout du pays %s: %v\n", pays.NomPays, err)
+		}
+	}
+
+	return nil
+}
+
+// LinkPaysRisqueToRegle associe toutes les entrées pays_risque sans liaison à la règle 'pays_risque' active
+func (s *Store) LinkPaysRisqueToRegle(ctx context.Context) error {
+	var regle models.RegleControle
+	if err := s.gormDB.WithContext(ctx).Where("type_regle = ? AND active = ?", "pays_risque", true).First(&regle).Error; err != nil {
+		return fmt.Errorf("règle pays_risque active introuvable: %w", err)
+	}
+
+	// Mettre à jour uniquement les pays sans FK définie
+	result := s.gormDB.WithContext(ctx).Model(&models.PaysRisque{}).Where("regle_controle_id IS NULL").Update("regle_controle_id", regle.ID)
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
+}
+
+// DeletePaysARisque supprime (désactive) un pays de la liste des pays à risque
+func (s *Store) DeletePaysARisque(ctx context.Context, nomPays string, userID string) error {
+	// Trouver le pays
+	var pays models.PaysRisque
+	result := s.gormDB.WithContext(ctx).Where("UPPER(nom_pays) = ?", strings.ToUpper(nomPays)).First(&pays)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	// Désactiver au lieu de supprimer (soft delete logique)
+	if err := s.gormDB.WithContext(ctx).Model(&pays).Update("active", false).Error; err != nil {
+		return err
+	}
+
+	// Logging d'audit
+	if userID != "" {
+		actionDescription := fmt.Sprintf("Suppression du pays à risque '%s'", nomPays)
+		if err := s.LogAction(ctx, userID, actionDescription, "Pays à Risque", pays.ID, fmt.Sprintf("Suppression du pays: %s", nomPays), "succès"); err != nil {
+			fmt.Printf("Erreur lors du logging d'audit pour la suppression du pays %s: %v\n", nomPays, err)
+		}
+	}
+
+	return nil
+}
+
+// UpdatePaysARisque met à jour le nom d'un pays dans la liste
+func (s *Store) UpdatePaysARisque(ctx context.Context, ancienNom, nouveauNom string, userID string) error {
+	return s.UpdatePaysARisqueWithCode(ctx, ancienNom, nouveauNom, "", userID)
+}
+
+// UpdatePaysARisqueWithCode met à jour le nom et le code d'un pays dans la liste
+func (s *Store) UpdatePaysARisqueWithCode(ctx context.Context, ancienNom, nouveauNom, code string, userID string) error {
+	// Validation: le code est obligatoire
+	if code == "" || len(code) != 2 {
+		return fmt.Errorf("le code pays ISO alpha-2 est obligatoire (2 caractères)")
+	}
+
+	// Trouver le pays
+	var pays models.PaysRisque
+	result := s.gormDB.WithContext(ctx).Where("UPPER(nom_pays) = ?", strings.ToUpper(ancienNom)).First(&pays)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	// Mettre à jour le nom et le code
+	updates := map[string]interface{}{
+		"nom_pays": nouveauNom,
+		"code":     code,
+	}
+
+	if err := s.gormDB.WithContext(ctx).Model(&pays).Updates(updates).Error; err != nil {
+		return err
+	}
+
+	// Logging d'audit
+	if userID != "" {
+		actionDescription := fmt.Sprintf("Modification du pays à risque '%s' en '%s'", ancienNom, nouveauNom)
+		details := fmt.Sprintf("Modification du pays: %s → %s", ancienNom, nouveauNom)
+		if code != "" {
+			details += fmt.Sprintf(", code: %s", code)
+		}
+		if err := s.LogAction(ctx, userID, actionDescription, "Pays à Risque", pays.ID, details, "succès"); err != nil {
+			fmt.Printf("Erreur lors du logging d'audit pour la modification du pays %s: %v\n", ancienNom, err)
+		}
+	}
+
+	return nil
+}
+
+// GetReglePaysRisqueActive retourne la règle pays_risque active (pour compatibilité)
+// Note: Maintenant que les pays sont dans une table séparée, cette méthode
+// est principalement utilisée pour vérifier si la règle est active
 func (s *Store) GetReglePaysRisqueActive(ctx context.Context) (*models.RegleControle, error) {
 	var regle models.RegleControle
 	result := s.gormDB.WithContext(ctx).Where("type_regle = ? AND active = ?", "pays_risque", true).First(&regle)
@@ -22,257 +215,4 @@ func (s *Store) GetReglePaysRisqueActive(ctx context.Context) (*models.RegleCont
 		return nil, result.Error
 	}
 	return &regle, nil
-}
-
-// IsPaysARisque vérifie si un pays est dans la liste des pays à risque (de la règle "Pays à risque").
-func (s *Store) IsPaysARisque(ctx context.Context, pays string) (bool, error) {
-	var regle models.RegleControle
-	result := s.gormDB.WithContext(ctx).Where("type_regle = ?", "pays_risque").First(&regle)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return false, nil
-		}
-		return false, result.Error
-	}
-
-	// Décoder la liste des pays depuis le JSON - gérer le double-encoding
-	var listePays []string
-	if len(regle.ListePays) > 0 {
-		err := json.Unmarshal(regle.ListePays, &listePays)
-		if err != nil {
-			// Essayer de récupérer comme string puis re-unmarshal
-			var jsonStr string
-			if err2 := json.Unmarshal(regle.ListePays, &jsonStr); err2 == nil {
-				err = json.Unmarshal([]byte(jsonStr), &listePays)
-				if err != nil {
-					return false, err
-				}
-			} else {
-				return false, err
-			}
-		}
-	}
-
-	// Vérifier si le pays est dans la liste (case-insensitive)
-	paysUpper := strings.ToUpper(pays)
-	for _, p := range listePays {
-		if strings.ToUpper(p) == paysUpper {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-// GetAllPaysARisque récupère tous les pays à risque de la règle "Pays à risque".
-func (s *Store) GetAllPaysARisque(ctx context.Context) ([]string, error) {
-	var regle models.RegleControle
-	result := s.gormDB.WithContext(ctx).Where("type_regle = ?", "pays_risque").First(&regle)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return []string{}, nil
-		}
-		return nil, result.Error
-	}
-
-	// Décoder la liste des pays depuis le JSON
-	var listePays []string
-	if len(regle.ListePays) > 0 {
-		// Gerer le double-encoding: si c'est une chaîne entre guillemets, l'unmarshal d'abord en string
-		err := json.Unmarshal(regle.ListePays, &listePays)
-		if err != nil {
-			// Essayer de récupérer comme string puis re-unmarshal
-			var jsonStr string
-			if err2 := json.Unmarshal(regle.ListePays, &jsonStr); err2 == nil {
-				err = json.Unmarshal([]byte(jsonStr), &listePays)
-				if err != nil {
-					return nil, err
-				}
-			} else {
-				return nil, err
-			}
-		}
-	} else {
-		listePays = []string{}
-	}
-
-	return listePays, nil
-}
-
-// AddPaysARisque ajoute un pays à la liste des pays à risque.
-func (s *Store) AddPaysARisque(ctx context.Context, nomPays string, userID string) error {
-	var regle models.RegleControle
-	result := s.gormDB.WithContext(ctx).Where("type_regle = ?", "pays_risque").First(&regle)
-	if result.Error != nil {
-		return result.Error
-	}
-
-	// Décoder la liste actuelle - gérer le double-encoding
-	var listePays []string
-	if len(regle.ListePays) > 0 {
-		err := json.Unmarshal(regle.ListePays, &listePays)
-		if err != nil {
-			// Essayer de récupérer comme string puis re-unmarshal
-			var jsonStr string
-			if err2 := json.Unmarshal(regle.ListePays, &jsonStr); err2 == nil {
-				err = json.Unmarshal([]byte(jsonStr), &listePays)
-				if err != nil {
-					return err
-				}
-			} else {
-				return err
-			}
-		}
-	}
-
-	// Vérifier si le pays existe déjà
-	paysUpper := strings.ToUpper(nomPays)
-	for _, p := range listePays {
-		if strings.ToUpper(p) == paysUpper {
-			return nil // Déjà présent
-		}
-	}
-
-	// Ajouter le pays
-	listePays = append(listePays, nomPays)
-
-	// Encoder et mettre à jour
-	newListeJSON, err := json.Marshal(listePays)
-	if err != nil {
-		return err
-	}
-
-	err = s.gormDB.WithContext(ctx).Model(&regle).Update("liste_pays", string(newListeJSON)).Error
-	if err != nil {
-		return err
-	}
-
-	// Logging d'audit automatique si userID fourni
-	if userID != "" {
-		actionDescription := fmt.Sprintf("Ajout du pays à risque '%s'", nomPays)
-		auditErr := s.LogAction(ctx, userID, actionDescription, "Pays à Risque", regle.ID, fmt.Sprintf("Ajout du pays: %s", nomPays), "succès")
-		if auditErr != nil {
-			// Ne pas faire échouer l'ajout si le logging échoue, mais logger l'erreur
-			fmt.Printf("Erreur lors du logging d'audit pour l'ajout du pays %s: %v\n", nomPays, auditErr)
-		}
-	}
-
-	return nil
-}
-
-// DeletePaysARisque supprime un pays de la liste des pays à risque.
-func (s *Store) DeletePaysARisque(ctx context.Context, nomPays string, userID string) error {
-	var regle models.RegleControle
-	result := s.gormDB.WithContext(ctx).Where("type_regle = ?", "pays_risque").First(&regle)
-	if result.Error != nil {
-		return result.Error
-	}
-
-	// Décoder la liste actuelle - gérer le double-encoding
-	var listePays []string
-	if len(regle.ListePays) > 0 {
-		err := json.Unmarshal(regle.ListePays, &listePays)
-		if err != nil {
-			// Essayer de récupérer comme string puis re-unmarshal
-			var jsonStr string
-			if err2 := json.Unmarshal(regle.ListePays, &jsonStr); err2 == nil {
-				err = json.Unmarshal([]byte(jsonStr), &listePays)
-				if err != nil {
-					return err
-				}
-			} else {
-				return err
-			}
-		}
-	}
-
-	// Filtrer le pays à supprimer (case-insensitive)
-	paysUpper := strings.ToUpper(nomPays)
-	var updatedList []string
-	for _, p := range listePays {
-		if strings.ToUpper(p) != paysUpper {
-			updatedList = append(updatedList, p)
-		}
-	}
-
-	// Encoder et mettre à jour
-	newListeJSON, err := json.Marshal(updatedList)
-	if err != nil {
-		return err
-	}
-
-	err = s.gormDB.WithContext(ctx).Model(&regle).Update("liste_pays", string(newListeJSON)).Error
-	if err != nil {
-		return err
-	}
-
-	// Logging d'audit automatique si userID fourni
-	if userID != "" {
-		actionDescription := fmt.Sprintf("Suppression du pays à risque '%s'", nomPays)
-		auditErr := s.LogAction(ctx, userID, actionDescription, "Pays à Risque", regle.ID, fmt.Sprintf("Suppression du pays: %s", nomPays), "succès")
-		if auditErr != nil {
-			// Ne pas faire échouer la suppression si le logging échoue, mais logger l'erreur
-			fmt.Printf("Erreur lors du logging d'audit pour la suppression du pays %s: %v\n", nomPays, auditErr)
-		}
-	}
-
-	return nil
-}
-
-// UpdatePaysARisque met à jour le nom d'un pays dans la liste (renaming).
-func (s *Store) UpdatePaysARisque(ctx context.Context, ancienNom, nouveauNom string, userID string) error {
-	var regle models.RegleControle
-	result := s.gormDB.WithContext(ctx).Where("type_regle = ?", "pays_risque").First(&regle)
-	if result.Error != nil {
-		return result.Error
-	}
-
-	// Décoder la liste actuelle - gérer le double-encoding
-	var listePays []string
-	if len(regle.ListePays) > 0 {
-		err := json.Unmarshal(regle.ListePays, &listePays)
-		if err != nil {
-			// Essayer de récupérer comme string puis re-unmarshal
-			var jsonStr string
-			if err2 := json.Unmarshal(regle.ListePays, &jsonStr); err2 == nil {
-				err = json.Unmarshal([]byte(jsonStr), &listePays)
-				if err != nil {
-					return err
-				}
-			} else {
-				return err
-			}
-		}
-	}
-
-	// Remplacer l'ancien nom par le nouveau (case-insensitive)
-	ancienUpper := strings.ToUpper(ancienNom)
-	for i, p := range listePays {
-		if strings.ToUpper(p) == ancienUpper {
-			listePays[i] = nouveauNom
-			break
-		}
-	}
-
-	// Encoder et mettre à jour
-	newListeJSON, err := json.Marshal(listePays)
-	if err != nil {
-		return err
-	}
-
-	err = s.gormDB.WithContext(ctx).Model(&regle).Update("liste_pays", string(newListeJSON)).Error
-	if err != nil {
-		return err
-	}
-
-	// Logging d'audit automatique si userID fourni
-	if userID != "" {
-		actionDescription := fmt.Sprintf("Modification du pays à risque '%s' en '%s'", ancienNom, nouveauNom)
-		auditErr := s.LogAction(ctx, userID, actionDescription, "Pays à Risque", regle.ID, fmt.Sprintf("Modification du pays: %s → %s", ancienNom, nouveauNom), "succès")
-		if auditErr != nil {
-			// Ne pas faire échouer la modification si le logging échoue, mais logger l'erreur
-			fmt.Printf("Erreur lors du logging d'audit pour la modification du pays %s: %v\n", ancienNom, auditErr)
-		}
-	}
-
-	return nil
 }

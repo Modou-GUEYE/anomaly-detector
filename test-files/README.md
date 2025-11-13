@@ -13,9 +13,21 @@ Ce dossier contient des fichiers d'exemple pour tester la fonctionnalité d'impo
   Albanie
   ...
   ```
-- Contient : 16 pays
+- Contient : 16 pays (noms uniquement)
 
-### 2. **pays-risque.json** 
+### 2. **pays-risque-avec-codes.csv** ✨ NOUVEAU
+- Format : CSV avec en-têtes (nom_pays, code)
+- Structure :
+  ```
+  nom_pays,code
+  Afghanistan,AFG
+  Algérie,DZA
+  ...
+  ```
+- Contient : 23 pays avec leurs codes ISO alpha-3
+- **Recommandé** : Permet d'importer les pays avec leurs codes pays normalisés
+
+### 3. **pays-risque.json** 
 - Format : JSON avec objet
 - Structure :
   ```json

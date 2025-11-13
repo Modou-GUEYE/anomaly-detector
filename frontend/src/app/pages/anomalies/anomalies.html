@@ -23,10 +23,7 @@
 
       <select [(ngModel)]="filters.severite" (change)="applyFilters()" class="filter-select">
         <option value="">Tous les niveaux</option>
-        <option value="Critique">Critique</option>
-        <option value="Haute">Haute</option>
-        <option value="Moyenne">Moyenne</option>
-        <option value="Basse">Basse</option>
+        <option *ngFor="let s of severityOptions" [value]="s">{{ s }}</option>
       </select>
 
       <select [(ngModel)]="filters.statut" (change)="applyFilters()" class="filter-select">

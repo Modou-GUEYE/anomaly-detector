@@ -1,12 +1,12 @@
 
-import { Component, OnInit } from '@angular/core';
-import * as countries from 'i18n-iso-countries';
-import fr from 'i18n-iso-countries/langs/fr.json';
+import { Component, OnInit, HostListener } from '@angular/core';
+import { getCountryNameFromCode as countryNameFromCode, getAllCountriesFR } from '../../utils/country';
 // Fonction utilitaire pour normaliser les chaînes (sans accents, minuscule)
 function normalizeStr(str: string): string {
   return str.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
 }
 import { DashboardService } from '../../services/dashboard.service';
+import { TransactionService } from '../../services/transaction.service';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { HttpClientModule } from '@angular/common/http';
@@ -34,6 +34,8 @@ interface Transaction {
   numero_compte_paye: string;
   nom_paye: string;
   raw_data?: any;
+  // allow indexed access from templates for legacy keys coming from API
+  [key: string]: any;
 }
 
 @Component({
@@ -52,6 +54,10 @@ export class DashboardComponent implements OnInit {
   filteredTransactions: Transaction[] = [];
   paginatedTransactions: Transaction[] = [];
   alertes: any[] = []; // Alertes pour déterminer le statut des transactions
+  selectedTransaction: Transaction | null = null;
+  selectedAlertes: any[] = [];
+  // pour restauration du focus après fermeture du modal
+  private _lastFocusedElement: Element | null = null;
 
   // Pagination
   currentPage = 1;
@@ -89,12 +95,66 @@ export class DashboardComponent implements OnInit {
     return this.TYPE_CLIENT_LABELS[code] || 'Particulier';
   }
 
+  // Ouvrir le détail d'une transaction (modal)
+  viewTransaction(t: Transaction) {
+    this.selectedTransaction = t;
+    this.selectedAlertes = this.alertes.filter(a => a.transactionId === t.id);
+    if (typeof document !== 'undefined') {
+      // mémoriser l'élément focussé avant d'ouvrir la modal
+      this._lastFocusedElement = document.activeElement;
+      document.body.classList.add('modal-open');
+      // donner le focus au premier bouton/action dans la modal pour accessibilité
+      setTimeout(() => {
+        const el = document.querySelector('.modal-content .card-btn, .modal-content .close-btn, .modal-content button') as HTMLElement | null;
+        if (el) { el.focus(); }
+      }, 0);
+    }
+  }
+
+  // Fermer la modal de détail
+  closeTransactionDetail() {
+    this.selectedTransaction = null;
+    this.selectedAlertes = [];
+    if (typeof document !== 'undefined') {
+      document.body.classList.remove('modal-open');
+      // restaurer le focus à l'élément précédent
+      try {
+        const last = this._lastFocusedElement as HTMLElement | null;
+        if (last && typeof last.focus === 'function') {
+          last.focus();
+        }
+      } catch (e) {
+        // silent
+      }
+    }
+  }
+
+  // Statut lisible combiné
+  getReadableStatus(): string {
+    if (!this.selectedTransaction) return '';
+    return this.getTransactionStatus(this.selectedTransaction);
+  }
+
+  // Fermer avec la touche Échap
+  @HostListener('document:keydown.escape', ['$event'])
+  onEscKey(_: Event) {
+    if (this.selectedTransaction) {
+      this.closeTransactionDetail();
+    }
+  }
+
+  // Portée calculée à partir des pays
+  getTransactionScope(t: Transaction): string {
+    if (!t.pays_payeur || !t.pays_paye) return '';
+    return t.pays_payeur === t.pays_paye ? 'National' : 'International';
+  }
+
   // Listes pour filtres - Tous les pays du monde en français
   pays: string[] = [];
 
   // KPI
   kpi = {
-    notifications: 3,
+    notifications: 0,
     transactions: 0,
     anomaliesDetectees: 0,
     anomaliesTraitees: 0,
@@ -108,6 +168,7 @@ export class DashboardComponent implements OnInit {
 
   constructor(
     private dashboardService: DashboardService,
+    private transactionService: TransactionService,
     private router: Router
   ) {}
 
@@ -117,14 +178,22 @@ export class DashboardComponent implements OnInit {
       return;
     }
 
-    // Enregistrer la locale française pour les pays
-    countries.registerLocale(fr);
-    
-    // Charger la liste complète des pays
-    const countryNames = countries.getNames('fr');
-    this.pays = Object.values(countryNames).sort();
+    // Définir le titre de la page pour l'onglet navigateur
+    if (typeof document !== 'undefined') {
+      document.title = 'Métriques du Tableau de Bord - Anomaly Detector';
+    }
 
-    // Charger le dashboard avec un seul endpoint optimisé
+  // Charger la liste complète des pays en français via utilitaire partagé
+  this.pays = getAllCountriesFR();
+
+    // Charger le dashboard (réutilisable depuis refresh)
+    this.loadSummary();
+  }
+
+  // Extraire la logique de chargement pour pouvoir rafraîchir depuis l'UI
+  loadSummary() {
+    this.loading = true;
+    this.error = '';
     this.dashboardService.getDashboardSummary().subscribe({
       next: (data: any) => {
         // KPIs principaux
@@ -132,10 +201,10 @@ export class DashboardComponent implements OnInit {
         this.kpi.anomaliesDetectees = data.anomalies_count || 0;
         this.kpi.anomaliesTraitees = data.anomalies_treated || 0;
         this.kpi.comptesSurveilles = data.monitored_accounts || 0;
-        
+
         // Alertes pour déterminer le statut des transactions
         this.alertes = data.recent_anomalies || [];
-        
+
         // Notifications (anomalies non assignées)
         this.kpi.notifications = this.alertes.filter((a: any) => !a.analysteAssigneID).length;
 
@@ -146,23 +215,47 @@ export class DashboardComponent implements OnInit {
         this.kpi.entitesBlacklistees = byType['Blacklist'] || 0;
         this.kpi.paysARisque = byType['Pays à risque'] || 0;
 
-        // Utiliser les transactions récentes du dashboard summary
-        this.transactions = (data.recent_transactions || []).sort((a: any, b: any) => {
-          const da = new Date(a.date_operation).getTime();
-          const db = new Date(b.date_operation).getTime();
-          return db - da;
-        });
-        
-        // Initialiser les filtres et pagination
-        this.filters.periode = "Aujourd'hui";
-        this.applyFilters();
-        this.loading = false;
+        // Utiliser les transactions récentes du dashboard summary si elles existent
+        const summaryTx = (data.recent_transactions || []);
+
+        // Si le summary ne fournit pas toutes les transactions (typiquement limité à 10),
+        // récupérer la liste complète via le service Transactions pour alimenter le tableau.
+        const setTransactions = (txs: any[]) => {
+          this.transactions = (txs || []).sort((a: any, b: any) => {
+            const da = new Date(a.date_operation).getTime();
+            const db = new Date(b.date_operation).getTime();
+            return db - da;
+          });
+          // Initialiser les filtres et pagination
+          this.filters.periode = "Aujourd'hui";
+          this.applyFilters();
+          this.loading = false;
+        };
+
+        if (summaryTx.length >= 50) {
+          // Si le summary contient déjà suffisamment d'éléments, on l'utilise
+          setTransactions(summaryTx);
+        } else {
+          // Sinon, récupérer la liste complète des transactions disponible via l'API
+          this.transactionService.getRecentTransactions().subscribe({
+            next: (fullTxs: any[]) => setTransactions(fullTxs.length ? fullTxs : summaryTx),
+            error: () => {
+              // En cas d'erreur, fallback sur ce que le summary fournit
+              setTransactions(summaryTx);
+            }
+          });
+        }
       },
       error: () => {
         this.error = 'Impossible de charger le résumé du dashboard.';
         this.loading = false;
       }
     });
+  }
+
+  // Méthode appelée par le bouton Refresh de l'UI
+  refreshData() {
+    this.loadSummary();
   }
 
   // Navigation boutons "Voir détails"
@@ -177,6 +270,11 @@ export class DashboardComponent implements OnInit {
     if (statut.toLowerCase().includes('anomal') || statut.toLowerCase().includes('fraude') || statut.toLowerCase().includes('bloqué')) return 'status-alert';
     if (statut.toLowerCase().includes('trait')) return 'status-normal';
     return 'status-normal';
+  }
+
+  // Convertir un code pays ISO alpha-2 en nom (ex: "SN" → "Sénégal") avec guard ISO (5)
+  getCountryNameFromCode(code: string): string {
+    return countryNameFromCode(code);
   }
 
   // Déterminer le statut d'une transaction basé sur les alertes associées
@@ -234,14 +332,26 @@ export class DashboardComponent implements OnInit {
 
       let okPays = true;
       if (this.filters.pays) {
-        const normalizedPaysPayeur = t.pays_payeur ? normalizeStr(t.pays_payeur) : '';
-        const normalizedPaysPaye = t.pays_paye ? normalizeStr(t.pays_paye) : '';
+        // Convertir les codes pays des transactions en noms et comparer avec le filtre
+        const nomPaysPayeur = this.getCountryNameFromCode(t.pays_payeur);
+        const nomPaysPaye = this.getCountryNameFromCode(t.pays_paye);
         const normalizedPaysFilter = normalizeStr(this.filters.pays);
-        okPays = normalizedPaysPayeur === normalizedPaysFilter || normalizedPaysPaye === normalizedPaysFilter;
+        
+        okPays = 
+          normalizeStr(nomPaysPayeur) === normalizedPaysFilter || 
+          normalizeStr(nomPaysPaye) === normalizedPaysFilter;
       }
 
-      const okPortee = !this.filters.portee ||
-        (t.portee && t.portee.toLowerCase() === this.filters.portee.toLowerCase());
+      // Filtre portée: calculer dynamiquement à partir des pays (les données récentes n'ont pas toujours t.portee)
+      let okPortee = true;
+      if (this.filters.portee) {
+        const hasPayeur = !!t.pays_payeur;
+        const hasPaye = !!t.pays_paye;
+        const isNational = hasPayeur && hasPaye && t.pays_payeur === t.pays_paye;
+        const isInternational = hasPayeur && hasPaye && t.pays_payeur !== t.pays_paye;
+        const wanted = this.filters.portee.toLowerCase();
+        okPortee = (wanted === 'national' && isNational) || (wanted === 'international' && isInternational);
+      }
 
       // Filtre type de client (par label lisible)
       let okTypeClient = true;
@@ -252,42 +362,80 @@ export class DashboardComponent implements OnInit {
         okTypeClient = payeurLabel === this.filters.typeClient || payeLabel === this.filters.typeClient;
       }
 
-      // Période simple (exemple)
-      const okPeriode = (() => {
-        if (!this.filters.periode) return true;
-        
-        // Parse date_operation properly, handling both ISO strings and other formats
-        let d: Date;
-        if (typeof t.date_operation === 'string') {
-          // If it's an ISO string like "2025-10-22", parse it in local timezone
-          if (t.date_operation.includes('T')) {
-            d = new Date(t.date_operation); // Already has time component
-          } else {
-            // Format like "2025-10-22" - add noon to avoid timezone shift
-            d = new Date(t.date_operation + 'T12:00:00');
-          }
-        } else {
-          d = new Date(t.date_operation);
-        }
-        
-        const now = new Date();
-        
-        // Compare dates at midnight for accurate day comparison
-        const dMidnight = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-        const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        
-        const diff = (nowMidnight.getTime() - dMidnight.getTime()) / (1000 * 60 * 60 * 24);
-        
-        if (this.filters.periode === "Aujourd'hui") return diff === 0;
-        if (this.filters.periode === '7 derniers jours') return diff >= 0 && diff <= 7;
-        if (this.filters.periode === '30 derniers jours') return diff >= 0 && diff <= 30;
-        return true;
-      })();
+      // Période (4) déléguée à une fonction dédiée
+      const okPeriode = this.isInSelectedPeriode(t.date_operation);
 
       return okTxt && okPays && okPortee && okTypeClient && okPeriode;
     });
     this.updatePagination();
   }
+
+  // (4) Extraction de la logique de période
+  private isInSelectedPeriode(dateOp: string | Date): boolean {
+    if (!this.filters.periode) return true;
+    const d = this.parseDateOp(dateOp);
+    if (!d) return false;
+
+    const now = new Date();
+    const dMidnight = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diff = Math.floor((nowMidnight.getTime() - dMidnight.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (this.filters.periode === "Aujourd'hui") return diff === 0;
+    if (this.filters.periode === '7 derniers jours') return diff >= 0 && diff <= 7;
+    if (this.filters.periode === '30 derniers jours') return diff >= 0 && diff <= 30;
+    return true;
+  }
+
+  // Parse API date string into a Date object; return null on failure.
+  private parseDateOp(input: string | Date): Date | null {
+    if (input instanceof Date) return input;
+    const s = (input || '').toString().trim();
+
+    // Try to parse a strict ISO-like timestamp with optional fractional seconds and timezone
+    // Examples supported:
+    //  - 2025-11-10T14:38:52.329452Z
+    //  - 2025-11-04 13:15:19.172354+00
+    //  - 2025-11-04T13:15:19+01:00
+    const re = /^([0-9]{4})-([0-9]{2})-([0-9]{2})(?:[T\s])([0-9]{2}):([0-9]{2}):([0-9]{2})(?:\.(\d+))?(Z|([+-])(\d{2}):?(\d{2}))?$/;
+    const m = s.match(re);
+    if (!m) return null;
+
+    const year = Number(m[1]);
+    const month = Number(m[2]) - 1;
+    const day = Number(m[3]);
+    const hour = Number(m[4]);
+    const minute = Number(m[5]);
+    const second = Number(m[6]);
+    let fraction = m[7] || '';
+    // Normalize fraction to milliseconds
+    let ms = 0;
+    if (fraction) {
+      if (fraction.length > 3) fraction = fraction.slice(0, 3);
+      while (fraction.length < 3) fraction += '0';
+      ms = Number(fraction);
+    }
+
+    // Timezone handling
+    let tzOffsetMinutes = 0; // minutes to subtract to get UTC
+    if (m[8] === 'Z' || m[8] === undefined) {
+      tzOffsetMinutes = 0;
+    } else if (m[9] === '+' || m[9] === '-') {
+      const sign = m[9] === '+' ? 1 : -1;
+      const tzHour = Number(m[10] || '0');
+      const tzMin = Number(m[11] || '0');
+      tzOffsetMinutes = sign * (tzHour * 60 + tzMin);
+      // Note: to get UTC from local, subtract the offset minutes
+    }
+
+    // Build UTC timestamp then apply timezone offset
+    const utcMillis = Date.UTC(year, month, day, hour, minute, second, ms);
+    const final = new Date(utcMillis - tzOffsetMinutes * 60 * 1000);
+    if (isNaN(final.getTime())) return null;
+    return final;
+  }
+
+  // (removed debug helper)
 
   updatePagination() {
     this.totalPages = Math.ceil(this.filteredTransactions.length / this.pageSize);

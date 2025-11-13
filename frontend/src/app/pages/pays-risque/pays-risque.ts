@@ -1,11 +1,10 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ProfileService } from '../../services/profile.service';
+import { ProfileService, PaysRisque } from '../../services/profile.service';
 import { AuthService } from '../../services/auth.service';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import * as XLSX from 'xlsx';
 
 @Component({
   selector: 'app-pays-risque',
@@ -15,9 +14,9 @@ import * as XLSX from 'xlsx';
   styleUrls: ['./pays-risque.scss']
 })
 export class PaysRisqueComponent implements OnInit, OnDestroy {
-  pays: string[] = [];
-  filteredPays: string[] = [];
-  paginatedPays: string[] = [];
+  pays: PaysRisque[] = [];
+  filteredPays: PaysRisque[] = [];
+  paginatedPays: PaysRisque[] = [];
 
   loading = true;
   error = '';
@@ -37,13 +36,18 @@ export class PaysRisqueComponent implements OnInit, OnDestroy {
 
   // Formulaire d'ajout
   newPaysName = '';
+  newPaysCode = ''; // Code ISO alpha-2
   showForm = false;
   submitting = false;
 
   // Formulaire d'édition
-  editingPays: string | null = null;
+  editingPays: PaysRisque | null = null;
   editedPaysName = '';
+  editedPaysCode = ''; // Code ISO alpha-2
   showEditForm = false;
+
+  // Pays récemment ajouté / modifié pour mise en surbrillance
+  highlightPaysNom: string | null = null;
 
   // Import
   showImportForm = false;
@@ -109,14 +113,13 @@ export class PaysRisqueComponent implements OnInit, OnDestroy {
     this.profileService.getAllPaysARisque()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (data: string[]) => {
+        next: (data: PaysRisque[]) => {
           this.pays = data || [];
           this.applyFilters();
           this.loading = false;
         },
-        error: (err: any) => {
+        error: () => {
           this.error = 'Erreur lors du chargement des pays à risque';
-          console.error('Erreur:', err);
           this.loading = false;
         }
       });
@@ -128,7 +131,8 @@ export class PaysRisqueComponent implements OnInit, OnDestroy {
     if (this.searchTerm) {
       const term = this.searchTerm.toLowerCase();
       filtered = filtered.filter(p =>
-        p.toLowerCase().includes(term)
+        p.nomPays.toLowerCase().includes(term) ||
+        (p.code && p.code.toLowerCase().includes(term))
       );
     }
 
@@ -164,6 +168,7 @@ export class PaysRisqueComponent implements OnInit, OnDestroy {
     this.showForm = !this.showForm;
     if (!this.showForm) {
       this.newPaysName = '';
+      this.newPaysCode = '';
     }
   }
 
@@ -178,67 +183,81 @@ export class PaysRisqueComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Validation du code (OBLIGATOIRE)
+    if (!this.newPaysCode || !/^[A-Za-z]{2}$/.test(this.newPaysCode.trim())) {
+      this.error = 'Le code pays doit être ISO alpha-2 (2 lettres)';
+      return;
+    }
+
     this.submitting = true;
     this.error = '';
 
-    this.profileService.createPaysARisque(this.newPaysName.trim())
+    const nomAjoute = this.newPaysName.trim();
+    const codeAjoute = this.newPaysCode.trim().toUpperCase();
+    this.profileService.createPaysARisque(nomAjoute, codeAjoute)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          this.success = `Pays "${this.newPaysName}" ajouté avec succès`;
+          this.success = `Pays "${nomAjoute}" (${codeAjoute}) ajouté avec succès`;
           this.newPaysName = '';
+          this.newPaysCode = '';
           this.showForm = false;
           this.submitting = false;
+          this.highlightPaysNom = nomAjoute;
           this.loadPaysARisque();
-          setTimeout(() => this.success = '', 3000);
+          setTimeout(() => { this.success = ''; this.highlightPaysNom = null; }, 3000);
         },
-        error: (err: any) => {
+        error: () => {
           this.error = 'Erreur lors de l\'ajout du pays';
           this.submitting = false;
-          console.error('Erreur:', err);
         }
       });
   }
 
-  deletePays(nomPays: string) {
+  deletePays(pays: PaysRisque) {
     // Vérifier les permissions
     if (!this.checkAdminPermission()) {
       return;
     }
+    if (this.submitting) return; // Guard double clic
     
-    if (!confirm(`Êtes-vous sûr de vouloir supprimer "${nomPays}" ?`)) {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer "${pays.nomPays}" ?`)) {
       return;
     }
 
-    this.profileService.deletePaysARisque(nomPays)
+    this.submitting = true;
+    this.profileService.deletePaysARisque(pays.nomPays)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          this.success = `Pays "${nomPays}" supprimé avec succès`;
+          this.success = `Pays "${pays.nomPays}" supprimé avec succès`;
           this.loadPaysARisque();
+          this.submitting = false;
           setTimeout(() => this.success = '', 3000);
         },
-        error: (err: any) => {
+        error: () => {
           this.error = 'Erreur lors de la suppression du pays';
-          console.error('Erreur:', err);
+          this.submitting = false;
         }
       });
   }
 
-  startEdit(nomPays: string) {
+  startEdit(pays: PaysRisque) {
     // Vérifier les permissions
     if (!this.checkAdminPermission()) {
       return;
     }
     
-    this.editingPays = nomPays;
-    this.editedPaysName = nomPays;
+    this.editingPays = pays;
+    this.editedPaysName = pays.nomPays;
+    this.editedPaysCode = pays.code || '';
     this.showEditForm = true;
   }
 
   cancelEdit() {
     this.editingPays = null;
     this.editedPaysName = '';
+    this.editedPaysCode = '';
     this.showEditForm = false;
   }
 
@@ -257,25 +276,35 @@ export class PaysRisqueComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Validation du code (OBLIGATOIRE)
+    if (!this.editedPaysCode || !/^[A-Za-z]{2}$/.test(this.editedPaysCode.trim())) {
+      this.error = 'Le code pays doit être ISO alpha-2 (2 lettres)';
+      return;
+    }
+
     this.submitting = true;
     this.error = '';
 
-    this.profileService.updatePaysARisque(this.editingPays, this.editedPaysName.trim())
+    const nomAncien = this.editingPays.nomPays;
+    const nomNouveau = this.editedPaysName.trim();
+    const codeNouveau = this.editedPaysCode.trim().toUpperCase();
+    this.profileService.updatePaysARisque(nomAncien, nomNouveau, codeNouveau)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          this.success = `Pays "${this.editingPays}" renommé en "${this.editedPaysName}" avec succès`;
+          this.success = `Pays "${nomAncien}" mis à jour en "${nomNouveau}" (${codeNouveau})`;
           this.editingPays = null;
           this.editedPaysName = '';
+          this.editedPaysCode = '';
           this.showEditForm = false;
           this.submitting = false;
+          this.highlightPaysNom = nomNouveau;
           this.loadPaysARisque();
-          setTimeout(() => this.success = '', 3000);
+          setTimeout(() => { this.success = ''; this.highlightPaysNom = null; }, 3000);
         },
-        error: (err: any) => {
+        error: () => {
           this.error = 'Erreur lors de la mise à jour du pays';
           this.submitting = false;
-          console.error('Erreur:', err);
         }
       });
   }
@@ -311,6 +340,7 @@ export class PaysRisqueComponent implements OnInit, OnDestroy {
       this.importError = 'Veuillez sélectionner un fichier';
       return;
     }
+    if (this.submitting) return; // Guard double clic import
 
     const allowedTypes = [
       'text/csv', 
@@ -333,120 +363,18 @@ export class PaysRisqueComponent implements OnInit, OnDestroy {
     this.importError = '';
     this.importMessage = '';
 
-    // Si c'est un fichier Excel, on le traite localement
-    if (isExcel) {
-      this.processExcelFile();
-    } else {
-      // Sinon, on utilise l'API existante
-      this.profileService.importPaysARisque(this.selectedFile)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (result: any) => {
-            this.handleImportResult(result);
-          },
-          error: (err: any) => {
-            this.importError = 'Erreur lors de l\'import: ' + (err.error?.error || err.message);
-            this.submitting = false;
-            console.error('Erreur:', err);
-          }
-        });
-    }
-  }
-
-  private processExcelFile() {
-    const reader = new FileReader();
-    reader.onload = (e: any) => {
-      try {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        
-        // Prendre la première feuille
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        
-        // Convertir en JSON
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-        
-        // Extraire les noms de pays
-        const paysToImport = this.extractPaysFromExcelData(jsonData);
-        
-        if (paysToImport.length === 0) {
-          this.importError = 'Aucun pays trouvé dans le fichier Excel. Assurez-vous que la première colonne contient les noms de pays.';
+    // Envoyer tous les formats au backend (CSV, JSON, Excel)
+    this.profileService.importPaysARisque(this.selectedFile)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (result: any) => {
+          this.handleImportResult(result);
+        },
+        error: (err: any) => {
+          this.importError = 'Erreur lors de l\'import: ' + (err.error?.error || err.message);
           this.submitting = false;
-          return;
         }
-
-        // Importer les pays un par un
-        this.importPaysArray(paysToImport);
-        
-      } catch (error) {
-        this.importError = 'Erreur lors de la lecture du fichier Excel: ' + error;
-        this.submitting = false;
-        console.error('Erreur Excel:', error);
-      }
-    };
-    
-    reader.readAsArrayBuffer(this.selectedFile!);
-  }
-
-  private extractPaysFromExcelData(data: any[]): string[] {
-    const pays: string[] = [];
-    
-    // Ignorer la première ligne si elle contient des en-têtes
-    const startRow = data.length > 0 && typeof data[0][0] === 'string' && 
-                     (data[0][0].toLowerCase().includes('pays') || 
-                      data[0][0].toLowerCase().includes('country') ||
-                      data[0][0].toLowerCase().includes('nom')) ? 1 : 0;
-    
-    for (let i = startRow; i < data.length; i++) {
-      const row = data[i];
-      if (row && row[0] && typeof row[0] === 'string') {
-        const paysName = row[0].toString().trim();
-        if (paysName && !pays.includes(paysName)) {
-          pays.push(paysName);
-        }
-      }
-    }
-    
-    return pays;
-  }
-
-  private importPaysArray(paysArray: string[]) {
-    let imported = 0;
-    let errors = 0;
-    let processed = 0;
-    
-    const importNext = () => {
-      if (processed >= paysArray.length) {
-        // Tous les pays ont été traités
-        const result = {
-          imported: imported,
-          total: paysArray.length,
-          errors: errors > 0 ? [`${errors} pays n'ont pas pu être importés`] : []
-        };
-        this.handleImportResult(result);
-        return;
-      }
-      
-      const pays = paysArray[processed];
-      processed++;
-      
-      this.profileService.createPaysARisque(pays)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            imported++;
-            importNext();
-          },
-          error: (err: any) => {
-            errors++;
-            console.error(`Erreur pour ${pays}:`, err);
-            importNext();
-          }
-        });
-    };
-    
-    importNext();
+      });
   }
 
   private handleImportResult(result: any) {

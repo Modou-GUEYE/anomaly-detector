@@ -73,10 +73,30 @@
   margin-bottom: 12px;
   transition: all 0.2s;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
 
   &:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     border-color: #d1d5db;
+  }
+
+  /* Notification non lue */
+  &.unread {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, white 100%);
+    border-left: 4px solid #3b82f6;
+    font-weight: 500;
+  }
+
+  /* Notification lue */
+  &.read {
+    opacity: 0.7;
+    background: #fafbfc;
+    
+    .card-message,
+    .anomaly-title,
+    .card-date {
+      color: #9ca3af;
+    }
   }
 
   .card-header {
@@ -89,6 +109,16 @@
       display: flex;
       align-items: center;
       gap: 10px;
+      position: relative;
+
+      .read-indicator {
+        width: 8px;
+        height: 8px;
+        background: #3b82f6;
+        border-radius: 50%;
+        display: inline-block;
+        animation: pulse 2s infinite;
+      }
 
       .anomaly-code {
         font-weight: 700;
@@ -105,29 +135,6 @@
         font-weight: 600;
         font-size: 14px;
         color: #1f2937;
-      }
-    }
-
-    .card-action-btn {
-      padding: 8px 16px;
-      border: 1.5px solid #3b82f6;
-      background: white;
-      color: #3b82f6;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s;
-
-      &.consult {
-        border-color: #3b82f6;
-        color: #3b82f6;
-      }
-
-      &:hover {
-        background: #3b82f6;
-        color: white;
-        border-color: #3b82f6;
       }
     }
   }
@@ -211,5 +218,18 @@
         width: 100%;
       }
     }
+  }
+}
+
+/* Animation pour l'indicateur de notification non lue */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
   }
 }

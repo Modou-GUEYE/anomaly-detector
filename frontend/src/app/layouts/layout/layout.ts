@@ -50,15 +50,42 @@ export class LayoutComponent implements OnInit {
       next: (data: any) => {
         const recentAnomalies = data.recent_anomalies || [];
         this.unassignedAnomalies = recentAnomalies.filter((a: any) => !a.analysteAssigneID);
-        this.kpi.notifications = this.unassignedAnomalies.length;
+        this.updateNotificationCount();
       },
       error: () => {
       }
     });
   }
 
+  // Calculer le nombre de notifications non lues
+  updateNotificationCount() {
+    const readNotifications = this.getReadNotifications();
+    const unreadCount = this.unassignedAnomalies.filter(anomaly => 
+      !readNotifications.has(anomaly.id)
+    ).length;
+    this.kpi.notifications = unreadCount;
+  }
+
+  // Récupérer les notifications lues depuis localStorage
+  private getReadNotifications(): Set<string> {
+    const stored = localStorage.getItem('readNotifications');
+    if (stored) {
+      try {
+        const readIds = JSON.parse(stored);
+        return new Set(readIds);
+      } catch (e) {
+        return new Set();
+      }
+    }
+    return new Set();
+  }
+
   toggleNotificationPopup() {
     this.showNotificationPopup = !this.showNotificationPopup;
+    // Mettre à jour le compteur quand on ouvre/ferme le popup
+    if (!this.showNotificationPopup) {
+      this.updateNotificationCount();
+    }
   }
 
   assignAnomaly(anomalyId: string) {

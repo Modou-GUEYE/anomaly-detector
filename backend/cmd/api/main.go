@@ -5,6 +5,7 @@ import (
 	"anomaly-detector/internal/api"
 	"anomaly-detector/internal/store"
 	"log"
+	"os"
 )
 
 // ===================== METADATA SWAGGER =====================
@@ -28,8 +29,11 @@ import (
 // ===================== FONCTION PRINCIPALE =====================
 // main initialise le store, instancie le serveur API et le démarre.
 func main() {
-	// Connexion à la base Postgres
-	connStr := "postgresql://anomaly_user:passer@localhost:5432/anomaly_db?sslmode=disable"
+	// Connexion à la base Postgres (prend DATABASE_URL si défini)
+	connStr := os.Getenv("DATABASE_URL")
+	if connStr == "" {
+		connStr = "postgresql://anomaly_user:passer@localhost:5432/anomaly_db?sslmode=disable"
+	}
 
 	// Initialisation de la couche de persistance (store)
 	dbStore, err := store.NewStore(connStr)

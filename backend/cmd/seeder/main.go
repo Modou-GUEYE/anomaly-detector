@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 // HashPassword hache un mot de passe avec bcrypt
@@ -37,13 +38,13 @@ func main() {
 // ===================== FONCTIONS DE NETTOYAGE =====================
 // cleanDatabase supprime toutes les données des tables principales pour repartir sur une base propre.
 func cleanDatabase(ctx context.Context, s *store.Store) {
-	s.Gorm().WithContext(ctx).Exec("DELETE FROM alertes")
-	s.Gorm().WithContext(ctx).Exec("DELETE FROM suivi_blacklist")
-	s.Gorm().WithContext(ctx).Exec("DELETE FROM transactions")
-	// //s.Gorm().WithContext(ctx).Exec("DELETE FROM regles_controle")
-	s.Gorm().WithContext(ctx).Exec("DELETE FROM comptes")
-	s.Gorm().WithContext(ctx).Exec("DELETE FROM entites_blacklist")
-	s.Gorm().WithContext(ctx).Exec("DELETE FROM utilisateurs")
+	s.Gorm().WithContext(ctx).Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.Alerte{})
+	s.Gorm().WithContext(ctx).Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.SuiviBlacklist{})
+	s.Gorm().WithContext(ctx).Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.Transaction{})
+	// s.Gorm().WithContext(ctx).Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.RegleControle{}) // optionnel
+	s.Gorm().WithContext(ctx).Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.Compte{})
+	s.Gorm().WithContext(ctx).Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.EntiteBlacklist{})
+	s.Gorm().WithContext(ctx).Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.Utilisateur{})
 }
 
 // ===================== FONCTIONS DE PEUPLEMENT =====================

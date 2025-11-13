@@ -35,11 +35,11 @@
       </div>
 
       <div class="rule-actions">
-        <button class="btn-toggle" (click)="toggleRuleStatus(rule)" [class.inactive]="!rule.active" [title]="!isAdmin ? adminOnlyMessage : ''">
+        <button class="btn-toggle" (click)="toggleRuleStatus(rule)" [class.inactive]="!rule.active" [title]="!isAdmin ? adminOnlyMessage : ''" [disabled]="submitting">
           {{ rule.active ? 'Désactiver' : 'Activer' }}
         </button>
-        <button class="btn-edit" (click)="editRule(rule)" [title]="!isAdmin ? adminOnlyMessage : ''">Éditer</button>
-        <button class="btn-delete" (click)="deleteRule(rule.id)" [title]="!isAdmin ? adminOnlyMessage : ''">Supprimer</button>
+        <button class="btn-edit" (click)="editRule(rule)" [title]="!isAdmin ? adminOnlyMessage : ''" [disabled]="submitting">Éditer</button>
+        <button class="btn-delete" (click)="deleteRule(rule.id)" [title]="!isAdmin ? adminOnlyMessage : ''" [disabled]="submitting">Supprimer</button>
       </div>
     </div>
   </div>
@@ -59,6 +59,7 @@
     </div>
 
     <div class="modal-body">
+      <div *ngIf="error" class="inline-error">{{ error }}</div>
       <div class="form-group">
         <label for="ruleName">Nom de la règle *</label>
         <input 
@@ -113,7 +114,6 @@
           class="form-select"
         >
           <option *ngIf="formData.typeRegle === 'montant'" value="7d">7 Jours</option>
-          <option *ngIf="formData.typeRegle === 'montant'" value="24h">24 Heures</option>
           <option *ngIf="formData.typeRegle === 'montant'" value="30d">30 Jours</option>
           <option *ngIf="formData.typeRegle === 'frequence'" value="24h">24 Heures</option>
           <option *ngIf="formData.typeRegle === 'frequence'" value="7d">7 Jours</option>
@@ -133,6 +133,21 @@
       </div>
 
       <div class="form-group">
+        <label for="ruleAction">Action à effectuer *</label>
+        <select 
+          id="ruleAction"
+          [(ngModel)]="formData.action" 
+          class="form-select"
+        >
+          <option *ngFor="let action of availableActions" [value]="action.value">{{ action.label }}</option>
+        </select>
+        <small class="form-help">
+          • <strong>Bloquer</strong>: Créer une alerte et refuser la transaction<br>
+          • <strong>Surveiller</strong>: Créer une alerte sans bloquer
+        </small>
+      </div>
+
+      <div class="form-group">
         <label for="ruleStatus">Statut</label>
         <select 
           id="ruleStatus"
@@ -146,8 +161,8 @@
     </div>
 
     <div class="modal-footer">
-      <button class="btn-cancel" (click)="closeModal()">Annuler</button>
-      <button class="btn-submit" (click)="saveRule()">{{ isEditMode ? 'Mettre à jour' : 'Créer' }}</button>
+      <button class="btn-cancel" (click)="closeModal()" [disabled]="submitting">Annuler</button>
+      <button class="btn-submit" (click)="saveRule()" [disabled]="submitting">{{ submitting ? 'En cours...' : (isEditMode ? 'Mettre à jour' : 'Créer') }}</button>
     </div>
   </div>
 </div>

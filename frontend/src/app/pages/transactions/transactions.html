@@ -142,7 +142,7 @@
                       </div>
                       <div class="detail-item">
                         <span class="detail-label">Pays:</span>
-                        <span class="detail-value">{{ tx.pays_payeur }}</span>
+                        <span class="detail-value">{{ getCountryNameFromCode(tx.pays_payeur) }} ({{ tx.pays_payeur }})</span>
                       </div>
                       <div class="detail-item">
                         <span class="detail-label">Ville:</span>
@@ -175,7 +175,7 @@
                       </div>
                       <div class="detail-item">
                         <span class="detail-label">Pays:</span>
-                        <span class="detail-value">{{ tx.pays_paye }}</span>
+                        <span class="detail-value">{{ getCountryNameFromCode(tx.pays_paye) }} ({{ tx.pays_paye }})</span>
                       </div>
                       <div class="detail-item">
                         <span class="detail-label">Ville:</span>

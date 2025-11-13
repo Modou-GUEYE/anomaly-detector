@@ -20,6 +20,7 @@ export class ReportsComponent implements OnInit, OnDestroy, AfterViewInit {
 
   loading = false;
   error = '';
+  exporting = false; // état export en cours (PDF/Excel)
 
   // Charts
   private chartRegles: Chart | null = null;
@@ -67,13 +68,13 @@ export class ReportsComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnInit() {
+    this.initializeFilters();
     this.loadRealData();
   }
 
   ngAfterViewInit() {
-    setTimeout(() => {
-      this.createChartsIfReady();
-    }, 100);
+    // Création directe des charts une fois les ViewChild dispos
+    this.createChartsIfReady();
   }
 
   /**
@@ -105,8 +106,8 @@ export class ReportsComponent implements OnInit, OnDestroy, AfterViewInit {
             };
           }
         },
-        error: (error: any) => {
-          console.warn('Erreur lors du chargement des données dashboard:', error);
+        error: () => {
+          this.setError('Erreur chargement métriques tableau de bord');
         }
       });
   }
@@ -116,31 +117,18 @@ export class ReportsComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   loadChartData() {
     this.loadingStates.charts = true;
+    
     // Règles violées
     this.reportsService.getRuleViolationsData(this.currentFilters.period)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (data: any[]) => {
-          // Fallback si pas de données pour l'année
-          if (this.currentFilters.period === 'year' && (!data || data.length === 0)) {
-            this.reportsService.getRuleViolationsData('month')
-              .pipe(takeUntil(this.destroy$))
-              .subscribe({
-                next: (fallbackData: any[]) => {
-                  this.processRuleViolationsData(fallbackData || []);
-                },
-                error: (error: any) => {
-                  console.error('❌ Erreur fallback:', error);
-                  this.processRuleViolationsData([]);
-                }
-              });
-            return;
-          }
-          
+          // Le backend gère déjà le fallback année -> mois automatiquement
+          // On affiche les données directement
           this.processRuleViolationsData(data || []);
         },
-        error: (error: any) => {
-          console.error(`❌ Erreur période "${this.currentFilters.period}":`, error);
+        error: () => {
+          this.setError(`Erreur chargement règles violées (période: ${this.currentFilters.period})`);
         }
       });
 
@@ -156,11 +144,11 @@ export class ReportsComponent implements OnInit, OnDestroy, AfterViewInit {
           if (this.chartEffic) {
             this.updateEfficiencyChartWithRealData();
           } else {
-            setTimeout(() => this.createChartsIfReady(), 50);
+            this.createChartsIfReady();
           }
         },
-        error: (error: any) => {
-          console.error('Erreur lors du chargement des données d\'efficacité:', error);
+        error: () => {
+          this.setError('Erreur chargement données efficacité');
         }
       });
   }
@@ -177,16 +165,11 @@ export class ReportsComponent implements OnInit, OnDestroy, AfterViewInit {
     
     this.realRuleViolationsData = transformedData;
 
-    // DEBUG: Afficher les valeurs uniques de ruleName dans la console
-    const uniqueRuleNames = Array.from(new Set(transformedData.map(item => item.ruleName)));
-    // @ts-ignore
-    if (typeof window !== 'undefined') window.ruleNamesDebug = uniqueRuleNames;
-    console.log('Règles disponibles pour le filtre :', uniqueRuleNames);
     
     if (this.chartRegles) {
       this.updateRuleChartWithRealData();
     } else {
-      setTimeout(() => this.createChartsIfReady(), 50);
+      this.createChartsIfReady();
     }
   }
 
@@ -451,11 +434,11 @@ export class ReportsComponent implements OnInit, OnDestroy, AfterViewInit {
       this.chartRegles.update();
       return;
     }
-
-
+    // Filtrage souple: si type spécifique, garder ceux dont le nom contient le type (minuscule)
     let filteredData = this.realRuleViolationsData;
     if (this.currentFilters.typeRule !== 'all') {
-      filteredData = this.realRuleViolationsData.filter(item => item.ruleName === this.currentFilters.typeRule);
+      const needle = this.currentFilters.typeRule.toLowerCase();
+      filteredData = this.realRuleViolationsData.filter(item => item.ruleName.toLowerCase().includes(needle));
     }
 
     const labels = filteredData.map(item => item.ruleName);
@@ -508,20 +491,8 @@ export class ReportsComponent implements OnInit, OnDestroy, AfterViewInit {
    * Met à jour le graphique des règles avec les vraies données filtrées
    */
   private updateRulesChart() {
-    if (!this.chartRegles || this.realRuleViolationsData.length === 0) return;
-
-    // Utiliser les vraies données filtrées
-    const filteredData = this.realRuleViolationsData;
-    
-    this.chartRegles.data.labels = filteredData.map(item => item.ruleName);
-    this.chartRegles.data.datasets[0].data = filteredData.map(item => item.count);
-    
-    // Appliquer les couleurs spécifiques par type
-    const colors = this.getColorsForRules(filteredData);
-    this.chartRegles.data.datasets[0].backgroundColor = colors.background;
-    this.chartRegles.data.datasets[0].borderColor = colors.border;
-    
-    this.chartRegles.update('active');
+    // Redirection vers la méthode unifiée
+    this.updateRuleChartWithRealData();
   }
 
   /**
@@ -630,6 +601,8 @@ export class ReportsComponent implements OnInit, OnDestroy, AfterViewInit {
    * Exporte les données en PDF
    */
   exportToPDF() {
+    if (this.exporting) return;
+    this.exporting = true;
     import('jspdf').then(jsPDFModule => {
       const jsPDF = jsPDFModule.default;
       const doc = new jsPDF();
@@ -778,10 +751,13 @@ export class ReportsComponent implements OnInit, OnDestroy, AfterViewInit {
       doc.setTextColor(55, 65, 81);
       doc.text('Fin du Rapport.', 15, y);
       doc.save(`rapport_lbcft_${new Date().toISOString().split('T')[0]}.pdf`);
+      this.exporting = false;
     });
   }
 
   exportToExcel() {
+    if (this.exporting) return;
+    this.exporting = true;
     // Préparer les données pour l'export Excel
     const data = [
       // En-têtes
@@ -840,5 +816,10 @@ export class ReportsComponent implements OnInit, OnDestroy, AfterViewInit {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    this.exporting = false;
+  }
+
+  private setError(message: string) {
+    this.error = message;
   }
 }

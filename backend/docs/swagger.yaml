@@ -3,51 +3,39 @@ definitions:
   models.Alerte:
     description: Alerte générée lors du déclenchement d'une règle
     properties:
-      analysteAssigneId:
+      action:
+        type: string
+      analysteAssigneID:
+        type: string
+      code:
+        description: Code d'alerte unique
         type: string
       dateGeneration:
         type: string
+      dateTraitement:
+        description: Date de traitement/résolution
+        type: string
       id:
+        type: string
+      message:
         type: string
       niveauCriticite:
         type: string
-      raisonDetection:
+      numeroCompte:
         type: string
-      regleDeclencheeId:
+      paysRisque:
+        type: string
+      regleDeclencheeID:
         type: string
       scoreRisque:
         type: number
       statut:
-        description: '"En cours", "Traité", "Faux positif"'
         type: string
       transactionId:
         type: string
-    type: object
-  models.Client:
-    description: Client du système (personne physique ou morale) obtenu lors de l'analyse
-      des transactions
-    properties:
-      adresse:
-        type: string
-      categorie:
-        type: string
-      dateCreation:
-        type: string
-      id:
-        type: string
-      nomClient:
-        type: string
-      numeroCompte:
-        type: string
-      pays:
-        type: string
-      profilClientId:
-        type: string
-      typeClient:
-        type: string
-      typeCompte:
-        type: string
-      ville:
+      type:
+        description: 'Type d''alerte (ex: "Montant", "Pays à risque", "Surveillé",
+          etc.)'
         type: string
     type: object
   models.EntiteBlacklist:
@@ -62,64 +50,11 @@ definitions:
       nom:
         type: string
       numeroCompte:
-        description: Numéro de compte pour vérification
         type: string
       typeEntite:
-        description: '"Interdit", "Blacklisté", "PEP", "Surveillé"'
-        type: string
-    type: object
-  models.LogAudit:
-    description: Log d'audit des actions critiques
-    properties:
-      actionEffectuee:
-        type: string
-      dateHeure:
-        type: string
-      details:
-        type: string
-      id:
-        type: integer
-      resultat:
-        type: string
-      utilisateurId:
-        type: string
-    type: object
-  models.ProfilClient:
-    description: Profil de client avec règles spécifiques
-    properties:
-      description:
-        type: string
-      id:
-        type: string
-      nomProfil:
         type: string
     type: object
   models.RegleControle:
-    description: Règle de contrôle pour la détection d'anomalies
-    properties:
-      active:
-        type: boolean
-      criticite:
-        type: string
-      description:
-        type: string
-      id:
-        type: string
-      listePays:
-        items:
-          type: string
-        type: array
-      nomRegle:
-        type: string
-      periodeReference:
-        type: string
-      profilClientId:
-        type: string
-      seuil:
-        type: number
-      typeRegle:
-        description: 'Ex: "montant", "frequence"'
-        type: string
     type: object
   models.Transaction:
     description: Transaction financière entre deux entités
@@ -147,11 +82,17 @@ definitions:
       numero_compte_payeur:
         type: string
       pays_paye:
+        description: 'Code pays ISO alpha-2 (ex: SN, ML, CI) - Compatible SPI'
         type: string
       pays_payeur:
+        description: 'Code pays ISO alpha-2 (ex: SN, ML, CI) - Compatible SPI'
         type: string
       portee:
         type: string
+      raw_data:
+        items:
+          type: integer
+        type: array
       type_client_paye:
         type: string
       type_client_payeur:
@@ -163,24 +104,6 @@ definitions:
       ville_paye:
         type: string
       ville_payeur:
-        type: string
-    type: object
-  models.Utilisateur:
-    description: Utilisateur du système (admin ou analyste)
-    properties:
-      actif:
-        type: boolean
-      dateCreation:
-        type: string
-      email:
-        type: string
-      id:
-        type: string
-      nomUtilisateur:
-        type: string
-      password:
-        type: string
-      role:
         type: string
     type: object
 host: localhost:8080
@@ -197,7 +120,37 @@ info:
   title: API du Moteur de Détection d'Anomalies
   version: "1.0"
 paths:
-  /alertes:
+  /accounts/{number}/rules:
+    get:
+      description: Récupère toutes les règles actives associées au profil client d'un
+        compte donné.
+      parameters:
+      - description: Numéro de compte
+        in: path
+        name: numeroCompte
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.RegleControle'
+            type: array
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lister les règles actives d'un compte
+      tags:
+      - Règles
+  /anomalies:
     get:
       description: Récupère la liste de toutes les alertes générées par le système.
       produces:
@@ -219,13 +172,12 @@ paths:
       - BearerAuth: []
       summary: Lister toutes les alertes
       tags:
-      - Analystes - Alertes
-  /alertes/{id}/status:
+      - Anomalies
+  /anomalies/{id}/status:
     put:
       consumes:
       - application/json
-      description: 'Permet à un analyste de changer le statut d''une alerte (ex: ''Traité'',
-        ''Faux positif'').'
+      description: Permet à un analyste de changer le statut d'une alerte.
       parameters:
       - description: ID de l'alerte
         in: path
@@ -258,609 +210,8 @@ paths:
       - BearerAuth: []
       summary: Mettre à jour le statut d'une alerte
       tags:
-      - Analystes - Alertes
-  /blacklist:
-    get:
-      description: Récupère toutes les entités de la liste de surveillance. Nécessite
-        des droits admin.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/models.EntiteBlacklist'
-            type: array
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Lister les entrées de la blacklist
-      tags:
-      - Administration - Blacklist
-    post:
-      consumes:
-      - application/json
-      description: Ajoute une nouvelle entité à la liste de surveillance. Nécessite
-        des droits admin.
-      parameters:
-      - description: Détails de l'entité à ajouter
-        in: body
-        name: blacklistEntry
-        required: true
-        schema:
-          $ref: '#/definitions/models.EntiteBlacklist'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/models.EntiteBlacklist'
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Créer une entrée dans la blacklist
-      tags:
-      - Administration - Blacklist
-  /blacklist/{id}:
-    delete:
-      description: Supprime une entité de la liste de surveillance par son ID. Nécessite
-        des droits admin.
-      parameters:
-      - description: ID de l'entité
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "204":
-          description: No Content
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Supprimer une entrée de la blacklist
-      tags:
-      - Administration - Blacklist
-    put:
-      consumes:
-      - application/json
-      description: Modifie une entité de la liste de surveillance. Nécessite des droits
-        admin.
-      parameters:
-      - description: ID de l'entité
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Nouvelles données de l'entité
-        in: body
-        name: blacklistEntry
-        required: true
-        schema:
-          $ref: '#/definitions/models.EntiteBlacklist'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.EntiteBlacklist'
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Mettre à jour une entrée de la blacklist
-      tags:
-      - Administration - Blacklist
-  /clients:
-    post:
-      consumes:
-      - application/json
-      description: Crée un nouveau client et l'associe à un profil. Nécessite des
-        droits admin.
-      parameters:
-      - description: Détails du client
-        in: body
-        name: client
-        required: true
-        schema:
-          $ref: '#/definitions/models.Client'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/models.Client'
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Créer un client
-      tags:
-      - Administration - Clients
-  /demo/logs:
-    get:
-      description: Retourne une liste de logs d'audit pour exposer le modèle LogAudit
-        dans Swagger
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/models.LogAudit'
-            type: array
-      summary: Lister les logs d'audit (exemple)
-      tags:
-      - Administration - Démo
-  /login:
-    post:
-      consumes:
-      - application/json
-      description: Authentifie un utilisateur avec email et mot de passe et renvoie
-        un token JWT.
-      parameters:
-      - description: Identifiants de l'utilisateur
-        in: body
-        name: credentials
-        required: true
-        schema:
-          properties:
-            email:
-              type: string
-            password:
-              type: string
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Renvoie un token JWT
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Connecter un utilisateur
-      tags:
-      - Authentification
-  /profile:
-    get:
-      description: Renvoie les informations de l'utilisateur actuellement authentifié
-        via le token JWT.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.Utilisateur'
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Obtenir le profil de l'utilisateur connecté
-      tags:
-      - Utilisateurs
-  /profils:
-    get:
-      description: Récupère tous les profils clients. Nécessite des droits admin.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/models.ProfilClient'
-            type: array
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Lister les profils clients
-      tags:
-      - Administration - Profils
-    post:
-      consumes:
-      - application/json
-      description: Crée un nouveau profil client. Nécessite des droits admin.
-      parameters:
-      - description: Détails du profil
-        in: body
-        name: profil
-        required: true
-        schema:
-          $ref: '#/definitions/models.ProfilClient'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/models.ProfilClient'
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Créer un profil client
-      tags:
-      - Administration - Profils
-  /profils/{id}:
-    delete:
-      description: Supprime un profil client. Nécessite des droits admin.
-      parameters:
-      - description: ID du profil
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "204":
-          description: No Content
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Supprimer un profil client
-      tags:
-      - Administration - Profils
-    put:
-      consumes:
-      - application/json
-      description: Modifie un profil client. Nécessite des droits admin.
-      parameters:
-      - description: ID du profil
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Nouvelles données du profil
-        in: body
-        name: profil
-        required: true
-        schema:
-          $ref: '#/definitions/models.ProfilClient'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.ProfilClient'
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Mettre à jour un profil client
-      tags:
-      - Administration - Profils
-  /profils/{id}/regles:
-    get:
-      description: Récupère toutes les règles associées à un profil client. Nécessite
-        des droits admin.
-      parameters:
-      - description: ID du Profil Client
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/models.RegleControle'
-            type: array
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Lister les règles d'un profil
-      tags:
-      - Administration - Règles
-  /regle/pays_risque/pays:
-    delete:
-      consumes:
-      - application/json
-      description: Permet à un admin de retirer un pays de la liste sans toucher aux
-        autres.
-      parameters:
-      - description: Pays à retirer
-        in: body
-        name: pays
-        required: true
-        schema:
-          properties:
-            pays:
-              type: string
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Retirer un pays de la liste des pays à risque
-      tags:
-      - Administration - Règles
-    get:
-      description: Récupère la liste actuelle des pays à risque de la règle universelle.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            properties:
-              liste_pays:
-                items:
-                  type: string
-                type: array
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Obtenir la liste des pays à risque
-      tags:
-      - Administration - Règles
-    post:
-      consumes:
-      - application/json
-      description: Permet à un admin d'ajouter un pays à la liste sans écraser les
-        autres.
-      parameters:
-      - description: Pays à ajouter
-        in: body
-        name: pays
-        required: true
-        schema:
-          properties:
-            pays:
-              type: string
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Ajouter un pays à la liste des pays à risque
-      tags:
-      - Administration - Règles
-    put:
-      consumes:
-      - application/json
-      description: Permet à un admin de modifier la liste des pays à risque de la
-        règle universelle.
-      parameters:
-      - description: Nouvelle liste des pays à risque
-        in: body
-        name: pays
-        required: true
-        schema:
-          properties:
-            liste_pays:
-              items:
-                type: string
-              type: array
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Mettre à jour la liste des pays à risque
-      tags:
-      - Administration - Règles
-  /regles:
-    post:
-      consumes:
-      - application/json
-      description: Crée une nouvelle règle de contrôle. Nécessite des droits admin.
-      parameters:
-      - description: Détails de la règle
-        in: body
-        name: regle
-        required: true
-        schema:
-          $ref: '#/definitions/models.RegleControle'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/models.RegleControle'
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Créer une règle de contrôle
-      tags:
-      - Administration - Règles
-  /regles/{id}:
-    delete:
-      description: Supprime une règle de contrôle. Nécessite des droits admin.
-      parameters:
-      - description: ID de la règle
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "204":
-          description: No Content
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Supprimer une règle de contrôle
-      tags:
-      - Administration - Règles
-    put:
-      consumes:
-      - application/json
-      description: Modifie une règle de contrôle. Nécessite des droits admin.
-      parameters:
-      - description: ID de la règle
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Nouvelles données de la règle
-        in: body
-        name: regle
-        required: true
-        schema:
-          $ref: '#/definitions/models.RegleControle'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.RegleControle'
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Mettre à jour une règle de contrôle
-      tags:
-      - Administration - Règles
-  /transactions/analyze:
+      - Anomalies
+  /anomalies/analyze:
     post:
       consumes:
       - application/json
@@ -898,36 +249,309 @@ paths:
       summary: Analyser une transaction (bidirectionnel)
       tags:
       - Moteur de Détection
-  /users:
+  /auth/login:
     post:
       consumes:
       - application/json
-      description: Crée un nouvel utilisateur (admin ou analyste).
+      description: Authentifie un utilisateur avec email et mot de passe et renvoie
+        un token JWT.
       parameters:
-      - description: Le mot de passe doit être dans le champ 'password'
+      - description: Identifiants de l'utilisateur
         in: body
-        name: utilisateur
+        name: credentials
         required: true
         schema:
-          $ref: '#/definitions/models.Utilisateur'
+          properties:
+            email:
+              type: string
+            password:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Renvoie un token JWT
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Connecter un utilisateur
+      tags:
+      - Authentification
+  /entities:
+    get:
+      description: Récupère toutes les entités de la liste de surveillance.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.EntiteBlacklist'
+            type: array
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lister les entrées de la blacklist
+      tags:
+      - Entités
+    post:
+      consumes:
+      - application/json
+      description: Ajoute une nouvelle entité à la liste de surveillance.
+      parameters:
+      - description: Détails de l'entité à ajouter
+        in: body
+        name: blacklistEntry
+        required: true
+        schema:
+          $ref: '#/definitions/models.EntiteBlacklist'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Bad Request
+            $ref: '#/definitions/models.EntiteBlacklist'
+        "403":
+          description: Forbidden
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: Créer un nouvel utilisateur
+      security:
+      - BearerAuth: []
+      summary: Créer une entrée dans la blacklist
       tags:
-      - Authentification
+      - Entités
+  /entities/{id}:
+    delete:
+      description: Supprime une entité de la liste de surveillance par son ID.
+      parameters:
+      - description: ID de l'entité
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Supprimer une entrée de la blacklist
+      tags:
+      - Entités
+    put:
+      consumes:
+      - application/json
+      description: Modifie une entité de la liste de surveillance.
+      parameters:
+      - description: ID de l'entité
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Nouvelles données de l'entité
+        in: body
+        name: blacklistEntry
+        required: true
+        schema:
+          $ref: '#/definitions/models.EntiteBlacklist'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.EntiteBlacklist'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Mettre à jour une entrée de la blacklist
+      tags:
+      - Entités
+  /rules:
+    post:
+      consumes:
+      - application/json
+      description: Crée une nouvelle règle de contrôle.
+      parameters:
+      - description: Détails de la règle
+        in: body
+        name: regle
+        required: true
+        schema:
+          $ref: '#/definitions/models.RegleControle'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.RegleControle'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Créer une règle de contrôle
+      tags:
+      - Règles
+  /rules/{id}:
+    delete:
+      description: Supprime une règle de contrôle.
+      parameters:
+      - description: ID de la règle
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Supprimer une règle de contrôle
+      tags:
+      - Règles
+    put:
+      consumes:
+      - application/json
+      description: Modifie une règle de contrôle.
+      parameters:
+      - description: ID de la règle
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Nouvelles données de la règle
+        in: body
+        name: regle
+        required: true
+        schema:
+          $ref: '#/definitions/models.RegleControle'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.RegleControle'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Mettre à jour une règle de contrôle
+      tags:
+      - Règles
+  /rules/{id}/profiles:
+    get:
+      description: Récupère toutes les règles associées à un profil client.
+      parameters:
+      - description: ID du Profil Client
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.RegleControle'
+            type: array
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lister les règles d'un profil
+      tags:
+      - Règles
+  /rules/{id}/status:
+    patch:
+      consumes:
+      - application/json
+      description: Change le statut actif/inactif d'une règle de contrôle.
+      parameters:
+      - description: ID de la règle
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Nouveau statut
+        in: body
+        name: status
+        required: true
+        schema:
+          properties:
+            active:
+              type: boolean
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.RegleControle'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Activer/Désactiver une règle de contrôle
+      tags:
+      - Règles
 schemes:
 - http
 securityDefinitions:

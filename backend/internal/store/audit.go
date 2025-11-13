@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"anomaly-detector/internal/models"
@@ -69,46 +70,55 @@ func (s *Store) LogActionWithRole(ctx context.Context, utilisateurID, action, ty
 
 // GetLogsAudit récupère les logs d'audit avec filtres
 func (s *Store) GetLogsAudit(ctx context.Context, filters map[string]interface{}) ([]models.LogAudit, error) {
+	// Nouveau contrat: accepte directement les clés « module », « statut », « action », « utilisateur_id », « date_debut », « date_fin », « limit ».
 	var logs []models.LogAudit
 	query := s.gormDB.WithContext(ctx).Model(&models.LogAudit{})
 
-	// Appliquer les filtres
-	if typeAction, ok := filters["type_action"]; ok && typeAction != "" {
-		query = query.Where("type_action = ?", typeAction)
+	// module -> type_action
+	if module, ok := filters["module"]; ok && module != "" {
+		query = query.Where("type_action = ?", module)
 	}
-
+	// statut -> resultat (exact)
+	if statut, ok := filters["statut"]; ok && statut != "" {
+		query = query.Where("resultat = ?", statut)
+	}
+	// action -> action_effectuee (ILIKE partiel)
+	if action, ok := filters["action"]; ok && action != "" {
+		if aStr, isStr := action.(string); isStr {
+			query = query.Where("action_effectuee ILIKE ?", "%"+aStr+"%")
+		}
+	}
+	// utilisateur_id
 	if utilisateurID, ok := filters["utilisateur_id"]; ok && utilisateurID != "" {
 		query = query.Where("utilisateur_id = ?", utilisateurID)
 	}
 
-	if action, ok := filters["action_effectuee"]; ok && action != "" {
-		query = query.Where("action_effectuee ILIKE ?", "%"+action.(string)+"%")
-	}
-
-	if resultat, ok := filters["resultat"]; ok && resultat != "" {
-		query = query.Where("resultat = ?", resultat)
-	}
-
-	// Filtres de date
+	// Dates
 	if dateDebut, ok := filters["date_debut"]; ok && dateDebut != "" {
 		if date, err := time.Parse("2006-01-02", dateDebut.(string)); err == nil {
 			query = query.Where("date_heure >= ?", date)
 		}
 	}
-
 	if dateFin, ok := filters["date_fin"]; ok && dateFin != "" {
 		if date, err := time.Parse("2006-01-02", dateFin.(string)); err == nil {
-			// Ajouter 24h pour inclure toute la journée
 			dateFin := date.Add(24 * time.Hour)
 			query = query.Where("date_heure < ?", dateFin)
 		}
 	}
 
-	// Limitation et tri
-	limit := 1000 // Limite par défaut
+	// limit
+	limit := 1000
 	if limitVal, ok := filters["limit"]; ok {
-		if l, ok := limitVal.(int); ok && l > 0 && l < 5000 {
-			limit = l
+		switch v := limitVal.(type) {
+		case int:
+			if v > 0 && v < 5000 {
+				limit = v
+			}
+		case string:
+			// parse simple string int
+			if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 && parsed < 5000 {
+				limit = parsed
+			}
 		}
 	}
 

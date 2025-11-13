@@ -12,6 +12,7 @@ export interface ControlRule {
   seuil?: number;
   profilClientId?: string;
   periodeReference?: string;
+  action?: string; // Action paramétrable: bloquer, surveiller, notifier
   createdAt?: string;
   updatedAt?: string;
 }

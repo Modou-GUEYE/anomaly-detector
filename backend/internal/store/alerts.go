@@ -80,8 +80,9 @@ func (s *Store) CreateAlerte(ctx context.Context, alerte *models.Alerte, userID 
 		resultat = "bloqué"
 	case "surveiller":
 		resultat = "surveillance"
-	case "notifier":
-		resultat = "notifié"
+	default:
+		// Par défaut, traiter comme surveillance
+		resultat = "surveillance"
 	}
 
 	logErr := s.LogAction(ctx,

@@ -1,3 +1,172 @@
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(1px);
+  z-index: 999;
+}
+
+.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(920px, 95vw);
+  max-height: 85vh;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+}
+
+body.modal-open {
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-close {
+  border: none;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 18px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  transition: background .2s, transform .15s, color .2s;
+}
+.modal-close:hover {
+  background:#e2e8f0;
+  color:#0f172a;
+}
+.modal-close:active {
+  transform: scale(.92);
+}
+.modal-close:focus-visible {
+  outline: 3px solid #2E6CF2;
+  outline-offset: 2px;
+}
+
+.modal-body {
+  padding: 16px 20px;
+  overflow: auto;
+}
+
+.modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid #eee;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.detail-section {
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.alertes-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.raw-json {
+  background: #111;
+  color: #e6e6e6;
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+/* Modal overlay/content styles (align with other pages) */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.18s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+  max-width: 900px;
+  width: calc(100% - 40px);
+  max-height: 85vh;
+  overflow-y: auto;
+  animation: slideUp 0.22s ease-out;
+  padding: 0; /* header/body provide padding */
+  position: relative; /* ensure absolutely positioned close button anchors to modal box */
+}
+
+@keyframes slideUp {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Close button positioned in top-right of modal-content */
+.modal-content .close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  font-size: 1.05rem;
+  color: #64748B;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: color 0.12s ease, background 0.12s ease, transform 0.08s ease;
+}
+.modal-content .close-btn:hover {
+  color: #0f172a;
+  background: rgba(15,23,42,0.04);
+  transform: translateY(-1px);
+}
+
+/* Ensure modal header has space for the absolute close button */
+.modal-content .modal-header {
+  /* header stays in flow; close button is positioned relative to .modal-content */
+  padding-right: 56px; /* leave room visually for close button */
+}
 /* Forcer la cellule vide à occuper toute la largeur du tableau */
 .provider-table .empty {
   width: 100%;
@@ -53,20 +222,25 @@
     align-items: stretch;
   }
   .dashboard-provider {
-  height: 65vh;
+  /* Remove fixed viewport height so the page can scroll naturally.
+    Keep flexible column layout so the table area can grow/shrink. */
+  height: auto;
   display: flex;
   flex-direction: column;
   }
   .provider-table-scroll {
+  /* Use flex so the table area shrinks/grows inside the provider
+    and provide a max-height so the overall page can scroll. */
   flex: 1 1 auto;
+  min-height: 0;
+  max-height: 60vh; /* limit table scroll area to allow page scrolling */
   overflow-y: auto;
-  max-height: 100%;
-  min-height: 120px;
+  overflow-x: auto;
   width: 100%;
   min-width: 0;
   padding: 0;
   margin: 0;
-  /* Masquer la scrollbar */
+  /* Keep hidden native scrollbars on desktop but allow scroll behaviour */
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* Internet Explorer et Edge */
   }
@@ -81,6 +255,117 @@
 
 /* Page */
 .dashboard-page{ padding:24px; }
+
+/* Report-style KPI section (aligned with Reports page) */
+.performance-section {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(46, 108, 242, 0.1);
+  border: 1px solid #E5E7EB;
+  margin: 8px 0 16px;
+}
+
+.section-title {
+  color: #1F2937;
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 20px 0;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #F3F4F6;
+}
+
+/* Add extra top spacing for the section title on the dashboard so it sits
+   comfortably under the KPI cards and matches the page rhythm. Scoped to
+   .dashboard-tracking to avoid impacting other pages. */
+.dashboard-tracking .section-title {
+  margin-top: 16px;
+}
+
+.kpis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.kpi-card {
+  background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.2s;
+}
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(46, 108, 242, 0.15);
+}
+
+.kpi-card .kpi-icon {
+  font-size: 2rem;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(46, 108, 242, 0.1);
+  border-radius: 10px;
+}
+
+.kpi-card .kpi-content { flex: 1; }
+
+.kpi-card .kpi-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2E6CF2;
+  line-height: 1.2;
+}
+
+.kpi-card .kpi-label {
+  font-size: 0.85rem;
+  color: #6B7280;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.kpi-card .kpi-period {
+  font-size: 0.75rem;
+  color: #9CA3AF;
+  font-style: italic;
+}
+
+/* Tracking-like page title style (force blue title like Tracking) */
+.tracking-page h1 {
+  color: #2E6CF2;
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Align the dashboard title with the table padding: same left and top spacing as the provider content */
+.dashboard-tracking > h1,
+.dashboard-tracking .tracking-content > h1,
+.dashboard-tracking .tracking-content h1 {
+  padding-left: 20px;
+  padding-top: 20px;
+  margin-bottom: 12px;
+}
+
+/* Dashboard-specific override: avoid forcing 100% height which can prevent
+   the page from scrolling when parent heights are not set. Use min-height
+   so the document can scroll naturally and inner containers handle their
+   own scrolling. */
+.dashboard-tracking {
+  height: auto !important;
+  min-height: 100vh;
+  overflow: visible !important;
+}
 
 /* KPI Cards */
 .dashboard-cards{ display:flex; gap:20px; flex-wrap:wrap; margin:20px 0 8px; }
@@ -100,6 +385,39 @@
   font-size:.95rem; cursor:pointer; transition:all .2s;
 }
 .card-btn:hover{ background:#2E6CF2; color:#fff; }
+
+/* Actions buttons (view, close, etc.) */
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: .95rem;
+  border: none;
+  cursor: pointer;
+  background: #2E6CF2;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(46,108,242,0.25);
+  transition: background .2s, transform .15s, box-shadow .2s, color .2s;
+}
+.action-btn:hover { background: #1f4db8; box-shadow: 0 6px 16px rgba(31,77,184,0.28); }
+.action-btn:active { transform: translateY(1px) scale(.98); }
+.action-btn:disabled { opacity:.6; cursor:not-allowed; }
+
+/* Outline variant for view buttons in table */
+.action-btn.view-btn {
+  background: #fff;
+  color: #2E6CF2;
+  border: 2px solid #2E6CF2;
+  box-shadow: none;
+}
+.action-btn.view-btn:hover { background:#2E6CF2; color:#fff; }
+
+/* Footer spacing for modal actions */
+.modal-footer .action-btn + .action-btn { margin-left: 8px; }
 
 /* Two-column section */
 .dashboard-section{
@@ -146,6 +464,173 @@
    border-spacing: 0 10px;    /* espace vertical entre les lignes */
    table-layout: auto; /* Tableau dynamique selon le contenu */
  }
+.transaction-amount .amount-main {
+  white-space: nowrap; /* Prevent the amount from wrapping to a second line */
+}
+.provider-table-scroll {
+  /* Make the scroll container visually match Tracking's provider-table-container */
+  background: #fff;
+  border-radius: 16px;
+  /* Allow internal scrolling — do not hide overflow here. */
+  overflow: auto;
+  box-shadow: 0 4px 20px rgba(46, 108, 242, 0.08);
+  border: 1px solid #E5E7EB;
+}
+
+/* Floating row / card look and sticky header (unified with Tracking styles) */
+.provider-table thead th{
+  position: sticky;
+  top: 0;
+  background: #2E6CF2; /* primary blue like Tracking */
+  color: #fff;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(36,99,222,0.15);
+}
+
+/* Copy of Tracking table styles scoped to the Dashboard section to ensure
+   the Dashboard table is visually identical to Tracking's table. */
+.dashboard-tracking .provider-table-container {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(46, 108, 242, 0.08);
+  border: 1px solid #E5E7EB;
+}
+
+.dashboard-tracking .provider-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 10px;
+  table-layout: auto;
+}
+
+.dashboard-tracking .provider-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.dashboard-tracking .provider-table th{
+  color: #fff;
+  background: #2E6CF2;
+  font-weight: 700;
+  padding: 12px 10px;
+  text-align: left;
+  box-shadow: 0 4px 12px rgba(36, 99, 222, 0.15);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.9rem;
+}
+
+.dashboard-tracking .provider-table thead tr th:first-child{
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+}
+
+.dashboard-tracking .provider-table thead tr th:last-child{
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+
+.dashboard-tracking .provider-row{
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(36, 99, 222, 0.10);
+  transition: all 0.3s ease;
+}
+
+/* Ensure amount doesn't wrap on small screens: reduce font-size slightly if necessary */
+@media (max-width: 560px) {
+  .transaction-amount .amount-main {
+    font-size: 0.95rem;
+  }
+}
+
+.dashboard-tracking .provider-row:hover{
+  box-shadow: 0 4px 12px rgba(36, 99, 222, 0.14);
+}
+
+.dashboard-tracking .provider-row td{
+  padding: 12px 10px;
+  border-bottom: none;
+  vertical-align: middle;
+  font-size: 0.9rem;
+  line-height: 1.2;
+}
+
+.dashboard-tracking .provider-row td:first-child{
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+}
+
+.dashboard-tracking .provider-row td:last-child{
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+
+.dashboard-tracking .provider-row .timestamp-cell{ color: #2E6CF2; font-weight:700; }
+
+.provider-table tbody tr td{
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(2,6,23,0.06);
+  padding: 12px 10px;
+  vertical-align: middle;
+}
+/* Rounded ends so the whole row looks like a card */
+.provider-table tbody tr td:first-child{
+  border-radius: 10px 0 0 10px;
+}
+.provider-table tbody tr td:last-child{
+  border-radius: 0 10px 10px 0;
+}
+.provider-table {
+  background: transparent;
+}
+
+/* Row interactions and refined shadows */
+.provider-table tbody tr {
+  transition: box-shadow .18s ease, transform .18s ease;
+}
+.provider-table tbody tr:hover td{
+  box-shadow: 0 14px 32px rgba(2,6,23,0.08);
+}
+
+/* Status badges */
+.status-badge {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #fff;
+}
+.status-badge.success{ background: #10B981; } /* Succès / Traité */
+.status-badge.pending{ background: #F59E0B; } /* En cours */
+.status-badge.failed{ background: #EF4444; } /* Échec */
+
+/* Scope badge refinement */
+.scope-badge{
+  padding: 6px 8px;
+  border-radius: 999px;
+  font-weight:700;
+  font-size:0.85rem;
+}
+.scope-national{ background: rgba(46,108,242,0.08); color:#2E6CF2; border:1px solid rgba(46,108,242,0.12); }
+.scope-international{ background: rgba(239,68,68,0.06); color:#DC2626; border:1px solid rgba(239,68,68,0.10); }
+
+/* Column sizing hints to prevent awkward stretching */
+.provider-table th.amount, .provider-table td.transaction-amount{ width:110px; }
+.provider-table th.date, .provider-table td.transaction-date{ width:150px; }
+.provider-table th.actions, .provider-table td.transaction-actions{ width:120px; }
+
+/* Responsive: on small screens present compact stacked view */
+@media (max-width: 780px) {
+  .provider-table thead { display: none; }
+  .provider-table, .provider-table tbody, .provider-table tr, .provider-table td { display: block; width: 100%; }
+  .provider-table tr { margin-bottom: 12px; }
+  .provider-table td { padding: 10px; white-space: normal; }
+  .provider-table td::before { content: attr(data-label); display:block; font-weight:700; color:#6B7280; margin-bottom:6px; }
+}
 .provider-table th, .provider-table td{
   padding: 8px 4px;
   border-bottom: none; /* pas de trait, on utilise l'espacement */
@@ -153,7 +638,18 @@
   line-height: 1.2;
   text-align: center;
   vertical-align: middle;
-  white-space: nowrap; /* Empêche le retour à la ligne automatique */
+  /* Allow wrapping to avoid horizontal overflow; rely on container scroll if content is too wide */
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* Truncate long client names to keep rows tidy */
+.provider-table td .client-name{
+  display: block;
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Alignement spécifique pour chaque colonne */

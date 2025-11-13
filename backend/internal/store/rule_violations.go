@@ -8,6 +8,23 @@ import (
 	"anomaly-detector/internal/models"
 )
 
+// Helpers pour bornes de périodes calendaires (UTC)
+func startOfMonthUTC(t time.Time) time.Time {
+	tt := t.UTC()
+	return time.Date(tt.Year(), tt.Month(), 1, 0, 0, 0, 0, time.UTC)
+}
+
+func startOfQuarterUTC(t time.Time) time.Time {
+	tt := t.UTC()
+	qStartMonth := ((int(tt.Month())-1)/3)*3 + 1 // 1,4,7,10
+	return time.Date(tt.Year(), time.Month(qStartMonth), 1, 0, 0, 0, 0, time.UTC)
+}
+
+func startOfYearUTC(t time.Time) time.Time {
+	tt := t.UTC()
+	return time.Date(tt.Year(), time.January, 1, 0, 0, 0, 0, time.UTC)
+}
+
 // GetRuleViolationsByPeriod récupère les violations de règles par période
 func (s *Store) GetRuleViolationsByPeriod(ctx context.Context, period string) ([]RuleViolation, error) {
 	var violations []RuleViolation
@@ -19,7 +36,9 @@ func (s *Store) GetRuleViolationsByPeriod(ctx context.Context, period string) ([
 	case "quarter":
 		violations, err = s.getRuleViolationsForQuarter(ctx)
 	case "year":
+		violations, err = s.getRuleViolationsForYear(ctx)
 	default:
+		// Par sécurité, fallback sur la dernière année
 		violations, err = s.getRuleViolationsForYear(ctx)
 	}
 
@@ -49,38 +68,33 @@ func (s *Store) GetRuleViolationsByPeriod(ctx context.Context, period string) ([
 
 // getRuleViolationsForMonth calcule les violations sur le dernier mois
 func (s *Store) getRuleViolationsForMonth(ctx context.Context) ([]RuleViolation, error) {
-	startDate := time.Now().AddDate(0, -1, 0) // Dernier mois
-	return s.getRuleViolationsForDateRange(ctx, startDate, time.Now())
+	now := time.Now().UTC()
+	startDate := startOfMonthUTC(now) // Mois calendaire courant (1er du mois)
+	return s.getRuleViolationsForDateRange(ctx, startDate, now)
 }
 
 // getRuleViolationsForQuarter calcule les violations sur le dernier trimestre
 func (s *Store) getRuleViolationsForQuarter(ctx context.Context) ([]RuleViolation, error) {
-	startDate := time.Now().AddDate(0, -3, 0) // Dernier trimestre
-	return s.getRuleViolationsForDateRange(ctx, startDate, time.Now())
+	now := time.Now().UTC()
+	startDate := startOfQuarterUTC(now) // Trimestre calendaire courant (Q1/Q2/Q3/Q4)
+	return s.getRuleViolationsForDateRange(ctx, startDate, now)
 }
 
 // getRuleViolationsForYear calcule les violations sur la dernière année
-// Si aucune donnée sur l'année, utilise les données du mois
 func (s *Store) getRuleViolationsForYear(ctx context.Context) ([]RuleViolation, error) {
-	startDate := time.Now().AddDate(-1, 0, 0) // Dernière année
-	violations, err := s.getRuleViolationsForDateRange(ctx, startDate, time.Now())
-
-	// Si aucune donnée sur l'année, utiliser les données du mois comme fallback
-	if err == nil && len(violations) == 0 {
-		return s.getRuleViolationsForMonth(ctx)
-	}
-
-	return violations, err
+	now := time.Now().UTC()
+	startDate := startOfYearUTC(now) // Année calendaire courante (1er janvier)
+	return s.getRuleViolationsForDateRange(ctx, startDate, now)
 }
 
 // getRuleViolationsForDateRange calcule les violations pour une plage de dates
-func (s *Store) getRuleViolationsForDateRange(_ context.Context, startDate, endDate time.Time) ([]RuleViolation, error) {
+func (s *Store) getRuleViolationsForDateRange(ctx context.Context, startDate, endDate time.Time) ([]RuleViolation, error) {
 	var results []struct {
 		Type  string `gorm:"column:type"`
 		Count int    `gorm:"column:count"`
 	}
 
-	err := s.gormDB.Model(&models.Alerte{}).
+	err := s.gormDB.WithContext(ctx).Model(&models.Alerte{}).
 		Select("type, COUNT(*) as count").
 		Where("date_generation >= ? AND date_generation <= ?", startDate, endDate).
 		Group("type").

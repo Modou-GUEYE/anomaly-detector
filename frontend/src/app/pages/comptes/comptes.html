@@ -74,7 +74,7 @@
               <td class="col-nom">{{ compte.nomClient }}</td>
               <td class="col-type"><span class="badge">{{ getTypeClientLabel(compte.typeClient) }}</span></td>
               <td class="col-ville">{{ compte.ville }}</td>
-              <td class="col-pays">{{ compte.pays }}</td>
+              <td class="col-pays">{{ getCountryNameFromCode(compte.pays) }}</td>
               <td class="col-categorie">{{ compte.categorie }}</td>
               <td class="col-date">{{ compte.dateCreation | date: 'dd/MM/yyyy' }}</td>
               <td class="col-surveillance">

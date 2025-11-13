@@ -7,7 +7,7 @@ import (
 
 // RuleViolation représente une violation de règle avec son nombre d'occurrences
 type RuleViolation struct {
-	RuleName   string  `json:"rule_name"`
+	RuleName   string  `json:"ruleName"`
 	Count      int     `json:"count"`
 	Percentage float64 `json:"percentage"`
 }
@@ -52,10 +52,14 @@ type StoreInterface interface {
 	GetRegleByType(ctx context.Context, typeRegle string) (*models.RegleControle, error)
 	GetReglePaysRisqueActive(ctx context.Context) (*models.RegleControle, error)
 	IsPaysARisque(ctx context.Context, pays string) (bool, error)
-	GetAllPaysARisque(ctx context.Context) ([]string, error)
+	IsPaysARisqueByCode(ctx context.Context, codePays string) (bool, error)
+	GetAllPaysARisque(ctx context.Context) ([]models.PaysRisque, error)
 	AddPaysARisque(ctx context.Context, nomPays string, userID string) error
+	AddPaysARisqueWithCode(ctx context.Context, pays *models.PaysRisque, userID string) error
 	DeletePaysARisque(ctx context.Context, nomPays string, userID string) error
 	UpdatePaysARisque(ctx context.Context, ancienNom, nouveauNom string, userID string) error
+	UpdatePaysARisqueWithCode(ctx context.Context, ancienNom, nouveauNom, code string, userID string) error
+	LinkPaysRisqueToRegle(ctx context.Context) error
 
 	// Comptes
 	CreateCompte(ctx context.Context, compte *models.Compte, userID string) (*models.Compte, error)

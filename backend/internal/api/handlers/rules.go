@@ -5,6 +5,7 @@ import (
 	"anomaly-detector/internal/store"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -19,6 +20,93 @@ func NewRulesHandler(store *store.Store) *RulesHandler {
 	return &RulesHandler{store: store}
 }
 
+const (
+	defaultMontantPeriode   = "7d"
+	defaultFrequencePeriode = "24h"
+)
+
+// allowedTypes répertorie les types de règles autorisées (évolutif)
+var allowedTypes = map[string]struct{}{
+	"montant":     {},
+	"frequence":   {},
+	"pays_risque": {},
+}
+
+var allowedActions = map[string]struct{}{
+	"bloquer":    {},
+	"surveiller": {},
+	"notifier":   {},
+}
+
+// normalizeAndValidateRegle applique les valeurs par défaut et valide les champs selon le type.
+// Elle ne persiste rien : uniquement transformation/validation.
+func normalizeAndValidateRegle(r *models.RegleControle) error {
+	r.TypeRegle = strings.TrimSpace(strings.ToLower(r.TypeRegle))
+	if _, ok := allowedTypes[r.TypeRegle]; !ok {
+		return fmt.Errorf("typeRegle invalide: %s", r.TypeRegle)
+	}
+
+	// Action par défaut si vide
+	if strings.TrimSpace(r.Action) == "" {
+		r.Action = "surveiller"
+	}
+	// Normaliser action et valider
+	r.Action = strings.TrimSpace(strings.ToLower(r.Action))
+	if _, ok := allowedActions[r.Action]; !ok {
+		r.Action = "surveiller"
+	}
+
+	// Nom et description basiques requis
+	r.NomRegle = strings.TrimSpace(r.NomRegle)
+	r.Description = strings.TrimSpace(r.Description)
+	if r.NomRegle == "" {
+		return fmt.Errorf("nomRegle est obligatoire")
+	}
+	if r.Description == "" {
+		return fmt.Errorf("description est obligatoire")
+	}
+
+	switch r.TypeRegle {
+	case "montant":
+		// Périodes autorisées pour montant
+		allowed := map[string]struct{}{"7d": {}, "30d": {}}
+		if r.PeriodeReference == "" {
+			r.PeriodeReference = defaultMontantPeriode
+		} else {
+			p := strings.ToLower(strings.TrimSpace(r.PeriodeReference))
+			if _, ok := allowed[p]; !ok {
+				// Valeur non autorisée -> défaut sécurisé
+				r.PeriodeReference = defaultMontantPeriode
+			} else {
+				r.PeriodeReference = p
+			}
+		}
+		if r.Seuil <= 0 {
+			return fmt.Errorf("seuil doit être > 0 pour une règle de type montant")
+		}
+	case "frequence":
+		// Périodes autorisées pour frequence
+		allowed := map[string]struct{}{"24h": {}, "7d": {}}
+		if r.PeriodeReference == "" {
+			r.PeriodeReference = defaultFrequencePeriode
+		} else {
+			p := strings.ToLower(strings.TrimSpace(r.PeriodeReference))
+			if _, ok := allowed[p]; !ok {
+				r.PeriodeReference = defaultFrequencePeriode
+			} else {
+				r.PeriodeReference = p
+			}
+		}
+		if r.Seuil <= 0 {
+			return fmt.Errorf("seuil doit être > 0 pour une règle de type frequence")
+		}
+	default:
+		// Pour pays_risque: pas de periodeReference, pas de seuil obligatoire
+		r.PeriodeReference = ""
+	}
+	return nil
+}
+
 // HandleGetAllRegles liste toutes les règles de contrôle
 func (h *RulesHandler) HandleGetAllRegles(ctx *gin.Context) {
 	regles, err := h.store.GetAllRegles(ctx)
@@ -27,6 +115,17 @@ func (h *RulesHandler) HandleGetAllRegles(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(200, regles)
+}
+
+// HandleGetRegleByID retourne une règle unique par son ID
+func (h *RulesHandler) HandleGetRegleByID(ctx *gin.Context) {
+	id := ctx.Param("id")
+	regle, err := h.store.GetRegleByID(ctx, id)
+	if err != nil {
+		ctx.JSON(404, gin.H{"error": "Règle introuvable"})
+		return
+	}
+	ctx.JSON(200, regle)
 }
 
 // @Summary      Créer une règle de contrôle
@@ -53,11 +152,9 @@ func (h *RulesHandler) HandleCreateRegleControle(ctx *gin.Context) {
 		return
 	}
 
-	// Fixer periodeReference selon le type de règle
-	if req.TypeRegle == "montant" {
-		req.PeriodeReference = "7d"
-	} else if req.TypeRegle == "frequence" {
-		req.PeriodeReference = "24h"
+	if err := normalizeAndValidateRegle(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 
 	regle, err := h.store.CreateRegleControle(ctx, &req, userID.(string))
@@ -94,11 +191,9 @@ func (h *RulesHandler) HandleUpdateRegleControle(ctx *gin.Context) {
 		return
 	}
 
-	// Fixer periodeReference selon le type de règle
-	if req.TypeRegle == "montant" {
-		req.PeriodeReference = "7d"
-	} else if req.TypeRegle == "frequence" {
-		req.PeriodeReference = "24h"
+	if err := normalizeAndValidateRegle(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 
 	regle, err := h.store.UpdateRegleControle(ctx, id, &req, userID.(string))

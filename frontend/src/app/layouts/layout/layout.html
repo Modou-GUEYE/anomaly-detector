@@ -21,7 +21,7 @@
       <a class="sidebar-link" [class.active]="router.url === '/pays-risque'" (click)="navigateTo('pays-risque')">Pays à risque</a>
       <a class="sidebar-link" [class.active]="router.url === '/blacklist'" (click)="navigateTo('blacklist')">Blacklist</a>
       <a class="sidebar-link" [class.active]="router.url === '/reports'" (click)="navigateTo('reports')">Rapports</a>
-      <a class="sidebar-link" [class.active]="router.url === '/tracking'" (click)="navigateTo('tracking')"><span>Tracking</span></a>
+  <a *ngIf="!(profile?.role?.toLowerCase() === 'analyst' || profile?.role?.toLowerCase() === 'analyste')" class="sidebar-link" [class.active]="router.url === '/tracking'" (click)="navigateTo('tracking')"><span>Tracking</span></a>
     </nav>
   </aside>
 

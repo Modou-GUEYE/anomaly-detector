@@ -467,8 +467,8 @@ export class ReportsService {
     return this.http.get<any[]>(url, { params }).pipe(
       map(data => data.map(item => ({
         period: item.period,
-        avgProcessingTime: item.avg_processing_time || 0,
-        resolutionRate: item.resolution_rate || 0,
+        avgProcessingTime: item.avgProcessingTime || 0,
+        resolutionRate: item.resolutionRate || 0,
         date: item.date
       })))
     );

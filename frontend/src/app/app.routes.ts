@@ -10,6 +10,7 @@ import { ReportsComponent } from './pages/reports/reports';
 import { PaysRisqueComponent } from './pages/pays-risque/pays-risque';
 import { TrackingComponent } from './pages/tracking/tracking';
 import { AuthGuard } from './guards/auth.guard';
+import { RoleGuard } from './guards/role.guard';
 import { LayoutComponent } from './layouts/layout/layout';
 
 export const routes: Routes = [
@@ -27,7 +28,7 @@ export const routes: Routes = [
       { path: 'blacklist', component: BlacklistComponent },
       { path: 'pays-risque', component: PaysRisqueComponent },
       { path: 'reports', component: ReportsComponent },
-      { path: 'tracking', component: TrackingComponent },
+  { path: 'tracking', component: TrackingComponent, canActivate: [AuthGuard, RoleGuard], data: { forbiddenRoles: ['analyst', 'analyste'] } },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   },

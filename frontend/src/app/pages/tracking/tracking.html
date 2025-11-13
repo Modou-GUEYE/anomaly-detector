@@ -1,13 +1,10 @@
 <section class="tracking-page">
   <h1>Audit & Traçabilité</h1>
 
-  
   <div *ngIf="loading" class="loading">Chargement des données...</div>
 
-  
   <div *ngIf="error && !loading" class="error">{{ error }}</div>
 
-  
   <div *ngIf="!loading" class="tracking-content">
 
     
@@ -55,20 +52,13 @@
                (ngModelChange)="applyFilters()">
 
         <div class="actions-group">
-          <button class="btn-export" (click)="exportData('csv')">📄 Export</button>
+          <button class="btn-export" (click)="exportData('excel')">📤 Export Excel</button>
           <button class="btn-refresh" (click)="refreshData()">🔄</button>
         </div>
       </div>
 
       <div class="provider-filters-grid">
         <div class="filter-row">
-          <select [(ngModel)]="filters.eventType" (ngModelChange)="applyFilters()">
-            <option value="">Tous les types d'action</option>
-            <option *ngFor="let type of eventTypeOptions" [value]="type">
-              {{ type }}
-            </option>
-          </select>
-
           <select [(ngModel)]="filters.severity" (ngModelChange)="applyFilters()">
             <option value="">Tous les résultats</option>
             <option *ngFor="let severity of severityOptions" [value]="severity">
@@ -169,10 +159,7 @@
   <div *ngIf="selectedEvent" class="modal-overlay" (click)="closeEventDetails()">
     <div class="modal-content dashboard-card" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h3>
-          {{ getEventTypeIcon(selectedEvent['action_effectuee'] || selectedEvent['eventType']) }} 
-          {{ (selectedEvent['action_effectuee'] || selectedEvent['eventType'] || 'Action').replace('_', ' ') }}
-        </h3>
+        <h3>{{ selectedEvent['action_effectuee'] || 'Détails de l\'événement' }}</h3>
         <button class="card-btn" (click)="closeEventDetails()">✖️ Fermer</button>
       </div>
       
@@ -233,22 +220,12 @@
 
           
           <div class="detail-section">
-            <h4>🏢 Entité et Système</h4>
+            <h4>🏢 Entité</h4>
             <div class="detail-item">
               <label>ID Entité :</label>
-              <span>{{ selectedEvent['entity_id'] }}</span>
-            </div>
-            <div class="detail-item" *ngIf="selectedEvent['adresse_ip'] && selectedEvent['adresse_ip'].trim()">
-              <label>Adresse IP :</label>
-              <span>{{ selectedEvent['adresse_ip'] }}</span>
-            </div>
-            <div class="detail-item">
-              <label>Source :</label>
-              <span>{{ getEventSource(selectedEvent['nom_utilisateur']) }}</span>
+              <span>{{ selectedEvent['entity_id'] || 'N/A' }}</span>
             </div>
           </div>
-
-          
         </div>
       </div>
     </div>

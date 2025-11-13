@@ -5,12 +5,16 @@ import (
 	"anomaly-detector/internal/api/middleware"
 	"anomaly-detector/internal/models"
 	"anomaly-detector/internal/store"
+	"encoding/json"
+	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/xuri/excelize/v2"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -56,7 +60,6 @@ func SetupRoutes(router *gin.Engine, handlers *AllHandlers, store *store.Store) 
 	setupTransactionsRoutes(apiV1, store)
 	setupUserRoutes(apiV1, store)
 	setupReportsRoutes(apiV1, store)
-	setupTrackingRoutes(apiV1, store)
 }
 
 // setupAuthRoutes configure les routes d'authentification
@@ -119,7 +122,7 @@ func setupRulesRoutes(apiV1 *gin.RouterGroup, rulesHandler *handlers.RulesHandle
 	{
 		rulesRoutes.GET("", rulesHandler.HandleGetAllRegles)
 		rulesRoutes.GET("/:id/profiles", rulesHandler.HandleGetReglesByProfil)
-		rulesRoutes.GET("/:id", rulesHandler.HandleGetAllRegles)
+		rulesRoutes.GET("/:id", rulesHandler.HandleGetRegleByID)
 		rulesRoutes.POST("", middleware.CheckRole("admin"), rulesHandler.HandleCreateRegleControle)
 		rulesRoutes.PUT("/:id", middleware.CheckRole("admin"), rulesHandler.HandleUpdateRegleControle)
 		rulesRoutes.PATCH("/:id/status", middleware.CheckRole("admin"), rulesHandler.HandleToggleRegleStatus)
@@ -161,7 +164,6 @@ func setupProfilesRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 			}
 			ctx.JSON(200, profils)
 		})
-		// Autres routes à implémenter...
 	}
 }
 
@@ -171,7 +173,6 @@ func setupAccountsRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 	accountRoutes := apiV1.Group("/accounts")
 	accountRoutes.Use(middleware.JwtAuthMiddleware(), middleware.RoleMiddleware("admin", "analyst"))
 	{
-		// TODO: Extraire vers un AccountsHandler
 		accountRoutes.GET("", func(ctx *gin.Context) {
 			comptes, err := store.GetAllComptes(ctx)
 			if err != nil {
@@ -188,7 +189,6 @@ func setupAccountsRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 			}
 			ctx.JSON(200, gin.H{"count": count})
 		})
-		// Autres routes à implémenter...
 	}
 }
 
@@ -198,7 +198,6 @@ func setupSuiviRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 	suiviRoutes := apiV1.Group("/suivi-blacklist")
 	suiviRoutes.Use(middleware.JwtAuthMiddleware(), middleware.RoleMiddleware("admin", "analyst"))
 	{
-		// TODO: Extraire vers un MonitoringHandler
 		suiviRoutes.GET("", func(ctx *gin.Context) {
 			suivis, err := store.GetSuiviBlacklist(ctx)
 			if err != nil {
@@ -220,6 +219,7 @@ func setupPaysRisqueRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 		paysRisqueRoutes.GET("", func(ctx *gin.Context) {
 			pays, err := store.GetAllPaysARisque(ctx)
 			if err != nil {
+				log.Printf("[ERROR] GET /api/v1/pays-risque -> GetAllPaysARisque: %v", err)
 				ctx.JSON(500, gin.H{"error": "Impossible de récupérer les pays à risque"})
 				return
 			}
@@ -230,9 +230,17 @@ func setupPaysRisqueRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 		paysRisqueRoutes.POST("", func(ctx *gin.Context) {
 			var request struct {
 				NomPays string `json:"nom_pays" binding:"required"`
+				Code    string `json:"code" binding:"required"` // Code ISO alpha-2 OBLIGATOIRE
 			}
 			if err := ctx.ShouldBindJSON(&request); err != nil {
-				ctx.JSON(400, gin.H{"error": "Nom du pays requis"})
+				ctx.JSON(400, gin.H{"error": "Nom du pays et code ISO alpha-2 requis"})
+				return
+			}
+
+			// Valider le code (2 caractères exactement)
+			code := strings.ToUpper(strings.TrimSpace(request.Code))
+			if len(code) != 2 {
+				ctx.JSON(400, gin.H{"error": "Le code pays doit contenir exactement 2 caractères (ISO alpha-2)"})
 				return
 			}
 
@@ -243,7 +251,14 @@ func setupPaysRisqueRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 				return
 			}
 
-			err := store.AddPaysARisque(ctx, request.NomPays, userID.(string))
+			// Créer le pays avec le code
+			pays := &models.PaysRisque{
+				NomPays: request.NomPays,
+				Code:    code,
+				Active:  true,
+			}
+
+			err := store.AddPaysARisqueWithCode(ctx, pays, userID.(string))
 			if err != nil {
 				ctx.JSON(500, gin.H{"error": "Impossible d'ajouter le pays à risque"})
 				return
@@ -257,9 +272,17 @@ func setupPaysRisqueRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 			var request struct {
 				NomPays    string `json:"nom_pays" binding:"required"`
 				NouveauNom string `json:"nouveau_nom"`
+				Code       string `json:"code" binding:"required"` // Code ISO alpha-2 OBLIGATOIRE
 			}
 			if err := ctx.ShouldBindJSON(&request); err != nil {
-				ctx.JSON(400, gin.H{"error": "Nom du pays requis", "details": err.Error()})
+				ctx.JSON(400, gin.H{"error": "Nom du pays et code ISO alpha-2 requis", "details": err.Error()})
+				return
+			}
+
+			// Valider le code (2 caractères exactement)
+			code := strings.ToUpper(strings.TrimSpace(request.Code))
+			if len(code) != 2 {
+				ctx.JSON(400, gin.H{"error": "Le code pays doit contenir exactement 2 caractères (ISO alpha-2)"})
 				return
 			}
 
@@ -276,7 +299,7 @@ func setupPaysRisqueRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 				return
 			}
 
-			err := store.UpdatePaysARisque(ctx, ancienNom, nouveauNom, userID.(string))
+			err := store.UpdatePaysARisqueWithCode(ctx, ancienNom, nouveauNom, code, userID.(string))
 			if err != nil {
 				ctx.JSON(500, gin.H{"error": "Impossible de modifier le pays à risque"})
 				return
@@ -301,6 +324,222 @@ func setupPaysRisqueRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 				return
 			}
 			ctx.JSON(200, gin.H{"message": "Pays supprimé avec succès"})
+		})
+
+		// POST - Importer des pays à risque depuis un fichier CSV/JSON/Excel
+		paysRisqueRoutes.POST("/import", func(ctx *gin.Context) {
+			file, err := ctx.FormFile("file")
+			if err != nil {
+				log.Printf("❌ Erreur FormFile: %v", err)
+				ctx.JSON(400, gin.H{"error": "Fichier manquant"})
+				return
+			}
+			log.Printf("📁 Fichier reçu: %s (taille: %d bytes)", file.Filename, file.Size)
+
+			// Récupérer l'utilisateur connecté
+			userID, exists := ctx.Get("userID")
+			if !exists {
+				ctx.JSON(500, gin.H{"error": "Utilisateur non identifié"})
+				return
+			}
+
+			// Structure pour stocker les pays avec leurs codes
+			type PaysData struct {
+				NomPays string
+				Code    string
+			}
+			var paysToImport []PaysData
+			filename := strings.ToLower(file.Filename)
+
+			// Parser selon le format
+			if strings.HasSuffix(filename, ".xlsx") || strings.HasSuffix(filename, ".xls") {
+				// Format Excel
+				log.Printf("📊 Traitement fichier Excel: %s", filename)
+				src, err := file.Open()
+				if err != nil {
+					log.Printf("❌ Erreur ouverture Excel: %v", err)
+					ctx.JSON(500, gin.H{"error": "Impossible d'ouvrir le fichier Excel"})
+					return
+				}
+				defer src.Close()
+
+				xlFile, err := excelize.OpenReader(src)
+				if err != nil {
+					log.Printf("❌ Erreur lecture Excel: %v", err)
+					ctx.JSON(400, gin.H{"error": fmt.Sprintf("Erreur lecture Excel: %v", err)})
+					return
+				}
+				defer xlFile.Close()
+
+				// Lire la première feuille
+				sheets := xlFile.GetSheetList()
+				if len(sheets) == 0 {
+					log.Printf("❌ Aucune feuille trouvée dans Excel")
+					ctx.JSON(400, gin.H{"error": "Le fichier Excel ne contient aucune feuille"})
+					return
+				}
+				log.Printf("📄 Feuilles trouvées: %v", sheets)
+
+				rows, err := xlFile.GetRows(sheets[0])
+				if err != nil {
+					log.Printf("❌ Erreur lecture lignes: %v", err)
+					ctx.JSON(400, gin.H{"error": fmt.Sprintf("Erreur lecture des lignes: %v", err)})
+					return
+				}
+				log.Printf("📋 Nombre de lignes: %d", len(rows))
+
+				// Parser les lignes (ignorer l'en-tête)
+				for i, row := range rows {
+					log.Printf("Ligne %d: %v (colonnes: %d)", i, row, len(row))
+
+					// Ignorer l'en-tête
+					if i == 0 && len(row) >= 1 {
+						firstCell := strings.ToLower(row[0])
+						if strings.Contains(firstCell, "nom") || strings.Contains(firstCell, "pays") {
+							log.Printf("⏭️ En-tête détecté, ligne ignorée")
+							continue
+						}
+					}
+
+					// Vérifier qu'on a au moins 2 colonnes
+					if len(row) >= 2 {
+						nomPays := strings.TrimSpace(row[0])
+						code := strings.TrimSpace(row[1])
+						if nomPays != "" && code != "" {
+							log.Printf("✅ Pays ajouté: %s (%s)", nomPays, code)
+							paysToImport = append(paysToImport, PaysData{NomPays: nomPays, Code: code})
+						} else {
+							log.Printf("⚠️ Ligne ignorée (champ vide): nom='%s', code='%s'", nomPays, code)
+						}
+					} else {
+						log.Printf("⚠️ Ligne ignorée (moins de 2 colonnes): %d colonnes", len(row))
+					}
+				}
+
+			} else if strings.HasSuffix(filename, ".json") {
+				// Format JSON
+				src, err := file.Open()
+				if err != nil {
+					ctx.JSON(500, gin.H{"error": "Impossible d'ouvrir le fichier"})
+					return
+				}
+				defer src.Close()
+
+				content := make([]byte, file.Size)
+				if _, err := src.Read(content); err != nil {
+					ctx.JSON(500, gin.H{"error": "Impossible de lire le fichier"})
+					return
+				}
+
+				// Format JSON avec codes: [{"nomPays": "France", "code": "FR"}, ...]
+				var dataWithCodes []struct {
+					NomPays string `json:"nomPays"`
+					Code    string `json:"code"`
+				}
+				if err := json.Unmarshal(content, &dataWithCodes); err == nil {
+					log.Printf("📊 Format JSON détecté: nomPays/code")
+					for _, d := range dataWithCodes {
+						if d.NomPays != "" && d.Code != "" {
+							paysToImport = append(paysToImport, PaysData{NomPays: d.NomPays, Code: d.Code})
+						}
+					}
+				} else {
+					log.Printf("🔄 Essai format alternatif: nom_pays/code")
+					// Essayer aussi le format avec nom_pays au lieu de nomPays
+					var dataWithCodesAlt []struct {
+						NomPays string `json:"nom_pays"`
+						Code    string `json:"code"`
+					}
+					if err := json.Unmarshal(content, &dataWithCodesAlt); err == nil {
+						for _, d := range dataWithCodesAlt {
+							if d.NomPays != "" && d.Code != "" {
+								paysToImport = append(paysToImport, PaysData{NomPays: d.NomPays, Code: d.Code})
+							}
+						}
+					} else {
+						ctx.JSON(400, gin.H{"error": "Format JSON invalide. Utilisez [{\"nomPays\":\"France\",\"code\":\"FR\"}, ...] ou [{\"nom_pays\":\"France\",\"code\":\"FR\"}, ...]"})
+						return
+					}
+				}
+
+			} else if strings.HasSuffix(filename, ".csv") || strings.HasSuffix(filename, ".txt") {
+				// Format CSV
+				src, err := file.Open()
+				if err != nil {
+					ctx.JSON(500, gin.H{"error": "Impossible d'ouvrir le fichier"})
+					return
+				}
+				defer src.Close()
+
+				content := make([]byte, file.Size)
+				if _, err := src.Read(content); err != nil {
+					ctx.JSON(500, gin.H{"error": "Impossible de lire le fichier"})
+					return
+				}
+
+				// Format CSV: nom_pays,code
+				lines := strings.Split(string(content), "\n")
+				hasHeader := false
+				for i, line := range lines {
+					line = strings.TrimSpace(line)
+					// Ignorer ligne vide
+					if line == "" {
+						continue
+					}
+					// Détecter et ignorer la ligne d'en-tête
+					if i == 0 && (strings.Contains(strings.ToLower(line), "nom") || strings.Contains(strings.ToLower(line), "pays") || strings.Contains(strings.ToLower(line), "code")) {
+						hasHeader = true
+						continue
+					}
+					// Parser la ligne: nom_pays,code
+					parts := strings.Split(line, ",")
+					if len(parts) >= 2 {
+						nomPays := strings.TrimSpace(parts[0])
+						code := strings.TrimSpace(parts[1])
+						if nomPays != "" && code != "" {
+							paysToImport = append(paysToImport, PaysData{NomPays: nomPays, Code: code})
+						}
+					} else if len(parts) == 1 && !hasHeader {
+						// Format sans code - retourner une erreur
+						ctx.JSON(400, gin.H{"error": "Le fichier CSV doit contenir deux colonnes: nom_pays,code (ISO alpha-2). Exemple: France,FR"})
+						return
+					}
+				}
+			} else {
+				ctx.JSON(400, gin.H{"error": "Format de fichier non supporté. Utilisez CSV, JSON ou Excel (.xlsx, .xls)"})
+				return
+			}
+
+			if len(paysToImport) == 0 {
+				log.Printf("⚠️ Aucun pays trouvé dans le fichier %s", filename)
+				ctx.JSON(400, gin.H{"error": "Aucun pays trouvé dans le fichier. Assurez-vous que le fichier contient des données au format: nom_pays,code"})
+				return
+			}
+
+			log.Printf("✅ %d pays extraits du fichier", len(paysToImport))
+
+			// Importer les pays avec leurs codes
+			imported := 0
+			var errors []string
+			for _, paysData := range paysToImport {
+				pays := &models.PaysRisque{
+					NomPays: paysData.NomPays,
+					Code:    paysData.Code,
+					Active:  true,
+				}
+				if err := store.AddPaysARisqueWithCode(ctx, pays, userID.(string)); err != nil {
+					errors = append(errors, fmt.Sprintf("Erreur pour '%s' (%s): %v", paysData.NomPays, paysData.Code, err))
+				} else {
+					imported++
+				}
+			}
+
+			ctx.JSON(200, gin.H{
+				"message":  fmt.Sprintf("%d/%d pays importés avec succès", imported, len(paysToImport)),
+				"imported": imported,
+				"total":    len(paysToImport),
+				"errors":   errors,
+			})
 		})
 	}
 }
@@ -328,7 +567,6 @@ func setupUserRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 	userRoutes := apiV1.Group("/profile")
 	userRoutes.Use(middleware.JwtAuthMiddleware())
 	{
-		// TODO: Extraire vers un UsersHandler
 		userRoutes.GET("", func(ctx *gin.Context) {
 			userID, _ := ctx.Get("userID")
 			user, err := store.GetUserByID(ctx, userID.(string))
@@ -420,38 +658,49 @@ func setupUserRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 	}
 }
 
+// validateReportPeriod valide et normalise le paramètre period pour les rapports
+func validateReportPeriod(period string) (string, error) {
+	normalized := strings.ToLower(strings.TrimSpace(period))
+	switch normalized {
+	case "month", "quarter", "year":
+		return normalized, nil
+	default:
+		return "", fmt.Errorf("période invalide: %s (autorisées: month, quarter, year)", period)
+	}
+}
+
 // setupReportsRoutes configure les routes de rapports et statistiques
 func setupReportsRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 	// ========== RAPPORTS & STATISTIQUES (Protégé) ==========
 	reportsRoutes := apiV1.Group("/reports")
 	reportsRoutes.Use(middleware.JwtAuthMiddleware(), middleware.RoleMiddleware("admin", "analyst"))
 	{
-		// TODO: Extraire vers un ReportsHandler
 		reportsRoutes.GET("/efficiency", func(ctx *gin.Context) {
 			period := ctx.DefaultQuery("period", "year")
 
 			// Valider le paramètre period
-			if period != "month" && period != "quarter" && period != "year" {
-				ctx.JSON(400, gin.H{"error": "Paramètre period invalide. Valeurs autorisées: month, quarter, year"})
+			validPeriod, err := validateReportPeriod(period)
+			if err != nil {
+				ctx.JSON(400, gin.H{"error": err.Error()})
 				return
 			}
 
 			// Récupérer les métriques d'efficacité depuis la base de données
-			metrics, err := store.GetEfficiencyMetrics(ctx, period)
+			metrics, err := store.GetEfficiencyMetrics(ctx, validPeriod)
 			if err != nil {
 				log.Printf("Erreur lors de la récupération des métriques d'efficacité: %v", err)
 				ctx.JSON(500, gin.H{"error": "Impossible de récupérer les métriques d'efficacité"})
 				return
 			}
 
-			// Transformer le format pour correspondre à l'interface frontend
+			// Transformer en camelCase cohérent avec frontend
 			response := make([]map[string]interface{}, len(metrics))
 			for i, metric := range metrics {
 				response[i] = map[string]interface{}{
-					"period":              metric.Period,
-					"avg_processing_time": metric.AvgProcessingTime,
-					"resolution_rate":     metric.ResolutionRate,
-					"date":                metric.Date,
+					"period":            metric.Period,
+					"avgProcessingTime": metric.AvgProcessingTime,
+					"resolutionRate":    metric.ResolutionRate,
+					"date":              metric.Date,
 				}
 			}
 
@@ -461,52 +710,42 @@ func setupReportsRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 			period := ctx.DefaultQuery("period", "year")
 
 			// Valider le paramètre period
-			if period != "month" && period != "quarter" && period != "year" {
-				ctx.JSON(400, gin.H{"error": "Paramètre period invalide. Valeurs autorisées: month, quarter, year"})
+			validPeriod, err := validateReportPeriod(period)
+			if err != nil {
+				ctx.JSON(400, gin.H{"error": err.Error()})
 				return
 			}
 
 			// Récupérer les violations de règles depuis la base de données
-			violations, err := store.GetRuleViolationsByPeriod(ctx, period)
+			violations, err := store.GetRuleViolationsByPeriod(ctx, validPeriod)
 			if err != nil {
 				log.Printf("Erreur lors de la récupération des violations de règles: %v", err)
 				ctx.JSON(500, gin.H{"error": "Impossible de récupérer les violations de règles"})
 				return
 			}
 
+			// Uniformiser en camelCase (ruleName, count, percentage déjà corrects dans struct store.RuleViolation)
 			ctx.JSON(200, violations)
 		})
-		reportsRoutes.GET("/debug-alertes", func(ctx *gin.Context) {
-			var result struct {
-				Type  string `gorm:"column:type"`
-				Count int    `gorm:"column:count"`
-			}
-
-			err := store.Gorm().Model(&models.Alerte{}).
-				Select("type, COUNT(*) as count").
-				Group("type").
-				Limit(1).
-				Scan(&result).Error
-			if err != nil {
-				log.Printf("Erreur debug: %v", err)
-				ctx.JSON(500, gin.H{"error": err.Error()})
-				return
-			}
-
-			ctx.JSON(200, gin.H{"result": result})
-		})
 		reportsRoutes.GET("/audit", func(ctx *gin.Context) {
-			// Récupération des paramètres de filtre (optionnels)
-			filters := make(map[string]interface{})
-
-			if module := ctx.Query("module"); module != "" {
-				filters["module"] = module
+			filters := map[string]interface{}{}
+			if v := ctx.Query("module"); v != "" {
+				filters["module"] = v
 			}
-			if statut := ctx.Query("statut"); statut != "" {
-				filters["statut"] = statut
+			if v := ctx.Query("statut"); v != "" {
+				filters["statut"] = v
 			}
-			if utilisateur := ctx.Query("utilisateur_id"); utilisateur != "" {
-				filters["utilisateur_id"] = utilisateur
+			if v := ctx.Query("utilisateur_id"); v != "" {
+				filters["utilisateur_id"] = v
+			}
+			if v := ctx.Query("action"); v != "" {
+				filters["action"] = v
+			}
+			if v := ctx.Query("date_debut"); v != "" {
+				filters["date_debut"] = v
+			}
+			if v := ctx.Query("date_fin"); v != "" {
+				filters["date_fin"] = v
 			}
 
 			logs, err := store.GetLogsAudit(ctx, filters)
@@ -557,184 +796,134 @@ func setupReportsRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 
 			ctx.JSON(200, enrichedLogs)
 		})
-	}
-}
 
-// setupTrackingRoutes configure les routes de tracking et audit
-func setupTrackingRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
-	trackingRoutes := apiV1.Group("/tracking")
-	trackingRoutes.Use(middleware.JwtAuthMiddleware(), middleware.RoleMiddleware("admin", "analyst", "auditor"))
-	{
-		// Statistiques de tracking
-		trackingRoutes.GET("/stats", func(ctx *gin.Context) {
-			// Mock data pour l'instant
-			stats := gin.H{
-				"totalEvents":     1234,
-				"activeUsers":     42,
-				"criticalEvents":  8,
-				"complianceRate":  94.5,
-				"avgResponseTime": 250,
-				"eventsToday":     87,
+		// Export XLSX des logs d'audit
+		reportsRoutes.GET("/audit/export", func(ctx *gin.Context) {
+			filters := map[string]interface{}{}
+			if v := ctx.Query("module"); v != "" {
+				filters["module"] = v
 			}
-			ctx.JSON(200, stats)
-		})
-
-		// Événements de tracking
-		trackingRoutes.GET("/events", func(ctx *gin.Context) {
-			// Récupération des paramètres de filtre
-			_ = ctx.Query("dateStart")
-			_ = ctx.Query("dateEnd")
-			_ = ctx.Query("eventType")
-			_ = ctx.Query("severity")
-			_ = ctx.Query("userId")
-			_ = ctx.Query("module")
-			_ = ctx.Query("compliance")
-			_ = ctx.Query("search")
-
-			// Pour l'instant, retourner des données mock
-			// TODO: Implémenter la logique de filtrage avec la base de données
-			events := []gin.H{
-				{
-					"id":          "event_1",
-					"timestamp":   "2024-01-15T10:30:00Z",
-					"eventType":   "ANOMALY_DETECTED",
-					"userId":      "user123",
-					"userName":    "Jean Dupont",
-					"userRole":    "Analyste",
-					"description": "Anomalie détectée sur transaction suspecte",
-					"severity":    "HIGH",
-					"module":      "ANOMALY_DETECTION",
-					"ipAddress":   "192.168.1.100",
-					"geolocation": gin.H{
-						"country":     "France",
-						"city":        "Paris",
-						"coordinates": []float64{48.8566, 2.3522},
-					},
-					"compliance": gin.H{
-						"regulation": "GDPR",
-						"status":     "COMPLIANT",
-						"reference":  "REF-ABC123",
-					},
-					"duration": 1500,
-					"metadata": gin.H{
-						"sessionId": "sess_456",
-						"requestId": "req_789",
-						"userAgent": "Mozilla/5.0...",
-					},
-				},
+			if v := ctx.Query("statut"); v != "" {
+				filters["statut"] = v
+			}
+			if v := ctx.Query("utilisateur_id"); v != "" {
+				filters["utilisateur_id"] = v
+			}
+			if v := ctx.Query("action"); v != "" {
+				filters["action"] = v
+			}
+			if v := ctx.Query("date_debut"); v != "" {
+				filters["date_debut"] = v
+			}
+			if v := ctx.Query("date_fin"); v != "" {
+				filters["date_fin"] = v
+			}
+			if v := ctx.Query("limit"); v != "" {
+				filters["limit"] = v
 			}
 
-			// Appliquer les filtres (simulation)
-			filteredEvents := events
-			// TODO: Implémenter la logique de filtrage avec les paramètres reçus
-
-			ctx.JSON(200, filteredEvents)
-		})
-
-		// Créer un nouvel événement
-		trackingRoutes.POST("/events", func(ctx *gin.Context) {
-			var event gin.H
-			if err := ctx.ShouldBindJSON(&event); err != nil {
-				ctx.JSON(400, gin.H{"error": "Format JSON invalide"})
+			logs, err := store.GetLogsAudit(ctx, filters)
+			if err != nil {
+				ctx.JSON(500, gin.H{"error": "Impossible de récupérer les logs d'audit"})
 				return
 			}
 
-			// TODO: Sauvegarder l'événement en base de données
-			// Pour l'instant, on retourne l'événement avec un ID généré
-			event["id"] = "event_" + time.Now().Format("20060102150405")
-			event["timestamp"] = time.Now().Format(time.RFC3339)
+			file := excelize.NewFile()
+			sheet := file.GetSheetName(0)
 
-			ctx.JSON(201, event)
-		})
-
-		// Mettre à jour un événement
-		trackingRoutes.PUT("/events/:id", func(ctx *gin.Context) {
-			eventId := ctx.Param("id")
-			var updates gin.H
-			if err := ctx.ShouldBindJSON(&updates); err != nil {
-				ctx.JSON(400, gin.H{"error": "Format JSON invalide"})
-				return
-			}
-
-			// TODO: Mettre à jour l'événement en base de données
-			updates["id"] = eventId
-			updates["updated_at"] = time.Now().Format(time.RFC3339)
-
-			ctx.JSON(200, updates)
-		})
-
-		// Supprimer un événement
-		trackingRoutes.DELETE("/events/:id", func(ctx *gin.Context) {
-			eventId := ctx.Param("id")
-
-			// TODO: Supprimer l'événement de la base de données
-
-			ctx.JSON(200, gin.H{
-				"message":    "Événement supprimé avec succès",
-				"event_id":   eventId,
-				"deleted_at": time.Now().Format(time.RFC3339),
+			// Styles
+			headerStyle, _ := file.NewStyle(&excelize.Style{
+				Font:      &excelize.Font{Bold: true, Color: "#FFFFFF"},
+				Fill:      excelize.Fill{Type: "pattern", Color: []string{"#4F81BD"}, Pattern: 1},
+				Alignment: &excelize.Alignment{Horizontal: "center"},
 			})
-		})
+			rowAltStyle, _ := file.NewStyle(&excelize.Style{
+				Fill: excelize.Fill{Type: "pattern", Color: []string{"#F2F2F2"}, Pattern: 1},
+			})
+			dateStyle, _ := file.NewStyle(&excelize.Style{
+				NumFmt: 22, // yyyy-mm-dd h:mm
+			})
 
-		// Export des données
-		trackingRoutes.POST("/export", func(ctx *gin.Context) {
-			var exportRequest struct {
-				Events []gin.H `json:"events"`
-				Format string  `json:"format"`
+			// En-têtes
+			headers := []string{"Date", "Utilisateur", "Événement", "Description", "Détails", "Résultat"}
+			for i, h := range headers {
+				col, _ := excelize.ColumnNumberToName(i + 1)
+				cell := fmt.Sprintf("%s1", col)
+				file.SetCellValue(sheet, cell, h)
+			}
+			file.SetCellStyle(sheet, "A1", "F1", headerStyle)
+
+			// Lignes de données
+			rowIndex := 2
+			for i := len(logs) - 1; i >= 0; i-- {
+				logItem := logs[i]
+
+				// Nom utilisateur enrichi
+				nomUtilisateur := "Système"
+				switch logItem.UtilisateurID {
+				case "MDA":
+					nomUtilisateur = "Moteur de Détection"
+				case "app", "app_bis_01":
+					nomUtilisateur = "Application Externe"
+				default:
+					if logItem.UtilisateurID != "" {
+						if user, err := store.GetUserByID(ctx, logItem.UtilisateurID); err == nil && user != nil && user.NomUtilisateur != "" {
+							nomUtilisateur = user.NomUtilisateur
+						} else if len(logItem.UtilisateurID) > 8 {
+							nomUtilisateur = "Utilisateur " + logItem.UtilisateurID[:8] + "..."
+						} else {
+							nomUtilisateur = "Utilisateur " + logItem.UtilisateurID
+						}
+					}
+				}
+
+				values := []interface{}{
+					logItem.DateHeure,
+					nomUtilisateur,
+					logItem.TypeAction,
+					logItem.ActionEffectuee,
+					logItem.Details,
+					logItem.Resultat,
+				}
+				for j, v := range values {
+					col, _ := excelize.ColumnNumberToName(j + 1)
+					cell := fmt.Sprintf("%s%d", col, rowIndex)
+					file.SetCellValue(sheet, cell, v)
+				}
+
+				// Style date
+				file.SetCellStyle(sheet, fmt.Sprintf("A%d", rowIndex), fmt.Sprintf("A%d", rowIndex), dateStyle)
+
+				// Alternance ligne
+				if rowIndex%2 == 0 {
+					file.SetCellStyle(sheet, fmt.Sprintf("A%d", rowIndex), fmt.Sprintf("F%d", rowIndex), rowAltStyle)
+				}
+				rowIndex++
 			}
 
-			if err := ctx.ShouldBindJSON(&exportRequest); err != nil {
-				ctx.JSON(400, gin.H{"error": "Format JSON invalide"})
+			// Largeur des colonnes
+			file.SetColWidth(sheet, "A", "A", 20)
+			file.SetColWidth(sheet, "B", "B", 20)
+			file.SetColWidth(sheet, "C", "C", 20)
+			file.SetColWidth(sheet, "D", "D", 45)
+			file.SetColWidth(sheet, "E", "E", 45)
+			file.SetColWidth(sheet, "F", "F", 20)
+
+			// Figer l'en-tête
+			file.SetPanes(sheet, &excelize.Panes{
+				Freeze:      true,
+				Split:       false,
+				TopLeftCell: "A2",
+				ActivePane:  "topLeft",
+			})
+
+			filename := "audit_export_" + time.Now().Format("20060102_150405") + ".xlsx"
+			ctx.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+			ctx.Header("Content-Disposition", "attachment; filename="+filename)
+			if err := file.Write(ctx.Writer); err != nil {
+				ctx.JSON(500, gin.H{"error": "Erreur écriture fichier XLSX"})
 				return
 			}
-
-			// TODO: Générer le fichier d'export selon le format demandé
-			filename := "tracking_export_" + time.Now().Format("20060102_150405")
-
-			switch exportRequest.Format {
-			case "csv":
-				ctx.Header("Content-Type", "text/csv")
-				ctx.Header("Content-Disposition", "attachment; filename="+filename+".csv")
-				// Génération CSV simplifiée
-				ctx.String(200, "ID,Timestamp,Event Type,User,Description\n")
-			case "pdf":
-				ctx.Header("Content-Type", "application/pdf")
-				ctx.Header("Content-Disposition", "attachment; filename="+filename+".pdf")
-				ctx.String(200, "PDF Export simulation")
-			case "excel":
-				ctx.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-				ctx.Header("Content-Disposition", "attachment; filename="+filename+".xlsx")
-				ctx.String(200, "Excel Export simulation")
-			default:
-				ctx.JSON(400, gin.H{"error": "Format d'export non supporté"})
-				return
-			}
-		})
-
-		// Utilisateurs actifs
-		trackingRoutes.GET("/active-users", func(ctx *gin.Context) {
-			// TODO: Récupérer la liste des utilisateurs actifs depuis la base
-			activeUsers := []string{
-				"jean.dupont",
-				"marie.martin",
-				"pierre.durand",
-				"sophie.bernard",
-			}
-			ctx.JSON(200, activeUsers)
-		})
-
-		// Métriques de conformité
-		trackingRoutes.GET("/compliance-metrics", func(ctx *gin.Context) {
-			// TODO: Calculer les vraies métriques de conformité
-			metrics := gin.H{
-				"gdpr_compliance":    95.2,
-				"pci_dss_compliance": 98.7,
-				"sox_compliance":     92.1,
-				"violations_count":   3,
-				"pending_reviews":    7,
-				"last_audit_date":    "2024-01-10T00:00:00Z",
-			}
-			ctx.JSON(200, metrics)
 		})
 	}
 }

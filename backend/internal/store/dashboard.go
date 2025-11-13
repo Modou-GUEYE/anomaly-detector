@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"anomaly-detector/internal/models"
@@ -113,7 +114,28 @@ func (s *Store) GetDashboardSummary(ctx context.Context, dateDebut, dateFin stri
 	if err := recentTxQuery.Order("date_operation DESC").Limit(10).Find(&recentTransactions).Error; err != nil {
 		return nil, err
 	}
-	summary["recent_transactions"] = recentTransactions
+
+	// Harmoniser le format de date renvoyé au front : RFC3339 with milliseconds (UTC)
+	// Convertir chaque transaction en map[string]interface{} et remplacer date_operation par une string formatée
+	var recentTxOut []map[string]interface{}
+	for _, tx := range recentTransactions {
+		// Marshal puis unmarshal pour obtenir une map dynamique sans recréer manuellement tous les champs
+		b, _ := json.Marshal(tx)
+		var m map[string]interface{}
+		if err := json.Unmarshal(b, &m); err != nil {
+			// En cas d'erreur improbable, fallback sur les champs essentiels
+			m = map[string]interface{}{
+				"id":             tx.ID,
+				"date_operation": tx.DateOperation.UTC().Format("2006-01-02T15:04:05.000Z07:00"),
+				"montant":        tx.Montant,
+			}
+		} else {
+			// Remplacer la date par une chaîne RFC3339 (ms) en UTC
+			m["date_operation"] = tx.DateOperation.UTC().Format("2006-01-02T15:04:05.000Z07:00")
+		}
+		recentTxOut = append(recentTxOut, m)
+	}
+	summary["recent_transactions"] = recentTxOut
 
 	// Alertes récentes
 	var recentAnomalies []models.Alerte

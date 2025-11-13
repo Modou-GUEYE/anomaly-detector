@@ -153,11 +153,25 @@
   color: #666;
 }
 
+.form-section .info-text-small {
+  margin: 8px 0 0 0;
+  font-size: 0.85rem;
+  color: #888;
+  font-style: italic;
+}
+
 .form-group {
   display: flex;
   gap: 8px;
   align-items: flex-start;
   flex-wrap: wrap;
+}
+
+.input-row {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  min-width: 300px;
 }
 
 .form-input {
@@ -168,6 +182,16 @@
   border-radius: 6px;
   font-size: 0.95rem;
   box-sizing: border-box;
+}
+
+.form-input-name {
+  flex: 2;
+}
+
+.form-input-code {
+  flex: 1;
+  max-width: 120px;
+  text-transform: uppercase;
 }
 
 .form-input:focus {
@@ -289,11 +313,15 @@
 }
 
 .pays-risque-table th.col-pays {
-  width: 60%;
+  width: 50%;
+}
+
+.pays-risque-table th.col-code {
+  width: 20%;
 }
 
 .pays-risque-table th.col-actions {
-  width: 40%;
+  width: 30%;
   text-align: right;
 }
 
@@ -306,6 +334,18 @@
   background-color: #f9f9f9;
 }
 
+/* Surbrillance pays ajouté / modifié */
+.pays-risque-table tbody tr.highlight {
+  background-color: #fffbe6 !important;
+  animation: highlightFlash 2.5s ease-in-out 1;
+}
+
+@keyframes highlightFlash {
+  0% { background-color: #fffad1; }
+  50% { background-color: #ffe39c; }
+  100% { background-color: #fffbe6; }
+}
+
 .pays-risque-table td {
   padding: 12px 12px;
   font-size: 0.95rem;
@@ -314,6 +354,26 @@
 
 .pays-risque-table td.col-pays {
   font-weight: 500;
+}
+
+.pays-risque-table td.col-code {
+  font-family: 'Courier New', monospace;
+}
+
+.code-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  background: linear-gradient(90deg, #2E6CF2 0%, #6D5AE0 100%);
+  color: white;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.code-empty {
+  color: #ccc;
+  font-style: italic;
 }
 
 .pays-risque-table td.col-actions {

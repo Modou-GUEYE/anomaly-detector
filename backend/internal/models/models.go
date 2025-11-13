@@ -32,7 +32,7 @@ type Compte struct {
 	TypeClient     string    `json:"typeClient"`
 	TypeCompte     string    `json:"typeCompte"`
 	Categorie      string    `json:"categorie"`
-	Pays           string    `json:"pays"`
+	Pays           string    `json:"pays"` // Code pays ISO alpha-2 (ex: SN, ML, CI) - Compatible SPI
 	Ville          string    `json:"ville"`
 	Adresse        string    `json:"adresse"`
 	ProfilClientID string    `json:"profilClientId,omitempty"`
@@ -41,14 +41,14 @@ type Compte struct {
 
 // ===================== TRANSACTIONS =====================
 
-// Transaction représente une opération financière.
+// Transaction représente une transaction financière
 // @Description Transaction financière entre deux entités
 type Transaction struct {
 	ID                 string    `json:"id,omitempty" gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
 	DateOperation      time.Time `json:"date_operation"`
 	Montant            float64   `json:"montant"`
 	Portee             string    `json:"portee"`
-	PaysPayeur         string    `json:"pays_payeur"`
+	PaysPayeur         string    `json:"pays_payeur"` // Code pays ISO alpha-2 (ex: SN, ML, CI) - Compatible SPI
 	VillePayeur        string    `json:"ville_payeur"`
 	AdressePayeur      string    `json:"adresse_payeur"`
 	TypeComptePayeur   string    `json:"type_compte_payeur"`
@@ -56,7 +56,7 @@ type Transaction struct {
 	CategoriePayeur    string    `json:"categorie_payeur"`
 	NumeroComptePayeur string    `json:"numero_compte_payeur"`
 	NomPayeur          string    `json:"nom_payeur"`
-	PaysPaye           string    `json:"pays_paye"`
+	PaysPaye           string    `json:"pays_paye"` // Code pays ISO alpha-2 (ex: SN, ML, CI) - Compatible SPI
 	VillePaye          string    `json:"ville_paye"`
 	AdressePaye        string    `json:"adresse_paye"`
 	TypeComptePaye     string    `json:"type_compte_paye"`
@@ -109,12 +109,33 @@ type RegleControle struct {
 	Seuil            float64        `json:"seuil"`
 	PeriodeReference string         `json:"periodeReference"`
 	Active           bool           `json:"active"`
+	Action           string         `json:"action" gorm:"default:'surveiller'"` // Action: "bloquer", "surveiller", "notifier"
 	ProfilClientID   *string        `json:"profilClientId"`
 	ListePays        datatypes.JSON `json:"listePays" gorm:"type:jsonb"`
+	// Pays lie explicitement cette règle aux entrées de la table pays_risque (utile pour la règle de type 'pays_risque')
+	Pays []PaysRisque `json:"pays,omitempty" gorm:"foreignKey:RegleControleID;references:ID"`
 }
 
 // TableName indique à GORM d'utiliser la table 'regles_controle'
 func (RegleControle) TableName() string { return "regles_controle" }
+
+// ===================== PAYS À RISQUE =====================
+
+// PaysRisque représente un pays dans la liste des pays à risque
+// @Description Pays à risque pour la détection de transactions
+type PaysRisque struct {
+	ID string `json:"id" gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
+	// RegleControleID établit la liaison explicite avec la règle 'pays_risque'
+	RegleControleID *string   `json:"regleControleId" gorm:"type:uuid;index"`
+	Code            string    `json:"code" gorm:"unique;size:2;not null"` // Code ISO 3166-1 alpha-2 (ex: SN, ML, CI) - OBLIGATOIRE - Compatible SPI
+	NomPays         string    `json:"nomPays" gorm:"unique;not null"`
+	Active          bool      `json:"active" gorm:"default:true"`
+	CreatedAt       time.Time `json:"createdAt" gorm:"autoCreateTime"`
+	UpdatedAt       time.Time `json:"updatedAt" gorm:"autoUpdateTime"`
+}
+
+// TableName indique à GORM d'utiliser la table 'pays_risque'
+func (PaysRisque) TableName() string { return "pays_risque" }
 
 // ===================== ALERTES =====================
 
@@ -176,18 +197,6 @@ func (SuiviBlacklist) TableName() string {
 	return "suivi_blacklist"
 }
 
-// ===================== PAYS A RISQUE =====================
-
-// PaysARisque représente un pays à risque pour la détection d'anomalies.
-type PaysARisque struct {
-	ID      string `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
-	NomPays string `gorm:"column:nom_pays" json:"nom_pays"`
-}
-
-func (PaysARisque) TableName() string {
-	return "pays_a_risque"
-}
-
 // ===================== LOGS AUDIT =====================
 
 // LogAudit trace les actions critiques effectuées dans le système.
@@ -199,11 +208,10 @@ type LogAudit struct {
 	ActionEffectuee string    `gorm:"column:action_effectuee" json:"action_effectuee"`
 	Details         string    `gorm:"column:details" json:"details"`
 	Resultat        string    `gorm:"column:resultat" json:"resultat"`
-	// Champs additionnels pour la conformité LBC/FT
-	TypeAction string `gorm:"column:type_action" json:"type_action"` // "alerte", "transaction", "regle", "blacklist"
-	EntityID   string `gorm:"column:entity_id" json:"entity_id"`     // ID de l'entité concernée
-	AdresseIP  string `gorm:"column:adresse_ip" json:"adresse_ip"`
-	Role       string `gorm:"column:role" json:"role"` // Rôle de l'utilisateur
+	TypeAction      string    `gorm:"column:type_action" json:"type_action"` // "alerte", "transaction", "regle", "blacklist"
+	EntityID        string    `gorm:"column:entity_id" json:"entity_id"`     // ID de l'entité concernée
+	AdresseIP       string    `gorm:"column:adresse_ip" json:"adresse_ip"`
+	Role            string    `gorm:"column:role" json:"role"` // Rôle de l'utilisateur
 }
 
 func (LogAudit) TableName() string {

@@ -10,13 +10,17 @@
       Aucune anomalie en attente
     </div>
     
-    <div *ngFor="let anomaly of displayedAnomalies" class="notification-card">
+    <div *ngFor="let anomaly of displayedAnomalies" 
+         class="notification-card"
+         [class.read]="isRead(anomaly.id)"
+         [class.unread]="!isRead(anomaly.id)"
+         (click)="markAsRead(anomaly.id)">
       <div class="card-header">
         <div class="card-title">
+          <span class="read-indicator" *ngIf="!isRead(anomaly.id)"></span>
           <span class="anomaly-code">{{ anomaly.code }}</span>
           <span class="anomaly-title">{{ anomaly.type }} Detecté</span>
         </div>
-        <button class="card-action-btn consult" (click)="onAssign(anomaly.id)">Consulter</button>
       </div>
       
       <p class="card-message">{{ anomaly.message }}</p>
@@ -31,7 +35,7 @@
   </div>
   
   <div class="popup-footer" *ngIf="displayedAnomalies.length > 0">
-    <small>{{ displayedAnomalies.length }} anomalie(s) en attente</small>
+    <small>{{ getUnreadCount() }} anomalie(s) non lue(s) / {{ displayedAnomalies.length }} total</small>
   </div>
 </div>
 

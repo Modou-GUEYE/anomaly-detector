@@ -2,10 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TransactionService, Transaction } from '../../services/transaction.service';
-import * as countries from 'i18n-iso-countries';
+import { getCountryNameFromCode, getAllCountriesFR } from '../../utils/country';
 
 // Charger la langue française
-import fr from 'i18n-iso-countries/langs/fr.json';
+// (Import fr retiré: registration gérée dans utilitaire pays)
 
 // Fonction utilitaire pour normaliser les chaînes (sans accents, minuscule)
 function normalizeStr(str: string): string {
@@ -25,10 +25,7 @@ export class TransactionsComponent implements OnInit {
   loading = true;
   error = '';
   expandedRowId: string | null = null;
-  selectedTransaction: Transaction | null = null;
-  
-  // Accès à Math pour les templates
-  Math = Math;
+  // Propriétés inutilisées (selectedTransaction, Math) retirées
 
   // Filtres
   searchTerm = '';
@@ -37,8 +34,7 @@ export class TransactionsComponent implements OnInit {
   filterPeriodEnd = ''; // Fin période
   filterTypeClient = ''; // Type client (Personne/Entreprise)
   filterPortee = ''; // Portée (Nationale/Internationale)
-  sortBy = 'date'; // 'date', 'amount', 'pays'
-
+  sortBy: 'date' | 'amount' | 'pays' = 'date';
   // Pagination
   currentPage = 1;
   itemsPerPage = 5;  // 5 transactions par page
@@ -49,8 +45,6 @@ export class TransactionsComponent implements OnInit {
     if (typeof window === 'undefined') {
       return;
     }
-    // Enregistrer la locale française
-    countries.registerLocale(fr);
     this.loadTransactions();
   }
 
@@ -66,69 +60,81 @@ export class TransactionsComponent implements OnInit {
       error: (err) => {
         this.error = 'Erreur lors du chargement des transactions';
         this.loading = false;
-        console.error('Erreur:', err);
+        // Log retiré pour éviter bruit en prod; l'erreur est reflétée dans l'UI
       }
     });
   }
 
   applyFilters() {
-    let filtered = this.transactions;
+    let filtered = [...this.transactions];
 
-    // Filtre de recherche (numéro compte, nom, etc.)
-    if (this.searchTerm) {
-      const term = this.searchTerm.toLowerCase();
-      filtered = filtered.filter(t =>
-        t.numero_compte_payeur?.toLowerCase().includes(term) ||
-        t.numero_compte_paye?.toLowerCase().includes(term) ||
-        t.nom_payeur?.toLowerCase().includes(term) ||
-        t.nom_paye?.toLowerCase().includes(term)
-      );
-    }
+    const term = this.searchTerm.trim().toLowerCase();
+    const hasSearch = term.length > 0;
+    const hasPays = !!this.filterPays;
+    const hasPeriodStart = !!this.filterPeriodStart;
+    const hasPeriodEnd = !!this.filterPeriodEnd;
+    const hasTypeClient = !!this.filterTypeClient;
+    const hasPortee = !!this.filterPortee;
 
-    // Filtre par pays
-    if (this.filterPays) {
-      const normalizedFilter = normalizeStr(this.filterPays);
-      filtered = filtered.filter(t => 
-        normalizeStr(t.pays_payeur || '') === normalizedFilter ||
-        normalizeStr(t.pays_paye || '') === normalizedFilter
-      );
-    }
-
-    // Filtre par période
-    if (this.filterPeriodStart) {
-      const startDate = new Date(this.filterPeriodStart);
-      filtered = filtered.filter(t => new Date(t.date_operation) >= startDate);
-    }
-    if (this.filterPeriodEnd) {
-      const endDate = new Date(this.filterPeriodEnd);
+    // Pré-calcul dates pour éviter conversions répétées
+    let startDate: Date | null = null;
+    let endDate: Date | null = null;
+    if (hasPeriodStart) startDate = new Date(this.filterPeriodStart);
+    if (hasPeriodEnd) {
+      endDate = new Date(this.filterPeriodEnd);
       endDate.setHours(23, 59, 59, 999);
-      filtered = filtered.filter(t => new Date(t.date_operation) <= endDate);
     }
 
-    // Filtre par type client
-    if (this.filterTypeClient) {
-      filtered = filtered.filter(t => 
-        t.type_client_payeur?.toLowerCase() === this.filterTypeClient.toLowerCase() ||
-        t.type_client_paye?.toLowerCase() === this.filterTypeClient.toLowerCase()
-      );
-    }
+    const normalizedPays = hasPays ? normalizeStr(this.filterPays) : '';
 
-    // Filtre par portée
-    if (this.filterPortee) {
-      filtered = filtered.filter(t => t.portee === this.filterPortee);
-    }
+    filtered = filtered.filter(t => {
+      // Recherche
+      if (hasSearch) {
+        const matchSearch = (
+          t.numero_compte_payeur?.toLowerCase().includes(term) ||
+          t.numero_compte_paye?.toLowerCase().includes(term) ||
+          t.nom_payeur?.toLowerCase().includes(term) ||
+          t.nom_paye?.toLowerCase().includes(term)
+        );
+        if (!matchSearch) return false;
+      }
+      // Pays
+      if (hasPays) {
+        const nomPaysPayeur = this.getCountryNameFromCode(t.pays_payeur);
+        const nomPaysPaye = this.getCountryNameFromCode(t.pays_paye);
+        const matchPays = normalizeStr(nomPaysPayeur) === normalizedPays || normalizeStr(nomPaysPaye) === normalizedPays;
+        if (!matchPays) return false;
+      }
+      // Période
+      if (startDate || endDate) {
+        const opDate = new Date(t.date_operation);
+        if (startDate && opDate < startDate) return false;
+        if (endDate && opDate > endDate) return false;
+      }
+      // Type client
+      if (hasTypeClient) {
+        const typeMatch = (
+          t.type_client_payeur?.toLowerCase() === this.filterTypeClient.toLowerCase() ||
+          t.type_client_paye?.toLowerCase() === this.filterTypeClient.toLowerCase()
+        );
+        if (!typeMatch) return false;
+      }
+      // Portée
+      if (hasPortee && t.portee !== this.filterPortee) return false;
+      return true;
+    });
 
-    // Tri
-    if (this.sortBy === 'date') {
-      filtered.sort((a, b) => new Date(b.date_operation).getTime() - new Date(a.date_operation).getTime());
-    } else if (this.sortBy === 'amount') {
-      filtered.sort((a, b) => b.montant - a.montant);
-    } else if (this.sortBy === 'pays') {
-      filtered.sort((a, b) => (a.pays_payeur || '').localeCompare(b.pays_payeur || ''));
-    }
+    // Tri factorisé
+    const sortStrategies: Record<string, (a: Transaction, b: Transaction) => number> = {
+      date: (a, b) => new Date(b.date_operation).getTime() - new Date(a.date_operation).getTime(),
+      amount: (a, b) => b.montant - a.montant,
+      pays: (a, b) => (a.pays_payeur || '').localeCompare(b.pays_payeur || '')
+    };
+    const sorter = sortStrategies[this.sortBy] || sortStrategies['date'];
+    filtered.sort(sorter);
 
     this.filteredTransactions = filtered;
-    this.currentPage = 1; // Réinitialiser la pagination
+    this.currentPage = 1;
   }
 
   onSearchChange() {
@@ -185,20 +191,51 @@ export class TransactionsComponent implements OnInit {
 
   isHighRisk(transaction: Transaction): boolean {
     return transaction.montant > 500000 || 
-           transaction.pays_payeur !== transaction.pays_paye ||
+           (transaction.pays_payeur && transaction.pays_paye && transaction.pays_payeur !== transaction.pays_paye) ||
            transaction.portee === 'International';
   }
 
-  getRiskLevel(transaction: Transaction): string {
-    if (transaction.montant > 1000000) return 'Critique';
-    if (transaction.montant > 500000) return 'Élevé';
-    if (transaction.pays_payeur !== transaction.pays_paye) return 'Moyen';
+  // Calcule un niveau de risque lisible pour l'UI
+  // Retourne l'une de: 'Faible' | 'Moyen' | 'Eleve' (sans accent pour matcher les classes CSS: risk-faible/moyen/eleve)
+  getRiskLevel(tx: Transaction): 'Faible' | 'Moyen' | 'Eleve' {
+    let score = 0;
+
+    // Montant
+    if (tx.montant >= 1_000_000) score += 3;
+    else if (tx.montant >= 500_000) score += 2;
+    else if (tx.montant >= 200_000) score += 1;
+
+    // Portée / pays
+    if (tx.portee === 'International') score += 2;
+    if (tx.pays_payeur && tx.pays_paye && tx.pays_payeur !== tx.pays_paye) score += 1;
+
+    // Catégories (si présentes)
+    const catPayeur = (tx.categorie_payeur || '').toLowerCase();
+    const catPaye = (tx.categorie_paye || '').toLowerCase();
+    if (/(pep|interdit|blacklist)/.test(catPayeur) || /(pep|interdit|blacklist)/.test(catPaye)) {
+      score += 3;
+    } else if (/(surveille|surveillé|surveillee|surveillée)/.test(catPayeur) || /(surveille|surveillé|surveillee|surveillée)/.test(catPaye)) {
+      score += 1;
+    }
+
+    if (score >= 4) return 'Eleve';
+    if (score >= 2) return 'Moyen';
     return 'Faible';
   }
 
+  // Convertir un code pays ISO alpha-2 en nom
+  getCountryNameFromCode(code: string): string {
+    return getCountryNameFromCode(code);
+  }
+
   getUniqueCountries(): string[] {
-    const countryNames = countries.getNames('fr');
-    return Object.values(countryNames).sort();
+    // Restreindre aux pays présents dans les données (optimisation UX)
+    const set = new Set<string>();
+    this.transactions.forEach(t => {
+      if (t.pays_payeur) set.add(this.getCountryNameFromCode(t.pays_payeur));
+      if (t.pays_paye) set.add(this.getCountryNameFromCode(t.pays_paye));
+    });
+    return Array.from(set).sort();
   }
 
   getUniqueTypeClients(): string[] {
@@ -211,18 +248,25 @@ export class TransactionsComponent implements OnInit {
   }
 
   getTransactionStats() {
+    // Calcul en une seule passe
+    let totalAmount = 0;
+    let highRisk = 0;
+    let international = 0;
+    let highAmount = 0;
+    for (const t of this.filteredTransactions) {
+      totalAmount += t.montant;
+      if (this.isHighRisk(t)) highRisk++;
+      if (t.pays_payeur !== t.pays_paye) international++;
+      if (t.montant > 500000) highAmount++;
+    }
     const total = this.filteredTransactions.length;
-    const highRisk = this.filteredTransactions.filter(t => this.isHighRisk(t)).length;
-    const international = this.filteredTransactions.filter(t => t.pays_payeur !== t.pays_paye).length;
-    const highAmount = this.filteredTransactions.filter(t => t.montant > 500000).length;
-
     return {
       total,
       highRisk,
       international,
       highAmount,
-      totalAmount: this.filteredTransactions.reduce((sum, t) => sum + t.montant, 0),
-      averageAmount: total > 0 ? this.filteredTransactions.reduce((sum, t) => sum + t.montant, 0) / total : 0
+      totalAmount,
+      averageAmount: total > 0 ? totalAmount / total : 0
     };
   }
 

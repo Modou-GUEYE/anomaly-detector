@@ -17,6 +17,7 @@ export class ControlRulesComponent implements OnInit {
   isAdmin = false;
   adminOnlyMessage = 'Cette action est réservée aux administrateurs';
   showAccessDeniedModal = false;
+  submitting = false; // éviter doubles soumissions
   
   rules: ControlRule[] = [];
 
@@ -33,8 +34,15 @@ export class ControlRulesComponent implements OnInit {
     active: true,
     seuil: 0,
     profilClientId: '',
-    periodeReference: '7d' // Valeur par défaut
+    periodeReference: '7d', // Valeur par défaut
+    action: 'surveiller' // Valeur par défaut
   };
+
+  // Actions disponibles
+  availableActions = [
+    { value: 'bloquer', label: 'Bloquer' },
+    { value: 'surveiller', label: 'Surveiller' }
+  ];
 
   // Types de règles : utiliser les types backend directement
   predefinedRuleTypes: string[] = [
@@ -74,11 +82,9 @@ export class ControlRulesComponent implements OnInit {
           label: profil.nomProfil
         }));
       },
-      error: (err) => {
-        // En cas d'erreur, laisser la liste vide
-        // L'utilisateur pourra créer une règle sans profil spécifique
+      error: () => {
+        // En cas d'erreur, laisser la liste vide (pas de console en prod)
         this.profils = [];
-        console.warn('Impossible de charger les profils clients:', err);
       }
     });
   }
@@ -120,11 +126,6 @@ export class ControlRulesComponent implements OnInit {
         );
         // Extraire les types de règles uniques
         this.extractRuleTypes();
-        // Debug: afficher les données reçues
-        this.rules.forEach(rule => {
-          if (rule.profilClientId) {
-          }
-        });
         this.loading = false;
       },
       error: (err) => {
@@ -156,7 +157,8 @@ export class ControlRulesComponent implements OnInit {
       seuil: rule.seuil || 0,
       profilClientId: rule.profilClientId || '',
       // periodeReference seulement pour montant et frequence
-      periodeReference: (rule.typeRegle === 'montant' || rule.typeRegle === 'frequence') ? (rule.periodeReference || '7d') : ''
+      periodeReference: (rule.typeRegle === 'montant' || rule.typeRegle === 'frequence') ? (rule.periodeReference || '7d') : '',
+      action: (rule as any).action || 'surveiller' // Action paramétrable
     };
     this.showModal = true;
   }
@@ -174,42 +176,53 @@ export class ControlRulesComponent implements OnInit {
       active: true,
       seuil: 0,
       profilClientId: '',
-      periodeReference: '' // Sera défini selon le type
+      periodeReference: '', // Sera défini selon le type
+      action: 'surveiller' // Valeur par défaut
     };
   }
 
   saveRule(): void {
+    if (this.submitting) return;
     if (!this.formData.nomRegle?.trim() || !this.formData.description?.trim() || !this.formData.typeRegle) {
-      alert('Veuillez remplir tous les champs obligatoires');
+      this.error = 'Veuillez remplir tous les champs obligatoires (nom, description, type).';
       return;
     }
 
-    const payload: Partial<ControlRule> = {
+    const payload: any = {
       nomRegle: this.formData.nomRegle.trim(),
       description: this.formData.description.trim(),
       typeRegle: this.formData.typeRegle,
       active: this.formData.active,
       seuil: this.formData.seuil > 0 ? this.formData.seuil : undefined,
-      profilClientId: this.formData.profilClientId || undefined
+      profilClientId: this.formData.profilClientId || undefined,
+      action: this.formData.action // Action paramétrable
     };
 
     // periodeReference est valide pour montant et frequence
     if (this.formData.typeRegle === 'montant' || this.formData.typeRegle === 'frequence') {
-      payload.periodeReference = this.formData.periodeReference;
+      if (!this.formData.periodeReference) {
+        // Sécurise une valeur par défaut
+        payload.periodeReference = this.formData.typeRegle === 'montant' ? '7d' : '24h';
+      } else {
+        payload.periodeReference = this.formData.periodeReference;
+      }
     } else {
       // Pour les autres types (pays_risque), ne pas envoyer periodeReference
       payload.periodeReference = undefined;
     }
 
+    this.submitting = true;
     if (this.isEditMode && this.currentRuleId) {
       // Mode édition
       this.controlRulesService.updateRule(this.currentRuleId, payload).subscribe({
         next: () => {
           this.loadRules();
           this.closeModal();
+          this.submitting = false;
         },
-        error: (err) => {
+        error: () => {
           this.error = 'Erreur lors de la mise à jour de la règle';
+          this.submitting = false;
         }
       });
     } else {
@@ -218,9 +231,11 @@ export class ControlRulesComponent implements OnInit {
         next: () => {
           this.loadRules();
           this.closeModal();
+          this.submitting = false;
         },
-        error: (err) => {
+        error: () => {
           this.error = 'Erreur lors de la création de la règle';
+          this.submitting = false;
         }
       });
     }
@@ -231,16 +246,20 @@ export class ControlRulesComponent implements OnInit {
       this.showAccessDenied();
       return;
     }
+    if (this.submitting) return;
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette règle ? Cette action est irréversible.')) {
       return;
     }
 
+    this.submitting = true;
     this.controlRulesService.deleteRule(id).subscribe({
       next: () => {
         this.loadRules();
+        this.submitting = false;
       },
-      error: (err) => {
+      error: () => {
         this.error = 'Erreur lors de la suppression de la règle';
+        this.submitting = false;
       }
     });
   }
@@ -250,14 +269,18 @@ export class ControlRulesComponent implements OnInit {
       this.showAccessDenied();
       return;
     }
+    if (this.submitting) return;
     const newActive = !rule.active;
     
+    this.submitting = true;
     this.controlRulesService.toggleRuleStatus(rule.id, newActive ? 'Actif' : 'Inactif').subscribe({
       next: () => {
         rule.active = newActive;
+        this.submitting = false;
       },
-      error: (err) => {
+      error: () => {
         this.error = 'Erreur lors de la modification du statut';
+        this.submitting = false;
       }
     });
   }

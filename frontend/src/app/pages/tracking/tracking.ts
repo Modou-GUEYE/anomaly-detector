@@ -10,20 +10,15 @@ interface TrackingStats {
   activeUsers: number;
   criticalEvents: number;
   complianceRate: number;
-  avgResponseTime: number;
   eventsToday: number;
 }
 
 interface TrackingFilters {
   dateStart: string;
   dateEnd: string;
-  eventType: string;
   severity: string;
-  userId: string;
   module: string;
-  compliance: string;
   search: string;
-  realTime: boolean;
 }
 
 @Component({
@@ -44,7 +39,6 @@ export class TrackingComponent implements OnInit, OnDestroy {
     activeUsers: 0,
     criticalEvents: 0,
     complianceRate: 0,
-    avgResponseTime: 0,
     eventsToday: 0
   };
 
@@ -52,41 +46,24 @@ export class TrackingComponent implements OnInit, OnDestroy {
   error = '';
   selectedEvent: any = null;
   
-  // ...existing code...
   filters: TrackingFilters = {
     dateStart: '',
     dateEnd: '',
-    eventType: '',
     severity: '',
-    userId: '',
     module: '',
-    compliance: '',
-    search: '',
-    realTime: true
+    search: ''
   };
 
-  // ...existing code...
   currentPage = 1;
   pageSize = 20;
   totalPages = 1;
   paginatedEvents: any[] = [];
 
-  // ...existing code...
-  eventTypeOptions = [
-    'Alertes',
-    'Blacklist', 
-    'Règles de Contrôle',
-    'Pays à Risque',
-    'Comptes'
-  ];
-  
   severityOptions = [
     'succès',
     'bloqué',
     'échec',
-    'erreur',
-    'surveillance',
-    'notifié'
+    'surveillance'
   ];
   
   moduleOptions = [
@@ -97,10 +74,8 @@ export class TrackingComponent implements OnInit, OnDestroy {
     'Comptes'
   ];
 
-  // ...existing code...
   private apiUrl = '';
 
-  // ...existing code...
   private http = inject(HttpClient);
 
   constructor() {}
@@ -218,7 +193,6 @@ export class TrackingComponent implements OnInit, OnDestroy {
       criticalEvents: criticalEvents,
       activeUsers: activeUsers,
       complianceRate: complianceRate,
-      avgResponseTime: 125,
       eventsToday: eventsToday
     };
   }
@@ -226,28 +200,28 @@ export class TrackingComponent implements OnInit, OnDestroy {
   applyFilters() {
     this.filteredEvents = this.events.filter(event => {
       if (this.filters.search) {
-        const searchTerm = this.filters.search.toLowerCase();
-        const searchFields = [
-          event.role || event.username,
+        const searchTerm = this.filters.search.trim().toLowerCase();
+        const userFields = [
+          event.nom_utilisateur,
+          event.utilisateur_id,
+          event.role || event.username
+        ].filter(Boolean) as string[];
+        const globalFields = [
+          ...userFields,
           event.action_effectuee || event.action,
           event.details,
           event.type_action,
           event.resultat
-        ].filter(field => field);
-        
-        const searchMatch = searchFields.some(field => 
-          field.toString().toLowerCase().includes(searchTerm)
-        );
-        
-        if (!searchMatch) return false;
-      }
+        ].filter(Boolean) as string[];
 
-      // Filtre par Type d'Action (colonnes type_action)
-      if (this.filters.eventType) {
-        const typeAction = event.type_action;
-        if (typeAction !== this.filters.eventType) {
-          return false;
-        }
+        const matches = (fields: string[]) =>
+          fields.some(field => field.toString().toLowerCase().includes(searchTerm));
+
+        const roleKeywords = ['admin', 'analyst', 'analyste', 'system', 'application', 'app', 'mda'];
+        const shouldRestrictToUser = roleKeywords.includes(searchTerm);
+
+        const searchMatch = shouldRestrictToUser ? matches(userFields) : matches(globalFields);
+        if (!searchMatch) return false;
       }
 
       // Filtre par Résultat (colonne resultat: succès, bloqué, échec, etc.)
@@ -258,10 +232,10 @@ export class TrackingComponent implements OnInit, OnDestroy {
         }
       }
 
-      // Filtre par Module (même que type_action)
+      // Filtre par Module (colonne type_action: Alertes, Blacklist, etc.)
       if (this.filters.module) {
-        const module = event.type_action;
-        if (module !== this.filters.module) {
+        const typeAction = event.type_action;
+        if (typeAction !== this.filters.module) {
           return false;
         }
       }
@@ -308,57 +282,61 @@ export class TrackingComponent implements OnInit, OnDestroy {
   }
 
   exportData(format: 'csv' | 'excel') {
-    const data = this.formatDataForExport(this.filteredEvents, format);
-    const blob = new Blob([data], { 
-      type: format === 'csv' ? 'text/csv' : 'application/octet-stream' 
-    });
+    let params = new HttpParams();
     
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `tracking-events.${format}`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  }
-
-  private formatDataForExport(events: any[], format: string): string {
-    if (format === 'csv') {
-      const headers = 'Date,Utilisateur,Événement,Description,Détails\n';
-      const rows = events.map(event => {
-        const date = event.timestamp || event.created_at || new Date();
-        const user = event.userName || event.user_name || event.username || 'N/A';
-        const eventType = event.eventType || event.event_type || event.action || 'N/A';
-        const description = event.description || event.message || event.details || 'N/A';
-        const severity = event.severity || event.level || event.priority || 'N/A';
-        
-        return `"${new Date(date).toLocaleString()}","${user}","${eventType}","${description}","${severity}"`;
-      }).join('\n');
-      return headers + rows;
+    if (this.filters.module) {
+      params = params.set('module', this.filters.module);
     }
-    return JSON.stringify(events, null, 2);
+    if (this.filters.severity) {
+      params = params.set('statut', this.filters.severity);
+    }
+    if (this.filters.search) {
+      params = params.set('action', this.filters.search);
+    }
+    if (this.filters.dateStart) {
+      params = params.set('date_debut', this.filters.dateStart);
+    }
+    if (this.filters.dateEnd) {
+      params = params.set('date_fin', this.filters.dateEnd);
+    }
+
+    this.http.get('/api/v1/reports/audit/export', {
+      params: params,
+      responseType: 'blob',
+      observe: 'response'
+    }).subscribe({
+      next: (response) => {
+        const blob = response.body;
+        if (blob) {
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          
+          const contentDisposition = response.headers.get('content-disposition');
+          let filename = 'audit_export.xlsx';
+          if (contentDisposition) {
+            const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
+            if (matches != null && matches[1]) {
+              filename = matches[1].replace(/['"]/g, '');
+            }
+          }
+          
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        }
+      },
+      error: (error) => {
+        console.error('Erreur lors de l\'export:', error);
+        this.error = 'Erreur lors de l\'export des données';
+      }
+    });
   }
 
-  // ...existing code...
   trackByEventId(index: number, event: any): string {
     return event.id || event._id || index.toString();
-  }
-
-  getEventTypeIcon(eventType: string): string {
-    const icons = {
-      'LOGIN': '🔐',
-      'LOGOUT': '🚪',
-      'ANOMALY_DETECTED': '🚨',
-      'ANOMALY_RESOLVED': '✅',
-      'RULE_TRIGGERED': '⚡',
-      'ACCOUNT_BLOCKED': '🔒',
-      'SUSPICIOUS_ACTIVITY': '⚠️',
-      'COMPLIANCE_CHECK': '📋',
-      'DATA_EXPORT': '📤',
-      'USER_ACTION': '👤'
-    };
-    return icons[eventType as keyof typeof icons] || '📝';
   }
 
   getSeverityClass(severity: string): string {
@@ -373,28 +351,6 @@ export class TrackingComponent implements OnInit, OnDestroy {
       return 'compliance-unknown';
     }
     return `compliance-${status.toString().toLowerCase().replace('_', '-')}`;
-  }
-
-  getEventSource(userName: string): string {
-    if (!userName) {
-      return 'Source inconnue';
-    }
-    
-    if (userName === 'MDA') {
-      return 'Moteur de Détection Automatique';
-    } else if (userName === 'admin') {
-      return 'Administrateur Système';
-    } else if (userName === 'analyst') {
-      return 'Analyste Utilisateur';
-    } else if (userName === 'system') {
-      return 'Système Automatisé';
-    } else {
-      return `Utilisateur: ${userName}`;
-    }
-  }
-
-  getObjectKeys(obj: any): string {
-    return Object.keys(obj || {}).join(', ');
   }
 
   getFormattedDate(date: Date): string {

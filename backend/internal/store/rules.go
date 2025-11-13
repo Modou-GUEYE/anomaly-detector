@@ -15,7 +15,11 @@ import (
 // CreateRegleControle insère une nouvelle règle de contrôle dans la base de données.
 func (s *Store) CreateRegleControle(ctx context.Context, regle *models.RegleControle, userID string) (*models.RegleControle, error) {
 	// --- GORM ---
-	result := s.gormDB.WithContext(ctx).Create(regle)
+	// IMPORTANT: depuis la nouvelle architecture, on n'utilise plus la colonne liste_pays
+	// On sélectionne explicitement les colonnes à insérer pour éviter toute erreur
+	result := s.gormDB.WithContext(ctx).
+		Select("NomRegle", "Description", "TypeRegle", "Criticite", "Seuil", "PeriodeReference", "Active", "Action", "ProfilClientID").
+		Create(regle)
 	if result.Error != nil {
 		// Logger l'échec
 		if userID != "" {
@@ -62,13 +66,13 @@ func (s *Store) UpdateRegleControle(ctx context.Context, id string, regle *model
 		"periode_reference": regle.PeriodeReference,
 		"active":            regle.Active,
 		"profil_client_id":  regle.ProfilClientID,
+		"action":            regle.Action,
 	}
 
-	// Seulement mettre à jour liste_pays si elle est explicitement fournie (non nil)
-	// Cela évite d'effacer accidentellement la liste des pays à risque
-	if regle.ListePays != nil {
-		updateFields["liste_pays"] = regle.ListePays
-	}
+	// IMPORTANT: Ne jamais mettre à jour liste_pays via cette route générique.
+	// La gestion de la liste des pays à risque est centralisée dans countries.go
+	// (AddPaysARisque, DeletePaysARisque, UpdatePaysARisque). Cela évite de
+	// vider la liste par inadvertance lors d'une simple édition de la règle.
 
 	result := s.gormDB.WithContext(ctx).Model(&models.RegleControle{}).
 		Where("id = ?", id).
@@ -107,6 +111,8 @@ func (s *Store) DeleteRegleControle(ctx context.Context, id string, userID strin
 		}
 		return fmt.Errorf("erreur lors de la recherche de la règle: %w", err)
 	}
+
+	// Suppression autorisée pour la règle 'pays_risque' (nouvelle architecture: la liste est dans pays_risque)
 
 	// Supprimer la règle (les alertes conservent leur regle_declenchee_id pour audit)
 	result := s.gormDB.WithContext(ctx).Delete(&regle)
@@ -181,6 +187,15 @@ func (s *Store) GetAllRegles(ctx context.Context) ([]models.RegleControle, error
 		return nil, result.Error
 	}
 	return regles, nil
+}
+
+// GetRegleByID récupère une règle de contrôle par son ID.
+func (s *Store) GetRegleByID(ctx context.Context, id string) (*models.RegleControle, error) {
+	var regle models.RegleControle
+	if err := s.gormDB.WithContext(ctx).First(&regle, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &regle, nil
 }
 
 // GetRegleByType retourne la règle métier correspondant à un type donné (ex: PEP, Blacklist, etc.)

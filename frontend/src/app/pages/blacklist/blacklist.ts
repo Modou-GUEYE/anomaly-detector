@@ -49,7 +49,6 @@ export class BlacklistComponent implements OnInit {
   constructor(private blacklistService: BlacklistService) {}
 
   ngOnInit() {
-    // N'exécuter côté client uniquement
     if (typeof window === 'undefined') {
       return;
     }
