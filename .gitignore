@@ -1,3 +1,19 @@
+# Ignore backend dev env and generated key
+backend/.env
+backend/dev_jwt_private.pem
+
+# Node / Angular
+frontend/node_modules
+frontend/dist
+
+# Go build artifacts
+**/bin/
+
+# Editor configs
+.vscode/
+.idea/
+.DS_Store
+
 # IDE
 .idea/
 .vscode/

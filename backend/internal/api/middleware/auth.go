@@ -1,24 +1,27 @@
 package middleware
 
 import (
-	"errors"
 	"net/http"
 	"strings"
 
+	"anomaly-detector/internal/auth"
+	"anomaly-detector/internal/store"
+
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 )
 
-// jwtKey est la clé secrète pour signer les tokens JWT
-var jwtKey = []byte("ma_super_cle_secrete_qui_doit_etre_longue_et_complexe")
+// Clés de contexte utilisées localement dans ce package middleware.
+const (
+	CtxUserID = "userID"
+	CtxRoles  = "roles"
+)
 
-// JwtAuthMiddleware authentifie les requêtes via un token JWT passé dans le header Authorization.
-// Il vérifie la présence et la validité du token, extrait les claims utiles (userID, role)
-// et les injecte dans le contexte Gin pour les middlewares/handlers suivants.
-// Si le token est absent, mal formé ou invalide, la requête est stoppée avec un code 401.
-func JwtAuthMiddleware() gin.HandlerFunc {
+// JwtAuthMiddleware vérifie l'Authorization header (Bearer <token>), valide
+// le JWT et injecte les claims utiles (`userID`, `roles`) dans le
+// contexte Gin. En cas d'erreur la requête est arrêtée avec 401.
+func JwtAuthMiddleware(s *store.Store) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		// Récupère le header Authorization (doit être de la forme 'Bearer <token>')
+		// Récupère l'en-tête Authorization (doit être de la forme 'Bearer <token>')
 		authHeader := ctx.GetHeader("Authorization")
 		if authHeader == "" {
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Header d'autorisation manquant"})
@@ -30,24 +33,46 @@ func JwtAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 		tokenString := headerParts[1]
-		claims := jwt.MapClaims{}
-		// Vérifie et parse le token JWT avec la clé secrète
-		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, errors.New("méthode de signature inattendue")
-			}
-			return jwtKey, nil
-		})
-		if err != nil || !token.Valid {
+
+		// Analyse et valide le token en utilisant la clé RSA locale (RS256)
+		claims, err := auth.ParseAndValidateToken(tokenString)
+		if err != nil {
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Token invalide"})
 			return
 		}
+
 		// Extraction des claims utiles et injection dans le contexte Gin
 		if sub, ok := claims["sub"].(string); ok {
-			ctx.Set("userID", sub)
+			ctx.Set(CtxUserID, sub)
 		}
-		if role, ok := claims["role"].(string); ok {
-			ctx.Set("role", role)
+
+		// Normaliser les rôles : préférer un tableau `roles`, convertir
+		// un claim unique `role` en slice de longueur 1 si nécessaire.
+		var roles []string
+		if rolesRaw, ok := claims["roles"].([]interface{}); ok {
+			roles = make([]string, 0, len(rolesRaw))
+			for _, r := range rolesRaw {
+				if rs, ok := r.(string); ok {
+					roles = append(roles, strings.ToLower(rs))
+				}
+			}
+		} else if roleStr, ok := claims["role"].(string); ok {
+			roles = []string{strings.ToLower(roleStr)}
+		}
+		if len(roles) > 0 {
+			ctx.Set(CtxRoles, roles)
+		}
+
+		// Vérifier que l'utilisateur existe et est actif (si le store est fourni)
+		if sub, ok := claims["sub"].(string); ok {
+			if s != nil {
+				if usr, err := s.GetUserByID(ctx, sub); err == nil {
+					if !usr.Actif {
+						ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Identifiants invalides"})
+						return
+					}
+				}
+			}
 		}
 		ctx.Next()
 	}
@@ -57,20 +82,24 @@ func JwtAuthMiddleware() gin.HandlerFunc {
 // Vérifie que le claim 'role' du token JWT correspond à l'un des rôles autorisés.
 func RoleMiddleware(allowedRoles ...string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		role, ok := ctx.Get("role")
+		// Récupère les rôles normalisés depuis le contexte
+		rolesVal, ok := ctx.Get(CtxRoles)
 		if !ok {
 			ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Rôle non trouvé dans le token"})
 			return
 		}
-		roleStr, ok := role.(string)
+		rolesSlice, ok := rolesVal.([]string)
 		if !ok {
 			ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Rôle du token invalide"})
 			return
 		}
-		// Vérifie si le rôle de l'utilisateur fait partie des rôles autorisés
-		roleStrLower := strings.ToLower(roleStr)
-		for _, allowed := range allowedRoles {
-			if roleStrLower == strings.ToLower(allowed) {
+		// build a set for fast lookup
+		allowedSet := map[string]struct{}{}
+		for _, a := range allowedRoles {
+			allowedSet[strings.ToLower(a)] = struct{}{}
+		}
+		for _, r := range rolesSlice {
+			if _, found := allowedSet[strings.ToLower(r)]; found {
 				ctx.Next()
 				return
 			}
@@ -83,21 +112,24 @@ func RoleMiddleware(allowedRoles ...string) gin.HandlerFunc {
 // À utiliser pour les contrôles de rôle supplémentaires au niveau des routes.
 func CheckRole(requiredRole string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		role, ok := ctx.Get("role")
+		rolesVal, ok := ctx.Get(CtxRoles)
 		if !ok {
 			ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Rôle non trouvé"})
 			return
 		}
-		roleStr, ok := role.(string)
-		if !ok || !strings.EqualFold(roleStr, requiredRole) {
-			ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Rôle insuffisant"})
+		rolesSlice, ok := rolesVal.([]string)
+		if !ok {
+			ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Rôle du token invalide"})
 			return
 		}
+		// Vérifie que requiredRole est présent dans la slice
+		for _, r := range rolesSlice {
+			if strings.EqualFold(r, requiredRole) {
+				ctx.Next()
+				return
+			}
+		}
+		ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Rôle insuffisant"})
 		ctx.Next()
 	}
-}
-
-// GetJwtKey retourne la clé JWT pour les autres packages qui en ont besoin
-func GetJwtKey() []byte {
-	return jwtKey
 }

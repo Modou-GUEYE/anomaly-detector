@@ -1,1 +1,6 @@
 backend/anomaly.env
+backend/dev_jwt_private.pem
+backend/.env
+backend/dev_jwt_private.pem
+backend/.env
+.env

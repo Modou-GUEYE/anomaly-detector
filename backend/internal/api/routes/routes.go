@@ -1,15 +1,18 @@
 package routes
 
 import (
-	"anomaly-detector/internal/api/handlers"
-	"anomaly-detector/internal/api/middleware"
-	"anomaly-detector/internal/models"
-	"anomaly-detector/internal/store"
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
+
+	"anomaly-detector/internal/api/handlers"
+	"anomaly-detector/internal/api/middleware"
+	"anomaly-detector/internal/auth"
+	"anomaly-detector/internal/models"
+	"anomaly-detector/internal/store"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -47,11 +50,42 @@ func SetupRoutes(router *gin.Engine, handlers *AllHandlers, store *store.Store) 
 	// --- Routes API v1 (STANDARD ET NEUTRE) ---
 	apiV1 := router.Group("/api/v1")
 
+	// Endpoint runtime config utilisé par le frontend
+	// Retourne uniquement les éléments nécessaires côté client :
+	// - le nom du rôle système (KEY_ROLE_SYSTEM)
+	// - la TTL des tokens d'accès (KEY_JWT_ACCESS_TTL_MIN)
+	apiV1.GET("/config", func(ctx *gin.Context) {
+		systemRole := os.Getenv("KEY_ROLE_SYSTEM")
+		if systemRole == "" {
+			systemRole = "system"
+		}
+		jwtTtl := os.Getenv("KEY_JWT_ACCESS_TTL_MIN")
+		// renvoyer tel quel (chaine vide signifie pas d'exp si KEY_JWT_ACCESS_TTL_MIN=="0" ou vide)
+		ctx.JSON(200, gin.H{
+			"system":      systemRole,
+			"jwt_ttl_min": jwtTtl,
+		})
+	})
+
+	// JWKS endpoint exposant la clé publique pour la validation des tokens RS256
+	// Permet au frontend / clients de récupérer la clé publique (JWK) via
+	// /.well-known/jwks.json
+	apiV1.GET("/.well-known/jwks.json", func(ctx *gin.Context) {
+		jwks, err := auth.GetJwks()
+		if err != nil {
+			// Loguer l'erreur détaillée pour faciliter le diagnostic en production
+			log.Printf("jwks error: %v", err)
+			ctx.JSON(500, gin.H{"error": "jwks unavailable"})
+			return
+		}
+		ctx.JSON(200, jwks)
+	})
+
 	// Configuration des routes par domaine
-	setupAuthRoutes(apiV1, handlers.Auth)
-	setupAnomaliesRoutes(apiV1, handlers.Anomalies)
+	setupAuthRoutes(apiV1, handlers.Auth, store)
+	setupAnomaliesRoutes(apiV1, handlers.Anomalies, store)
 	setupEntitiesRoutes(apiV1, handlers.Entities, store)
-	setupRulesRoutes(apiV1, handlers.Rules)
+	setupRulesRoutes(apiV1, handlers.Rules, store)
 	setupDashboardRoutes(apiV1, store)
 	setupProfilesRoutes(apiV1, store)
 	setupAccountsRoutes(apiV1, store)
@@ -63,20 +97,80 @@ func SetupRoutes(router *gin.Engine, handlers *AllHandlers, store *store.Store) 
 }
 
 // setupAuthRoutes configure les routes d'authentification
-func setupAuthRoutes(apiV1 *gin.RouterGroup, authHandler *handlers.AuthHandler) {
+func setupAuthRoutes(apiV1 *gin.RouterGroup, authHandler *handlers.AuthHandler, store *store.Store) {
 	// ========== AUTHENTIFICATION (Public) ==========
 	authRoutes := apiV1.Group("/auth")
 	{
 		authRoutes.POST("/login", authHandler.HandleLogin)
-		authRoutes.POST("/token", authHandler.HandleGetSystemToken)
+		authRoutes.POST("/system-token", authHandler.HandleGetSystemToken)
+		// Public signup endpoint: creates a user inactif (requires admin activation)
+		authRoutes.POST("/signup", func(ctx *gin.Context) {
+			var req struct {
+				NomUtilisateur string `json:"nomUtilisateur" binding:"required"`
+				Email          string `json:"email" binding:"required,email"`
+				Password       string `json:"password" binding:"required,min=6"`
+				Role           string `json:"role" binding:"required,oneof=admin analyst"`
+			}
+
+			if err := ctx.ShouldBindJSON(&req); err != nil {
+				ctx.JSON(400, gin.H{"error": "Données invalides", "details": err.Error()})
+				return
+			}
+
+			// Check existing user
+			existing, _ := store.GetUserByEmail(ctx, req.Email)
+			if existing != nil {
+				ctx.JSON(409, gin.H{"error": "Un utilisateur avec cet email existe déjà"})
+				return
+			}
+
+			// Hash password
+			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+			if err != nil {
+				ctx.JSON(500, gin.H{"error": "Erreur lors du hachage du mot de passe"})
+				return
+			}
+
+			user := &models.Utilisateur{
+				NomUtilisateur: req.NomUtilisateur,
+				Email:          req.Email,
+				MotDePasseHash: string(hashedPassword),
+				Role:           req.Role,
+				Actif:          false, // created inactive; admin must activate
+				DateCreation:   time.Now(),
+			}
+
+			id, err := store.CreateUser(ctx, user)
+			if err != nil {
+				ctx.JSON(500, gin.H{"error": "Impossible de créer l'utilisateur", "details": err.Error()})
+				return
+			}
+
+			createdUser, err := store.GetUserByID(ctx, id)
+			if err != nil {
+				ctx.JSON(500, gin.H{"error": "Utilisateur créé mais impossible de le récupérer"})
+				return
+			}
+
+			resp := gin.H{
+				"id":             createdUser.ID,
+				"nomUtilisateur": createdUser.NomUtilisateur,
+				"email":          createdUser.Email,
+				"role":           createdUser.Role,
+				"actif":          createdUser.Actif,
+				"dateCreation":   createdUser.DateCreation,
+			}
+
+			ctx.JSON(201, gin.H{"message": "Utilisateur créé (inactif). Un administrateur doit l'activer.", "user": resp})
+		})
 	}
 }
 
 // setupAnomaliesRoutes configure les routes d'anomalies et transactions
-func setupAnomaliesRoutes(apiV1 *gin.RouterGroup, anomaliesHandler *handlers.AnomaliesHandler) {
+func setupAnomaliesRoutes(apiV1 *gin.RouterGroup, anomaliesHandler *handlers.AnomaliesHandler, store *store.Store) {
 	// ========== ANOMALIES / TRANSACTIONS (Protégé) ==========
 	anomalyRoutes := apiV1.Group("/anomalies")
-	anomalyRoutes.Use(middleware.JwtAuthMiddleware(), middleware.RoleMiddleware("admin", "analyst", "system"))
+	anomalyRoutes.Use(middleware.JwtAuthMiddleware(store), middleware.RoleMiddleware("admin", "analyst", "system"))
 	{
 		anomalyRoutes.POST("/analyze", anomaliesHandler.HandleAnalyzeTransaction)
 		anomalyRoutes.GET("", anomaliesHandler.HandleGetAlertes)
@@ -104,7 +198,7 @@ func setupEntitiesRoutes(apiV1 *gin.RouterGroup, entitiesHandler *handlers.Entit
 
 	// ========== ENTITÉS / BLACKLIST (Protégé) ==========
 	entityRoutes := apiV1.Group("/entities")
-	entityRoutes.Use(middleware.JwtAuthMiddleware(), middleware.RoleMiddleware("admin", "analyst"))
+	entityRoutes.Use(middleware.JwtAuthMiddleware(store), middleware.RoleMiddleware("admin", "analyst"))
 	{
 		entityRoutes.GET("", entitiesHandler.HandleGetBlacklistEntries)
 		entityRoutes.POST("", entitiesHandler.HandleCreateBlacklistEntry)
@@ -115,10 +209,10 @@ func setupEntitiesRoutes(apiV1 *gin.RouterGroup, entitiesHandler *handlers.Entit
 }
 
 // setupRulesRoutes configure les routes de règles de contrôle
-func setupRulesRoutes(apiV1 *gin.RouterGroup, rulesHandler *handlers.RulesHandler) {
+func setupRulesRoutes(apiV1 *gin.RouterGroup, rulesHandler *handlers.RulesHandler, store *store.Store) {
 	// ========== RÈGLES DE CONTRÔLE (Protégé) ==========
 	rulesRoutes := apiV1.Group("/rules")
-	rulesRoutes.Use(middleware.JwtAuthMiddleware(), middleware.RoleMiddleware("admin", "analyst"))
+	rulesRoutes.Use(middleware.JwtAuthMiddleware(store), middleware.RoleMiddleware("admin", "analyst"))
 	{
 		rulesRoutes.GET("", rulesHandler.HandleGetAllRegles)
 		rulesRoutes.GET("/:id/profiles", rulesHandler.HandleGetReglesByProfil)
@@ -133,7 +227,7 @@ func setupRulesRoutes(apiV1 *gin.RouterGroup, rulesHandler *handlers.RulesHandle
 // setupDashboardRoutes configure les routes du tableau de bord
 func setupDashboardRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 	dashboardRoutes := apiV1.Group("/dashboard")
-	dashboardRoutes.Use(middleware.JwtAuthMiddleware(), middleware.RoleMiddleware("admin", "analyst", "system", "reviewer"))
+	dashboardRoutes.Use(middleware.JwtAuthMiddleware(store), middleware.RoleMiddleware("admin", "analyst", "system"))
 	{
 		dashboardRoutes.GET("/summary", func(ctx *gin.Context) {
 			dateDebut := ctx.Query("dateDebut")
@@ -153,7 +247,7 @@ func setupDashboardRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 func setupProfilesRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 	// ========== PROFILS CLIENTS (Protégé) ==========
 	profileRoutes := apiV1.Group("/profiles")
-	profileRoutes.Use(middleware.JwtAuthMiddleware(), middleware.RoleMiddleware("admin", "analyst"))
+	profileRoutes.Use(middleware.JwtAuthMiddleware(store), middleware.RoleMiddleware("admin", "analyst"))
 	{
 		// GET - Récupérer tous les profils clients
 		profileRoutes.GET("", func(ctx *gin.Context) {
@@ -171,7 +265,7 @@ func setupProfilesRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 func setupAccountsRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 	// ========== COMPTES CLIENTS (Protégé) ==========
 	accountRoutes := apiV1.Group("/accounts")
-	accountRoutes.Use(middleware.JwtAuthMiddleware(), middleware.RoleMiddleware("admin", "analyst"))
+	accountRoutes.Use(middleware.JwtAuthMiddleware(store), middleware.RoleMiddleware("admin", "analyst"))
 	{
 		accountRoutes.GET("", func(ctx *gin.Context) {
 			comptes, err := store.GetAllComptes(ctx)
@@ -196,7 +290,7 @@ func setupAccountsRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 func setupSuiviRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 	// ========== SURVEILLANCE - SUIVI BLACKLIST (Protégé) ==========
 	suiviRoutes := apiV1.Group("/suivi-blacklist")
-	suiviRoutes.Use(middleware.JwtAuthMiddleware(), middleware.RoleMiddleware("admin", "analyst"))
+	suiviRoutes.Use(middleware.JwtAuthMiddleware(store), middleware.RoleMiddleware("admin", "analyst"))
 	{
 		suiviRoutes.GET("", func(ctx *gin.Context) {
 			suivis, err := store.GetSuiviBlacklist(ctx)
@@ -213,7 +307,7 @@ func setupSuiviRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 func setupPaysRisqueRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 	// ========== PAYS À RISQUE (Protégé) ==========
 	paysRisqueRoutes := apiV1.Group("/pays-risque")
-	paysRisqueRoutes.Use(middleware.JwtAuthMiddleware(), middleware.RoleMiddleware("admin", "analyst"))
+	paysRisqueRoutes.Use(middleware.JwtAuthMiddleware(store), middleware.RoleMiddleware("admin", "analyst"))
 	{
 		// GET - Récupérer tous les pays à risque
 		paysRisqueRoutes.GET("", func(ctx *gin.Context) {
@@ -272,7 +366,7 @@ func setupPaysRisqueRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 			var request struct {
 				NomPays    string `json:"nom_pays" binding:"required"`
 				NouveauNom string `json:"nouveau_nom"`
-				Code       string `json:"code" binding:"required"` // Code ISO alpha-2 OBLIGATOIRE
+				Code       string `json:"code" binding:"required"`
 			}
 			if err := ctx.ShouldBindJSON(&request); err != nil {
 				ctx.JSON(400, gin.H{"error": "Nom du pays et code ISO alpha-2 requis", "details": err.Error()})
@@ -330,11 +424,11 @@ func setupPaysRisqueRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 		paysRisqueRoutes.POST("/import", func(ctx *gin.Context) {
 			file, err := ctx.FormFile("file")
 			if err != nil {
-				log.Printf("❌ Erreur FormFile: %v", err)
+				// debug: failed to read uploaded file (logging retained in response)
 				ctx.JSON(400, gin.H{"error": "Fichier manquant"})
 				return
 			}
-			log.Printf("📁 Fichier reçu: %s (taille: %d bytes)", file.Filename, file.Size)
+			// file received (info removed to reduce verbosity)
 
 			// Récupérer l'utilisateur connecté
 			userID, exists := ctx.Get("userID")
@@ -354,10 +448,10 @@ func setupPaysRisqueRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 			// Parser selon le format
 			if strings.HasSuffix(filename, ".xlsx") || strings.HasSuffix(filename, ".xls") {
 				// Format Excel
-				log.Printf("📊 Traitement fichier Excel: %s", filename)
+				// processing excel file (info removed)
 				src, err := file.Open()
 				if err != nil {
-					log.Printf("❌ Erreur ouverture Excel: %v", err)
+					// excel open error (handled by response)
 					ctx.JSON(500, gin.H{"error": "Impossible d'ouvrir le fichier Excel"})
 					return
 				}
@@ -365,7 +459,7 @@ func setupPaysRisqueRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 
 				xlFile, err := excelize.OpenReader(src)
 				if err != nil {
-					log.Printf("❌ Erreur lecture Excel: %v", err)
+					// excel read error (handled by response)
 					ctx.JSON(400, gin.H{"error": fmt.Sprintf("Erreur lecture Excel: %v", err)})
 					return
 				}
@@ -374,29 +468,29 @@ func setupPaysRisqueRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 				// Lire la première feuille
 				sheets := xlFile.GetSheetList()
 				if len(sheets) == 0 {
-					log.Printf("❌ Aucune feuille trouvée dans Excel")
+					// no sheets found in excel
 					ctx.JSON(400, gin.H{"error": "Le fichier Excel ne contient aucune feuille"})
 					return
 				}
-				log.Printf("📄 Feuilles trouvées: %v", sheets)
+				// sheets found (info removed)
 
 				rows, err := xlFile.GetRows(sheets[0])
 				if err != nil {
-					log.Printf("❌ Erreur lecture lignes: %v", err)
+					// error reading rows (handled by response)
 					ctx.JSON(400, gin.H{"error": fmt.Sprintf("Erreur lecture des lignes: %v", err)})
 					return
 				}
-				log.Printf("📋 Nombre de lignes: %d", len(rows))
+				// row count info removed
 
 				// Parser les lignes (ignorer l'en-tête)
 				for i, row := range rows {
-					log.Printf("Ligne %d: %v (colonnes: %d)", i, row, len(row))
+					// per-line debug removed
 
 					// Ignorer l'en-tête
 					if i == 0 && len(row) >= 1 {
 						firstCell := strings.ToLower(row[0])
 						if strings.Contains(firstCell, "nom") || strings.Contains(firstCell, "pays") {
-							log.Printf("⏭️ En-tête détecté, ligne ignorée")
+							// header detected, skipping line
 							continue
 						}
 					}
@@ -406,13 +500,13 @@ func setupPaysRisqueRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 						nomPays := strings.TrimSpace(row[0])
 						code := strings.TrimSpace(row[1])
 						if nomPays != "" && code != "" {
-							log.Printf("✅ Pays ajouté: %s (%s)", nomPays, code)
+							// country added (info removed)
 							paysToImport = append(paysToImport, PaysData{NomPays: nomPays, Code: code})
 						} else {
-							log.Printf("⚠️ Ligne ignorée (champ vide): nom='%s', code='%s'", nomPays, code)
+							// ignored line with empty fields
 						}
 					} else {
-						log.Printf("⚠️ Ligne ignorée (moins de 2 colonnes): %d colonnes", len(row))
+						// ignored line with insufficient columns
 					}
 				}
 
@@ -431,20 +525,19 @@ func setupPaysRisqueRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 					return
 				}
 
-				// Format JSON avec codes: [{"nomPays": "France", "code": "FR"}, ...]
 				var dataWithCodes []struct {
 					NomPays string `json:"nomPays"`
 					Code    string `json:"code"`
 				}
 				if err := json.Unmarshal(content, &dataWithCodes); err == nil {
-					log.Printf("📊 Format JSON détecté: nomPays/code")
+					// JSON format detected (info removed)
 					for _, d := range dataWithCodes {
 						if d.NomPays != "" && d.Code != "" {
 							paysToImport = append(paysToImport, PaysData{NomPays: d.NomPays, Code: d.Code})
 						}
 					}
 				} else {
-					log.Printf("🔄 Essai format alternatif: nom_pays/code")
+					// tried alternative json format
 					// Essayer aussi le format avec nom_pays au lieu de nomPays
 					var dataWithCodesAlt []struct {
 						NomPays string `json:"nom_pays"`
@@ -511,12 +604,12 @@ func setupPaysRisqueRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 			}
 
 			if len(paysToImport) == 0 {
-				log.Printf("⚠️ Aucun pays trouvé dans le fichier %s", filename)
+				// no countries found in uploaded file
 				ctx.JSON(400, gin.H{"error": "Aucun pays trouvé dans le fichier. Assurez-vous que le fichier contient des données au format: nom_pays,code"})
 				return
 			}
 
-			log.Printf("✅ %d pays extraits du fichier", len(paysToImport))
+			// extracted countries count info removed
 
 			// Importer les pays avec leurs codes
 			imported := 0
@@ -548,7 +641,7 @@ func setupPaysRisqueRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 func setupTransactionsRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 	// ========== TRANSACTIONS (Protégé) ==========
 	transactionRoutes := apiV1.Group("/transactions")
-	transactionRoutes.Use(middleware.JwtAuthMiddleware(), middleware.RoleMiddleware("admin", "analyst"))
+	transactionRoutes.Use(middleware.JwtAuthMiddleware(store), middleware.RoleMiddleware("admin", "analyst"))
 	{
 		transactionRoutes.GET("", func(ctx *gin.Context) {
 			transactions, err := store.GetTransactions(ctx)
@@ -565,7 +658,7 @@ func setupTransactionsRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 func setupUserRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 	// ========== PROFIL UTILISATEUR (Protégé) ==========
 	userRoutes := apiV1.Group("/profile")
-	userRoutes.Use(middleware.JwtAuthMiddleware())
+	userRoutes.Use(middleware.JwtAuthMiddleware(store))
 	{
 		userRoutes.GET("", func(ctx *gin.Context) {
 			userID, _ := ctx.Get("userID")
@@ -576,11 +669,62 @@ func setupUserRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 			}
 			ctx.JSON(200, user)
 		})
+
+		// Mise à jour du profil de l'utilisateur connecté (nomUtilisateur, email, password)
+		userRoutes.PUT("", func(ctx *gin.Context) {
+			log.Printf("PUT /api/v1/profile called - Authorization header present: %v", ctx.GetHeader("Authorization") != "")
+
+			userID, _ := ctx.Get("userID")
+			var req struct {
+				NomUtilisateur *string `json:"nomUtilisateur" binding:"omitempty"`
+				Email          *string `json:"email" binding:"omitempty,email"`
+				Password       *string `json:"password" binding:"omitempty,min=6"`
+			}
+
+			if err := ctx.ShouldBindJSON(&req); err != nil {
+				ctx.JSON(400, gin.H{"error": "Données invalides", "details": err.Error()})
+				return
+			}
+
+			updates := make(map[string]interface{})
+			if req.NomUtilisateur != nil {
+				updates["nom_utilisateur"] = *req.NomUtilisateur
+			}
+			if req.Email != nil {
+				// vérifier unicité email
+				existing, _ := store.GetUserByEmail(ctx, *req.Email)
+				if existing != nil && existing.ID != userID.(string) {
+					ctx.JSON(409, gin.H{"error": "Un utilisateur avec cet email existe déjà"})
+					return
+				}
+				updates["email"] = *req.Email
+			}
+			if req.Password != nil {
+				hashed, err := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
+				if err != nil {
+					ctx.JSON(500, gin.H{"error": "Erreur lors du hachage du mot de passe"})
+					return
+				}
+				updates["mot_de_passe_hash"] = string(hashed)
+			}
+
+			if len(updates) == 0 {
+				ctx.JSON(400, gin.H{"error": "Aucune donnée à mettre à jour"})
+				return
+			}
+
+			updated, err := store.UpdateUser(ctx, userID.(string), updates)
+			if err != nil {
+				ctx.JSON(500, gin.H{"error": "Impossible de mettre à jour le profil", "details": err.Error()})
+				return
+			}
+			ctx.JSON(200, updated)
+		})
 	}
 
 	// ========== UTILISATEURS (Protégé) ==========
 	usersRoutes := apiV1.Group("/users")
-	usersRoutes.Use(middleware.JwtAuthMiddleware(), middleware.RoleMiddleware("admin"))
+	usersRoutes.Use(middleware.JwtAuthMiddleware(store), middleware.RoleMiddleware("admin"))
 	{
 		usersRoutes.POST("", func(ctx *gin.Context) {
 			var req struct {
@@ -646,6 +790,42 @@ func setupUserRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 			ctx.JSON(201, gin.H{"message": "Utilisateur créé avec succès", "user": response})
 		})
 
+		// Lister tous les utilisateurs (admin uniquement)
+		usersRoutes.GET("", func(ctx *gin.Context) {
+			users, err := store.GetAllUsers(ctx)
+			if err != nil {
+				ctx.JSON(500, gin.H{"error": "Impossible de récupérer la liste des utilisateurs"})
+				return
+			}
+			ctx.JSON(200, users)
+		})
+
+		// Mise à jour partielle d'un utilisateur (ex: activation/désactivation)
+		usersRoutes.PUT("/:id", func(ctx *gin.Context) {
+			id := ctx.Param("id")
+			var req map[string]interface{}
+			if err := ctx.ShouldBindJSON(&req); err != nil {
+				ctx.JSON(400, gin.H{"error": "Données invalides", "details": err.Error()})
+				return
+			}
+			updated, err := store.UpdateUser(ctx, id, req)
+			if err != nil {
+				ctx.JSON(500, gin.H{"error": "Impossible de mettre à jour l'utilisateur", "details": err.Error()})
+				return
+			}
+			ctx.JSON(200, updated)
+		})
+
+		// Supprimer un utilisateur
+		usersRoutes.DELETE("/:id", func(ctx *gin.Context) {
+			id := ctx.Param("id")
+			if err := store.DeleteUser(ctx, id); err != nil {
+				ctx.JSON(500, gin.H{"error": "Impossible de supprimer l'utilisateur", "details": err.Error()})
+				return
+			}
+			ctx.JSON(200, gin.H{"message": "Utilisateur supprimé avec succès"})
+		})
+
 		usersRoutes.GET("/:id", func(ctx *gin.Context) {
 			userID := ctx.Param("id")
 			user, err := store.GetUserByID(ctx, userID)
@@ -673,7 +853,7 @@ func validateReportPeriod(period string) (string, error) {
 func setupReportsRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 	// ========== RAPPORTS & STATISTIQUES (Protégé) ==========
 	reportsRoutes := apiV1.Group("/reports")
-	reportsRoutes.Use(middleware.JwtAuthMiddleware(), middleware.RoleMiddleware("admin", "analyst"))
+	reportsRoutes.Use(middleware.JwtAuthMiddleware(store), middleware.RoleMiddleware("admin", "analyst"))
 	{
 		reportsRoutes.GET("/efficiency", func(ctx *gin.Context) {
 			period := ctx.DefaultQuery("period", "year")

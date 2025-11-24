@@ -1,5 +1,5 @@
 <section class="anomalies-page">
-  <h1>Anomalies Détectées</h1>
+  <h1>Alertes Détectées</h1>
 
   <!-- Filtres -->
   <div class="filters-section">
@@ -35,7 +35,7 @@
   </div>
 
   <!-- Loading -->
-  <div *ngIf="loading" class="loading">Chargement des anomalies...</div>
+  <div *ngIf="loading" class="loading">Chargement des alertes...</div>
 
   <!-- Error -->
   <div *ngIf="error && !loading" class="error">{{ error }}</div>
@@ -45,7 +45,7 @@
     <!-- Header with action button -->
     <div class="anomalies-header">
       <div class="anomalies-count">
-        <span class="count-number">{{ filteredAnomalies.length }} Anomalies détectées</span>
+        <span class="count-number">{{ filteredAnomalies.length }} Alertes détectées</span>
       </div>
     </div>
 
@@ -91,7 +91,7 @@
               <td colspan="6">
                 <div class="expanded-content">
                   <div class="expanded-header">
-                    <h4>Détails de l'anomalie</h4>
+              <h4>Détails de l'alerte</h4>
                   </div>
                   <div class="expanded-body">
                     <div class="detail-column">
@@ -155,7 +155,7 @@
     </div>
 
     <div *ngIf="paginatedAnomalies.length === 0" class="empty-state">
-      <p>Aucune anomalie trouvée avec ces critères.</p>
+      <p>Aucune alerte trouvée avec ces critères.</p>
     </div>
 
     <!-- Pagination -->

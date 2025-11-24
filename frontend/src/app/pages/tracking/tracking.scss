@@ -100,6 +100,15 @@
   border-radius: 10px;
 }
 
+/* Size SVG icons inside kpi */
+.kpi-icon img { width: 24px; height: 24px; }
+
+/* Specific KPI colors for Tracking page */
+.kpi-card.kpi-critical .kpi-icon { background: rgba(220,38,38,0.06); color: #DC2626; }
+.kpi-card.kpi-compliance .kpi-icon { background: rgba(16,185,129,0.06); color: #10B981; }
+.kpi-card.kpi-events .kpi-icon { background: rgba(59,130,246,0.06); color: #3B82F6; }
+.kpi-card.kpi-users .kpi-icon { background: rgba(124,58,237,0.06); color: #7C3AED; }
+
 .kpi-content {
   flex: 1;
 }

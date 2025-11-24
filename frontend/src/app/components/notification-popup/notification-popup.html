@@ -7,7 +7,7 @@
   
   <div class="popup-content">
     <div *ngIf="displayedAnomalies.length === 0" class="empty-state">
-      Aucune anomalie en attente
+      Aucune alerte en attente
     </div>
     
     <div *ngFor="let anomaly of displayedAnomalies" 
@@ -19,7 +19,7 @@
         <div class="card-title">
           <span class="read-indicator" *ngIf="!isRead(anomaly.id)"></span>
           <span class="anomaly-code">{{ anomaly.code }}</span>
-          <span class="anomaly-title">{{ anomaly.type }} Detecté</span>
+          <span class="anomaly-title">{{ anomaly.type }} détectée</span>
         </div>
       </div>
       
@@ -35,7 +35,7 @@
   </div>
   
   <div class="popup-footer" *ngIf="displayedAnomalies.length > 0">
-    <small>{{ getUnreadCount() }} anomalie(s) non lue(s) / {{ displayedAnomalies.length }} total</small>
+    <small>{{ getUnreadCount() }} alerte(s) non lue(s) / {{ displayedAnomalies.length }} total</small>
   </div>
 </div>
 

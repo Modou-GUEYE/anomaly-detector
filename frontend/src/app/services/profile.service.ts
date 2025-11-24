@@ -49,6 +49,11 @@ export class ProfileService {
     return this.http.get(this.profileUrl);
   }
 
+  // Mettre à jour le profil de l'utilisateur connecté
+  updateProfile(payload: { nomUtilisateur?: string; email?: string; password?: string }): Observable<any> {
+    return this.http.put(this.profileUrl, payload);
+  }
+
   // Récupérer tous les comptes
   getAccounts(): Observable<Account[]> {
     return this.http.get<Account[]>(this.apiUrl);

@@ -1,57 +1,36 @@
 <div class="login-page">
-  <!-- Colonne gauche (image pleine hauteur) -->
-  <div class="login__left" role="img" aria-label="Illustration d'arrière-plan"></div>
+  <!-- header removed: logos not displayed as requested -->
 
-  <!-- Colonne droite (panneau) -->
-  <div class="login__right">
-    <div class="panel">
-      <h1 class="panel__title">CONNEXION</h1>
-      <p class="panel__desc">
-        Ce moteur aide à détecter les anomalies et à lutter contre le blanchiment et le financement du terrorisme (LBC/FT).
-      </p>
+  <main class="login-center">
+    <div class="login-panel">
+      <h2 class="login-panel__title">Connexion</h2>
+      <p class="login-panel__subtitle">Ce moteur aide à détecter les anomalies et à lutter contre le blanchiment et le financement du terrorisme (LBC/FT).</p>
 
-      <form (ngSubmit)="onSubmit()" #loginForm="ngForm" class="form">
-        <div class="form__group">
-          <label for="email" class="form__label">Email</label>
-          <input type="email"
-                 id="email"
-                 name="email"
-                 [(ngModel)]="email"
-                 placeholder="Votre adresse email"
-                 required
-                 class="form__control" />
+      <form (ngSubmit)="onSubmit()" #loginForm="ngForm" class="login-form">
+  <!-- label removed to match prototype -->
+
+        <input type="email" name="email" autocomplete="email" [(ngModel)]="email" required placeholder="Votre adresse email" class="input" />
+
+        <select name="role" [(ngModel)]="role" class="input" aria-label="Sélectionnez votre rôle" required>
+          <option value="" disabled>Selectionnez votre rôle</option>
+          <option *ngFor="let opt of roleOptions" [value]="opt.value">{{ opt.label }}</option>
+        </select>
+
+        <div class="password-row">
+          <input [type]="showPassword ? 'text' : 'password'" name="password" autocomplete="current-password" [(ngModel)]="password" required placeholder="Votre mot de passe" class="input" />
+          <button type="button" class="eye" aria-label="Montrer / cacher mot de passe" (click)="togglePasswordVisibility()" [attr.aria-pressed]="showPassword">
+            <img [src]="showPassword ? '/assets/eye-off.svg' : '/assets/eye.svg'" alt="toggle" />
+          </button>
         </div>
 
-        <div class="form__group">
-          <label for="password" class="form__label">Password</label>
-          <input type="password"
-                 id="password"
-                 name="password"
-                 [(ngModel)]="password"
-                 placeholder="Votre mot de passe"
-                 required
-                 class="form__control" />
-        </div>
+        <a class="forgot" href="#">Mot de passe oublié ?</a>
 
-        <div class="form__row">
-          <label class="form__remember">
-            <input type="checkbox" name="remember" />
-            <span>Se souvenir de moi</span>
-          </label>
-          <a href="#" class="form__link">Mot de passe oublié ?</a>
-        </div>
+        <button type="submit" class="login-btn" [disabled]="!loginForm.form.valid">Se Connecter</button>
 
-        <button type="submit" class="btn" [disabled]="!loginForm.form.valid">
-          SE CONNECTER →
-        </button>
-        <div *ngIf="message" [ngClass]="success ? 'msg-success' : 'msg-error'" style="margin-top:16px; text-align:center;">
-          {{ message }}
-        </div>
+        <div *ngIf="message" [ngClass]="success ? 'msg-success' : 'msg-error'" class="feedback">{{ message }}</div>
+
+  <div class="signup">Nouvel utilisateur ? <a routerLink="/signin">Cliquez ici</a> pour créer un compte.</div>
       </form>
-
-      <div class="panel__foot">
-        <a href="#" class="panel__create">Créer un compte</a>
-      </div>
     </div>
-  </div>
+  </main>
 </div>

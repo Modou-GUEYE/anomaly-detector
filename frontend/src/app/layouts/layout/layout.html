@@ -2,9 +2,9 @@
   <!-- SIDEBAR -->
   <aside class="dashboard-sidebar" aria-label="Menu latéral">
     <div class="sidebar-user">
-      <div class="sidebar-avatar-container">
+        <div class="sidebar-avatar-container">
         <img src="../../../assets/avatar.png" alt="Photo de profil" class="sidebar-avatar" />
-        <div class="status-indicator" *ngIf="profile?.actif">
+        <div class="status-indicator" [ngClass]="{ 'active': profile?.actif === true, 'inactive': profile?.actif === false }">
           <span class="status-dot"></span>
         </div>
       </div>
@@ -13,16 +13,18 @@
     </div>
 
     <nav class="sidebar-menu">
-      <a class="sidebar-link" [class.active]="router.url === '/dashboard'" (click)="navigateTo('dashboard')">Tableau de bord</a>
-      <a class="sidebar-link" [class.active]="router.url === '/transactions'" (click)="navigateTo('transactions')">Transactions</a>
-      <a class="sidebar-link" [class.active]="router.url === '/comptes'" (click)="navigateTo('comptes')">Comptes</a>
-      <a class="sidebar-link" [class.active]="router.url === '/anomalies'" (click)="navigateTo('anomalies')">Anomalies</a>
+  <a class="sidebar-link" [class.active]="router.url === '/dashboard'" (click)="navigateTo('dashboard')">Tableau de bord</a>
+  <a *ngIf="isAdmin()" class="sidebar-link" [class.active]="router.url === '/create-user'" (click)="navigateTo('create-user')">Gestion utilisateur</a>
       <a class="sidebar-link" [class.active]="router.url === '/control-rules'" (click)="navigateTo('control-rules')">Règles de contrôle</a>
       <a class="sidebar-link" [class.active]="router.url === '/pays-risque'" (click)="navigateTo('pays-risque')">Pays à risque</a>
       <a class="sidebar-link" [class.active]="router.url === '/blacklist'" (click)="navigateTo('blacklist')">Blacklist</a>
+      <a class="sidebar-link" [class.active]="router.url === '/anomalies'" (click)="navigateTo('anomalies')">Alertes</a>
+      <a class="sidebar-link" [class.active]="router.url === '/transactions'" (click)="navigateTo('transactions')">Transactions</a>
+      <a class="sidebar-link" [class.active]="router.url === '/comptes'" (click)="navigateTo('comptes')">Comptes</a>
       <a class="sidebar-link" [class.active]="router.url === '/reports'" (click)="navigateTo('reports')">Rapports</a>
-  <a *ngIf="!(profile?.role?.toLowerCase() === 'analyst' || profile?.role?.toLowerCase() === 'analyste')" class="sidebar-link" [class.active]="router.url === '/tracking'" (click)="navigateTo('tracking')"><span>Tracking</span></a>
+  <a *ngIf="showTracking()" class="sidebar-link" [class.active]="router.url === '/tracking'" (click)="navigateTo('tracking')">Tracking</a>
     </nav>
+
   </aside>
 
   <!-- MAIN -->
@@ -33,7 +35,7 @@
         <img src="../../../assets/faviconBis.png" alt="Logo BIS" class="header-logo" />
         <div class="dashboard-title">
           <span class="dashboard-welcome">Bienvenue {{ profile?.nomUtilisateur || 'User' }} !</span>
-          <span class="dashboard-system">Moteur de détection d'anomalie</span>
+          <span class="dashboard-system">Moteur de détection d'anomalies</span>
         </div>
       </div>
 
@@ -55,7 +57,7 @@
           <span class="notification-badge">{{ kpi.notifications }}</span>
         </div>
 
-        <div class="notification-icon" aria-label="Paramètres" role="button" tabindex="0">
+        <div class="notification-icon" aria-label="Paramètres" role="button" tabindex="0" (click)="navigateTo('parametre')">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>

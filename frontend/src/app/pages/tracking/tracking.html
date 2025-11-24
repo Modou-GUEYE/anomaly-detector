@@ -9,32 +9,32 @@
 
     
     <div class="kpis-grid">
-      <div class="kpi-card">
-        <div class="kpi-icon">📝</div>
+      <div class="kpi-card kpi-events">
+        <div class="kpi-icon"><img src="../../../assets/event.svg" alt="Événements"/></div>
         <div class="kpi-content">
           <div class="kpi-value">{{ stats.totalEvents | number }}</div>
           <div class="kpi-label">Événements Totaux</div>
         </div>
       </div>
       
-      <div class="kpi-card">
-        <div class="kpi-icon">🚨</div>
+      <div class="kpi-card kpi-critical">
+        <div class="kpi-icon"><img src="../../../assets/bell.svg" alt="Événements Critiques"/></div>
         <div class="kpi-content">
           <div class="kpi-value">{{ stats.criticalEvents | number }}</div>
           <div class="kpi-label">Événements Critiques</div>
         </div>
       </div>
 
-      <div class="kpi-card">
-        <div class="kpi-icon">✅</div>
+      <div class="kpi-card kpi-compliance">
+        <div class="kpi-icon"><img src="../../../assets/shield-check.svg" alt="Taux de Conformité"/></div>
         <div class="kpi-content">
           <div class="kpi-value">{{ stats.complianceRate | number:'1.1-1' }}%</div>
           <div class="kpi-label">Taux de Conformité</div>
         </div>
       </div>
 
-      <div class="kpi-card">
-        <div class="kpi-icon">👥</div>
+      <div class="kpi-card kpi-users">
+        <div class="kpi-icon"><img src="../../../assets/users.svg" alt="Utilisateurs Actifs"/></div>
         <div class="kpi-content">
           <div class="kpi-value">{{ stats.activeUsers | number }}</div>
           <div class="kpi-label">Utilisateurs Actifs</div>
@@ -52,8 +52,12 @@
                (ngModelChange)="applyFilters()">
 
         <div class="actions-group">
-          <button class="btn-export" (click)="exportData('excel')">📤 Export Excel</button>
-          <button class="btn-refresh" (click)="refreshData()">🔄</button>
+          <button class="btn-export" (click)="exportData('excel')" title="Exporter en Excel">
+            <img class="btn-icon" src="../../../assets/excel.svg" alt="Exporter en Excel"/> Export Excel
+          </button>
+          <button class="btn-refresh" (click)="refreshData()" title="Actualiser">
+            <img class="btn-icon" src="../../../assets/refresh-alt.svg" alt="Actualiser"/>
+          </button>
         </div>
       </div>
 
@@ -160,7 +164,7 @@
     <div class="modal-content dashboard-card" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3>{{ selectedEvent['action_effectuee'] || 'Détails de l\'événement' }}</h3>
-        <button class="card-btn" (click)="closeEventDetails()">✖️ Fermer</button>
+  <button class="card-btn" (click)="closeEventDetails()"><img class="btn-icon" src="../../../assets/close.svg" alt="Fermer"/> Fermer</button>
       </div>
       
       <div class="modal-body">

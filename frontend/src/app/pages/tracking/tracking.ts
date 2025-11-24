@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { ConfigService } from '../../services/config.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpParams } from '@angular/common/http';
@@ -78,7 +79,8 @@ export class TrackingComponent implements OnInit, OnDestroy {
 
   private http = inject(HttpClient);
 
-  constructor() {}
+  // inject ConfigService via constructor for runtime role keywords
+  constructor(private config: ConfigService) {}
 
   ngOnInit() {
     this.initializeFilters();
@@ -217,7 +219,30 @@ export class TrackingComponent implements OnInit, OnDestroy {
         const matches = (fields: string[]) =>
           fields.some(field => field.toString().toLowerCase().includes(searchTerm));
 
-        const roleKeywords = ['admin', 'analyst', 'analyste', 'system', 'application', 'app', 'mda'];
+        // build role keywords dynamically from runtime config, keep common aliases
+        const roleKeywords = (() => {
+          const out: string[] = [];
+          try {
+            const admin = this.config.getRoleName('admin'); if (admin) out.push(admin.toLowerCase());
+            const analyst = this.config.getRoleName('analyst'); if (analyst) out.push(analyst.toLowerCase());
+            const system = this.config.getRoleName('system'); if (system) out.push(system.toLowerCase());
+          } catch (e) {
+            // push configured role names (fallback to common literals)
+            try {
+              const adminRole = this.config.getRoleName('admin'); if (adminRole) out.push(adminRole.toLowerCase());
+            } catch (e) { out.push('admin'); }
+            try {
+              const analystRole = this.config.getRoleName('analyst'); if (analystRole) out.push(analystRole.toLowerCase());
+            } catch (e) { out.push('analyst'); }
+            try {
+              const systemRole = this.config.getRoleName('system'); if (systemRole) out.push(systemRole.toLowerCase());
+            } catch (e) { out.push('system'); }
+          }
+          // common alternative names
+          // garder quelques alias usuels (français/identifiants d'application)
+          out.push('analyste', 'application', 'app', 'mda');
+          return Array.from(new Set(out));
+        })();
         const shouldRestrictToUser = roleKeywords.includes(searchTerm);
 
         const searchMatch = shouldRestrictToUser ? matches(userFields) : matches(globalFields);

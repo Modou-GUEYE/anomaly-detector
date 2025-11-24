@@ -1,12 +1,14 @@
 package handlers
 
 import (
-	"anomaly-detector/internal/api/middleware"
+	"anomaly-detector/internal/auth"
 	"anomaly-detector/internal/store"
+	"log"
 	"net/http"
+	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -33,6 +35,7 @@ func (h *AuthHandler) HandleLogin(ctx *gin.Context) {
 	var loginReq struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
+		Role     string `json:"role,omitempty"`
 	}
 	if err := ctx.ShouldBindJSON(&loginReq); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Requête invalide"})
@@ -47,17 +50,40 @@ func (h *AuthHandler) HandleLogin(ctx *gin.Context) {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Identifiants invalides"})
 		return
 	}
-	claims := jwt.MapClaims{
-		"sub":  user.ID,
-		"role": user.Role,
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(middleware.GetJwtKey())
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de générer le token"})
+
+	// Si un rôle est spécifié dans la requête, vérifier qu'il correspond
+	// au rôle de l'utilisateur dans la base.
+	if loginReq.Role != "" && loginReq.Role != user.Role {
+		ctx.JSON(http.StatusForbidden, gin.H{"error": "Rôle invalide"})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"token": tokenString})
+
+	// Si l'utilisateur est désactivé, ne pas révéler cette information:
+	// renvoyer la même réponse que pour des identifiants invalides.
+	if !user.Actif {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Identifiants invalides"})
+		return
+	}
+	// Génération du token JWT signé
+	accessTTL := time.Duration(0)
+	// Détermine la durée de vie via `KEY_JWT_ACCESS_TTL_MIN`.
+	if v := os.Getenv("KEY_JWT_ACCESS_TTL_MIN"); v != "" && v != "0" {
+		if d, err := time.ParseDuration(v + "m"); err == nil {
+			accessTTL = d
+		} else {
+			log.Printf("invalid KEY_JWT_ACCESS_TTL_MIN: %v", err)
+		}
+	}
+
+	roles := []string{user.Role}
+	accessToken, err := auth.NewSignedTokenFromEnv(user.ID, roles, accessTTL)
+	if err != nil {
+		log.Printf("error signing access token for user %s: %v", user.ID, err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "could not sign token"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"access_token": accessToken, "expires_in": int(accessTTL.Seconds())})
 }
 
 // HandleGetSystemToken génère un token JWT pour un système externe (partenaire)
@@ -71,17 +97,24 @@ func (h *AuthHandler) HandleGetSystemToken(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Paramètres manquants: system_id et role requis"})
 		return
 	}
-	claims := jwt.MapClaims{
-		"sub":  req.SystemID,
-		"role": req.Role,
+
+	accessTTL := time.Duration(0)
+	// Détermine la durée de vie via `KEY_JWT_ACCESS_TTL_MIN` uniquement.
+	if v := os.Getenv("KEY_JWT_ACCESS_TTL_MIN"); v != "" && v != "0" {
+		if d, err := time.ParseDuration(v + "m"); err == nil {
+			accessTTL = d
+		} else {
+			log.Printf("invalid KEY_JWT_ACCESS_TTL_MIN: %v", err)
+		}
 	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(middleware.GetJwtKey())
+	roles := []string{req.Role}
+	token, err := auth.NewSignedTokenFromEnv(req.SystemID, roles, accessTTL)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de générer le token"})
+		log.Printf("error signing system token for system %s: %v", req.SystemID, err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "could not sign token"})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"token": tokenString})
+	ctx.JSON(http.StatusOK, gin.H{"access_token": token, "expires_in": int(accessTTL.Seconds())})
 }
 
 // checkPasswordHash vérifie si un mot de passe correspond à son hash bcrypt

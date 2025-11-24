@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"anomaly-detector/internal/models"
@@ -13,6 +14,8 @@ import (
 // ===================== CONSTANTES & TYPES =====================
 
 var ErrTransactionRefused = errors.New("transaction refusée")
+// ErrMissingPartnerBankCode is returned when the required environment variable is not set.
+var ErrMissingPartnerBankCode = errors.New("PARTNER_BANK_CODE environment variable not set")
 
 // RulesEngine centralise l'application des règles métier et des contrôles sur les transactions.
 type RulesEngine struct {
@@ -30,10 +33,15 @@ func NewRulesEngine(store *store.Store) *RulesEngine {
 func (re *RulesEngine) AnalyzeTransaction(ctx context.Context, tx *models.Transaction) ([]*models.Alerte, error) {
 	var alertesGenerees []*models.Alerte
 
-	// Code banque du partenaire principal (à configurer via base de données)
-	const partnerBankCode = "SN079"
-	isPayerPartner := len(tx.NumeroComptePayeur) >= 5 && tx.NumeroComptePayeur[:5] == partnerBankCode
-	isPayeePartner := len(tx.NumeroComptePaye) >= 5 && tx.NumeroComptePaye[:5] == partnerBankCode
+	// Code banque du partenaire principal configurable via variable d'environnement PARTNER_BANK_CODE
+	partnerBankCode := os.Getenv("PARTNER_BANK_CODE")
+	if partnerBankCode == "" {
+		// Exiger la variable d'environnement : si absente, on retourne une erreur explicite
+		return nil, fmt.Errorf("%w: PARTNER_BANK_CODE must be set", ErrMissingPartnerBankCode)
+	}
+	// Utiliser HasPrefix pour éviter les slices hors limites et supporter des longueurs variables
+	isPayerPartner := strings.HasPrefix(tx.NumeroComptePayeur, partnerBankCode)
+	isPayeePartner := strings.HasPrefix(tx.NumeroComptePaye, partnerBankCode)
 
 	// --- 1. CONTRÔLE BLACKLIST  ---
 	if isPayerPartner {

@@ -28,10 +28,14 @@
       </div>
       <div class="header-actions">
         <button class="btn-add-pays" (click)="toggleForm()">
-          {{ showForm ? '✕ Annuler' : '➕ Ajouter un pays' }}
+          <img *ngIf="showForm" class="btn-icon" src="../../../assets/close.svg" alt="Annuler"/>
+          <img *ngIf="!showForm" class="btn-icon" src="../../../assets/plus.svg" alt="Ajouter"/>
+          {{ showForm ? 'Annuler' : 'Ajouter un pays' }}
         </button>
         <button class="btn-import-pays" (click)="toggleImportForm()">
-          {{ showImportForm ? '✕ Annuler' : '📥 Importer' }}
+          <img *ngIf="showImportForm" class="btn-icon" src="../../../assets/close.svg" alt="Annuler"/>
+          <img *ngIf="!showImportForm" class="btn-icon" src="../../../assets/download.svg" alt="Importer"/>
+          {{ showImportForm ? 'Annuler' : 'Importer' }}
         </button>
       </div>
     </div>

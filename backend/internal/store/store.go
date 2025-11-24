@@ -22,6 +22,9 @@ type StoreInterface interface {
 	CreateUser(ctx context.Context, user *models.Utilisateur) (string, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.Utilisateur, error)
 	GetUserByID(ctx context.Context, id string) (*models.Utilisateur, error)
+	GetAllUsers(ctx context.Context) ([]models.Utilisateur, error)
+	UpdateUser(ctx context.Context, id string, updates map[string]interface{}) (*models.Utilisateur, error)
+	DeleteUser(ctx context.Context, id string) error
 
 	// Blacklist et surveillance
 	CreateBlacklistEntry(ctx context.Context, entry *models.EntiteBlacklist, userID string) (*models.EntiteBlacklist, error)

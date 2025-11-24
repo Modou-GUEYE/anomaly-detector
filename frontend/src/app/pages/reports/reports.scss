@@ -190,6 +190,28 @@
   border-radius: 10px;
 }
 
+/* Ensure SVG icons are sized and inherit color */
+.kpi-icon img {
+  width: 24px;
+  height: 24px;
+}
+
+/* Specific styles for alert KPIs */
+.kpi-card.kpi-alert-generated .kpi-icon {
+  background: rgba(249,115,22,0.08);
+  color: #F97316;
+}
+.kpi-card.kpi-alert-treated .kpi-icon {
+  background: rgba(16,185,129,0.08);
+  color: #10B981;
+}
+
+/* Blocked transactions KPI (red) */
+.kpi-card.kpi-blocked .kpi-icon {
+  background: rgba(220,38,38,0.06);
+  color: #DC2626;
+}
+
 .kpi-content {
   flex: 1;
 }

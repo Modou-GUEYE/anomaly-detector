@@ -669,9 +669,9 @@ export class ReportsComponent implements OnInit, OnDestroy, AfterViewInit {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       doc.setTextColor(55, 65, 81);
-      doc.text(`Anomalies Générées : ${this.performanceData.anomaliesGenerees}`, 15, y);
+  doc.text(`Alertes Générées : ${this.performanceData.anomaliesGenerees}`, 15, y);
       y += 5;
-      doc.text(`Anomalies Traitées : ${this.performanceData.anomaliesTraitees}`, 15, y);
+  doc.text(`Alertes Traitées : ${this.performanceData.anomaliesTraitees}`, 15, y);
       y += 5;
       doc.text(`Transactions Analysées : ${this.performanceData.transactionsAnalysees}`, 15, y);
       y += 5;
@@ -769,8 +769,8 @@ export class ReportsComponent implements OnInit, OnDestroy, AfterViewInit {
       [`Date de Fin: ${this.filters.dateFin || 'N/A'}`],
       [''],
       ['INDICATEURS CLÉS (KPI)'],
-      [`Anomalies Générées: ${this.performanceData.anomaliesGenerees}`],
-      [`Anomalies Traitées: ${this.performanceData.anomaliesTraitees}`],
+  [`Alertes Générées: ${this.performanceData.anomaliesGenerees}`],
+  [`Alertes Traitées: ${this.performanceData.anomaliesTraitees}`],
       [`Transactions Analysées: ${this.performanceData.transactionsAnalysees}`],
       [`Transactions Bloquées: ${this.regulatoryData.transactionsBloquees}`],
       [`Comptes Sous Surveillance: ${this.regulatoryData.comptesSurveilles}`],

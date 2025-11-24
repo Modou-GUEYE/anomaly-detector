@@ -1,0 +1,24 @@
+[Unit]
+Description=Anomaly Detector API
+After=network.target
+
+[Service]
+# User/Group du service (créer systématiquement l'utilisateur 'anomaly' ou adapter)
+User=anomaly
+Group=anomaly
+WorkingDirectory=/opt/anomaly-detector
+
+# Fichier d'environnement (ex: /etc/anomaly-detector/anomaly.env)
+EnvironmentFile=/etc/anomaly-detector/anomaly.env
+
+# Chemin vers le binaire (adapter si vous placez le binaire ailleurs)
+ExecStart=/opt/anomaly-detector/anomaly-api
+
+Restart=on-failure
+RestartSec=5
+
+# Limites (optionnelles)
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

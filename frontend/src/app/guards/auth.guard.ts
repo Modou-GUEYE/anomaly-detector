@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { CanActivate, Router } from '@angular/router';
 import { AuthStateService } from '../services/auth-state.service';
+import { jwtDecode } from 'jwt-decode';
 
 @Injectable({ providedIn: 'root' })
 export class AuthGuard implements CanActivate {
@@ -36,7 +37,24 @@ export class AuthGuard implements CanActivate {
     if (typeof window !== 'undefined' && window.localStorage) {
       const token = localStorage.getItem('token');
       if (token) {
-        return true;
+        // validate exp claim if present
+        try {
+          const decoded: any = jwtDecode(token);
+          if (decoded && decoded.exp) {
+            const now = Math.floor(Date.now() / 1000);
+            if (decoded.exp > now) {
+              return true;
+            }
+            // expired -> remove
+            try { localStorage.removeItem('token'); } catch (e) {}
+            return false;
+          }
+          // no exp claim -> accept
+          return true;
+        } catch (e) {
+          try { localStorage.removeItem('token'); } catch (e) {}
+          return false;
+        }
       }
     }
 

@@ -1,0 +1,36 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: anomaly_user
+      POSTGRES_PASSWORD: passer
+      POSTGRES_DB: anomaly_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    image: anomaly-detector/api:1.0.1
+    restart: always
+    depends_on:
+      - db
+    env_file:
+      - ./configs/anomaly.env
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "80:80" # optionally remove this and place a reverse proxy in front
+    environment:
+      - NODE_ENV=production
+
+volumes:
+  pgdata:

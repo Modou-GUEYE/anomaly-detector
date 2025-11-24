@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ControlRulesService, ControlRule, ProfilClient } from '../../services/control-rules.service';
 import { AuthService } from '../../services/auth.service';
+import { ConfigService } from '../../services/config.service';
 
 @Component({
   selector: 'app-control-rules',
@@ -56,7 +57,7 @@ export class ControlRulesComponent implements OnInit {
   // Profils clients - chargés dynamiquement de l'API
   profils: Array<{ id: string; label: string }> = [];
 
-  constructor(private controlRulesService: ControlRulesService, private authService: AuthService) {}
+  constructor(private controlRulesService: ControlRulesService, private authService: AuthService, private config: ConfigService) {}
 
   ngOnInit(): void {
     if (typeof window === 'undefined') {
@@ -65,6 +66,15 @@ export class ControlRulesComponent implements OnInit {
     
     // Vérifier si l'utilisateur est admin
     this.isAdmin = this.authService.isAdmin();
+    // Construire le message d'accès refusé en fonction du nom de rôle runtime
+    try {
+      const adminRole = this.config.getRoleName('admin');
+      if (adminRole) {
+        this.adminOnlyMessage = `Cette action est réservée au rôle « ${adminRole} »`;
+      }
+    } catch (e) {
+      // garder le fallback défini ci-dessus
+    }
     
     this.loadProfilsClient();
     this.loadRules();

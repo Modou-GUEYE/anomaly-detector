@@ -1,0 +1,32 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: anomaly_user
+      POSTGRES_PASSWORD: passer
+      POSTGRES_DB: anomaly_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    image: registry.gitlab.com/PISFN/LAB-FT/anomaly-api:1.0.1
+    restart: always
+    depends_on:
+      - db
+    env_file:
+      - ./configs/anomaly.env
+    ports:
+      - "8080:8080"
+
+  frontend:
+    image: registry.gitlab.com/PISFN/LAB-FT/anomaly-frontend:1.0.1
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "80:80" # optionally remove this mapping if infra will front with a reverse-proxy
+
+volumes:
+  pgdata:

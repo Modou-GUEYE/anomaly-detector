@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProfileService, PaysRisque } from '../../services/profile.service';
 import { AuthService } from '../../services/auth.service';
+import { ConfigService } from '../../services/config.service';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
@@ -59,7 +60,8 @@ export class PaysRisqueComponent implements OnInit, OnDestroy {
 
   constructor(
     private profileService: ProfileService,
-    private authService: AuthService
+    private authService: AuthService,
+    private config: ConfigService
   ) {}
 
   /**
@@ -85,6 +87,13 @@ export class PaysRisqueComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     if (typeof window === 'undefined') return;
+    // Construire le message d'accès refusé depuis la configuration runtime
+    try {
+      const adminRole = this.config.getRoleName('admin');
+      if (adminRole) this.adminOnlyMessage = `Cette action est réservée au rôle « ${adminRole} »`;
+    } catch (e) {
+      // fallback conservé
+    }
     this.loadPaysARisque();
   }
 

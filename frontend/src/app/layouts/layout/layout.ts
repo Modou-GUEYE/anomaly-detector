@@ -2,8 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { RouterOutlet, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { ProfileService } from '../../services/profile.service';
+import { ConfigService } from '../../services/config.service';
 import { NotificationPopupComponent } from '../../components/notification-popup/notification-popup';
 import { DashboardService } from '../../services/dashboard.service';
+import { AuthStateService } from '../../services/auth-state.service';
 
 @Component({
   selector: 'app-layout',
@@ -23,11 +25,58 @@ export class LayoutComponent implements OnInit {
   constructor(
     private profileService: ProfileService,
     private dashboardService: DashboardService,
-    public router: Router
+    public router: Router,
+    private authState: AuthStateService,
+    private config: ConfigService
   ) {}
 
+  // Helpers pour templates
+  isAdmin(): boolean {
+    try {
+      const role = (this.profile?.role || '').toLowerCase();
+      return role === this.getAdminRoleLower();
+    } catch (e) {
+      return (this.profile?.role || '').toLowerCase() === this.getAdminRoleLower();
+    }
+  }
+
+  isAnalyst(): boolean {
+    try {
+      const role = (this.profile?.role || '').toLowerCase();
+      const analystLower = this.getAnalystRoleLower();
+      return role === analystLower || role === 'analyste';
+    } catch (e) {
+      const r = (this.profile?.role || '').toLowerCase();
+      return r === this.getAnalystRoleLower() || r === 'analyste';
+    }
+  }
+
+  // Helper: retourne le nom de rôle admin en minuscules (fallback 'admin')
+  private getAdminRoleLower(): string {
+    try {
+      const r = this.config.getRoleName('admin');
+      return (r || 'admin').toLowerCase();
+    } catch (e) {
+      return 'admin';
+    }
+  }
+
+  // Helper: retourne le nom de rôle analyst en minuscules (fallback 'analyst')
+  private getAnalystRoleLower(): string {
+    try {
+      const r = this.config.getRoleName('analyst');
+      return (r || 'analyst').toLowerCase();
+    } catch (e) {
+      return 'analyst';
+    }
+  }
+
+  showTracking(): boolean {
+    // show tracking unless the user is an analyst (or french 'analyste')
+    return !this.isAnalyst();
+  }
+
   ngOnInit() {
-    // N'exécuter côté client uniquement
     if (typeof window === 'undefined') {
       return;
     }
@@ -43,6 +92,7 @@ export class LayoutComponent implements OnInit {
 
     // Charger les notifications
     this.loadNotifications();
+
   }
 
   loadNotifications() {
@@ -93,11 +143,18 @@ export class LayoutComponent implements OnInit {
   }
 
   onLogout() {
-    localStorage.removeItem('token');
-    this.router.navigate(['/login']);
+    // Use AuthStateService to perform logout logic (clears token, updates signals and navigates)
+    try {
+      this.authState.logout();
+    } catch (e) {
+      // Fallback: clear token and navigate to login
+      try { localStorage.removeItem('token'); } catch (e) {}
+      this.router.navigate(['/login']);
+    }
   }
 
   navigateTo(path: string) {
+    // Normal navigation (server enforces disabled accounts)
     this.router.navigate([path]);
   }
 }

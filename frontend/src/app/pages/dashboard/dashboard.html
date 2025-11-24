@@ -6,28 +6,28 @@
 
         <div class="kpis-grid">
       <div class="kpi-card">
-        <div class="kpi-icon">📊</div>
+        <div class="kpi-icon"><img src="../../../assets/analytics.svg" alt="Transactions"/></div>
         <div class="kpi-content">
           <div class="kpi-value">{{ kpi.transactions | number:'1.0-0' }}</div>
           <div class="kpi-label">Transactions Analysées</div>
         </div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-icon">🔍</div>
+  <div class="kpi-card kpi-alert-detected">
+        <div class="kpi-icon"><img src="../../../assets/bell.svg" alt="Alertes"/></div>
         <div class="kpi-content">
           <div class="kpi-value">{{ kpi.anomaliesDetectees | number:'1.0-0' }}</div>
-          <div class="kpi-label">Anomalies Détectées</div>
+          <div class="kpi-label">Alertes Détectées</div>
         </div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-icon">✅</div>
+  </div>
+  <div class="kpi-card kpi-alert-treated">
+        <div class="kpi-icon"><img src="../../../assets/shield-check.svg" alt="Traitée"/></div>
         <div class="kpi-content">
           <div class="kpi-value">{{ kpi.anomaliesTraitees | number:'1.0-0' }}</div>
-          <div class="kpi-label">Anomalies Traitées</div>
+          <div class="kpi-label">Alertes Traitées</div>
         </div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-icon">👁️</div>
+        <div class="kpi-icon"><img src="../../../assets/eye.svg" alt="Surveillés"/></div>
         <div class="kpi-content">
           <div class="kpi-value">{{ kpi.comptesSurveilles | number:'1.0-0' }}</div>
           <div class="kpi-label">Comptes Surveillés</div>
@@ -158,7 +158,7 @@
   <div class="modal-content dashboard-card" (click)="$event.stopPropagation()">
     <div class="modal-header">
         <h3 id="transactionModalTitle">{{ selectedTransaction['action_effectuee'] || 'Détails de la transaction' }}</h3>
-        <button class="close-btn" aria-label="Fermer" (click)="closeTransactionDetail()">✖</button>
+  <button class="close-btn" aria-label="Fermer" (click)="closeTransactionDetail()"><img class="btn-icon" src="../../../assets/close.svg" alt="Fermer"/></button>
     </div>
 
     <div class="modal-body">

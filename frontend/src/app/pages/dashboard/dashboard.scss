@@ -314,6 +314,24 @@ body.modal-open {
   border-radius: 10px;
 }
 
+/* SVG sizing and color handling for KPI icons */
+.kpi-card .kpi-icon img {
+  width: 24px;
+  height: 24px;
+}
+
+/* Specific styling for Alertes detected (orange) */
+.kpi-card.kpi-alert-detected .kpi-icon {
+  background: rgba(249,115,22,0.08); /* amber/orange */
+  color: #F97316; /* svg stroke uses currentColor */
+}
+
+/* Specific styling for Alertes treated (green) */
+.kpi-card.kpi-alert-treated .kpi-icon {
+  background: rgba(16,185,129,0.08); /* green */
+  color: #10B981;
+}
+
 .kpi-card .kpi-content { flex: 1; }
 
 .kpi-card .kpi-value {

@@ -51,3 +51,37 @@ func (s *Store) GetUserByID(ctx context.Context, id string) (*models.Utilisateur
 	}
 	return &user, nil
 }
+
+// GetAllUsers récupère tous les utilisateurs (sans mot de passe)
+func (s *Store) GetAllUsers(ctx context.Context) ([]models.Utilisateur, error) {
+	var users []models.Utilisateur
+	result := s.gormDB.WithContext(ctx).Select("id, nom_utilisateur, email, role, actif, date_creation").Find(&users)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return users, nil
+}
+
+// UpdateUser met à jour certains champs d'un utilisateur (actif, role, nomUtilisateur)
+func (s *Store) UpdateUser(ctx context.Context, id string, updates map[string]interface{}) (*models.Utilisateur, error) {
+	var user models.Utilisateur
+	if err := s.gormDB.WithContext(ctx).First(&user, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+
+	if err := s.gormDB.WithContext(ctx).Model(&user).Updates(updates).Error; err != nil {
+		return nil, err
+	}
+
+	// Recharger
+	if err := s.gormDB.WithContext(ctx).First(&user, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+// DeleteUser supprime un utilisateur par ID
+func (s *Store) DeleteUser(ctx context.Context, id string) error {
+	result := s.gormDB.WithContext(ctx).Delete(&models.Utilisateur{}, "id = ?", id)
+	return result.Error
+}

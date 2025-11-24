@@ -41,7 +41,7 @@ func cleanDatabase(ctx context.Context, s *store.Store) {
 	s.Gorm().WithContext(ctx).Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.Alerte{})
 	s.Gorm().WithContext(ctx).Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.SuiviBlacklist{})
 	s.Gorm().WithContext(ctx).Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.Transaction{})
-	// s.Gorm().WithContext(ctx).Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.RegleControle{}) // optionnel
+	s.Gorm().WithContext(ctx).Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.RegleControle{}) // optionnel
 	s.Gorm().WithContext(ctx).Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.Compte{})
 	s.Gorm().WithContext(ctx).Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.EntiteBlacklist{})
 	s.Gorm().WithContext(ctx).Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.Utilisateur{})
