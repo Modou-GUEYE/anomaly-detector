@@ -180,7 +180,7 @@ export class DashboardComponent implements OnInit {
 
     // Définir le titre de la page pour l'onglet navigateur
     if (typeof document !== 'undefined') {
-      document.title = 'Métriques du Tableau de Bord - Anomaly Detector';
+      document.title = 'Module LAB';
     }
 
   // Charger la liste complète des pays en français via utilitaire partagé
@@ -301,16 +301,17 @@ export class DashboardComponent implements OnInit {
       return 'Échec';
     }
 
-    // Vérifier les alertes critiques (entités interdites)
-    const alertesCritiques = alertesTransaction.filter(alerte => 
-      alerte.niveauCriticite && alerte.niveauCriticite.toLowerCase() === 'haute' ||
-      alerte.type === 'Interdit' || alerte.type === 'Blacklist'
+    // Seul "Interdit" est un échec (obligation légale OFAC/SWIFT)
+    // Blacklist, PEP, Surveillés → Succès avec surveillance
+    const alertesInterdites = alertesTransaction.filter(alerte => 
+      alerte.type === 'Interdit'
     );
 
-    if (alertesCritiques.length > 0) {
+    if (alertesInterdites.length > 0) {
       return 'Échec';
     }
 
+    // Blacklist, PEP, Surveillés = transaction validée sous surveillance
     return 'Succès';
   }
 

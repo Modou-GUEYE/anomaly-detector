@@ -96,14 +96,22 @@
       </div>
 
       <div class="form-group">
-        <label for="ruleThreshold">Seuil (optionnel)</label>
+        <label for="ruleThreshold">
+          {{ formData.typeRegle === 'frequence' ? 'Seuil (nombre de transactions)' : 'Seuil (montant en FCFA)' }}
+        </label>
         <input 
           id="ruleThreshold"
           type="number" 
           [(ngModel)]="formData.seuil" 
-          placeholder="0"
+          [placeholder]="formData.typeRegle === 'frequence' ? 'Ex: 3 transactions' : 'Ex: 500000 FCFA'"
           class="form-input"
         />
+        <small class="form-hint" *ngIf="formData.typeRegle === 'frequence'">
+          Nombre maximum de transactions autorisées sur la période
+        </small>
+        <small class="form-hint" *ngIf="formData.typeRegle === 'montant'">
+          Montant cumulé maximum autorisé sur la période
+        </small>
       </div>
 
       <div class="form-group" *ngIf="formData.typeRegle === 'montant' || formData.typeRegle === 'frequence'">
@@ -113,10 +121,9 @@
           [(ngModel)]="formData.periodeReference" 
           class="form-select"
         >
-          <option *ngIf="formData.typeRegle === 'montant'" value="7d">7 Jours</option>
-          <option *ngIf="formData.typeRegle === 'montant'" value="30d">30 Jours</option>
-          <option *ngIf="formData.typeRegle === 'frequence'" value="24h">24 Heures</option>
-          <option *ngIf="formData.typeRegle === 'frequence'" value="7d">7 Jours</option>
+          <option value="24h">24 Heures</option>
+          <option value="7d">7 Jours</option>
+          <option value="30d">30 Jours</option>
         </select>
       </div>
 

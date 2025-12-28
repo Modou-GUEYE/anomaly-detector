@@ -487,12 +487,15 @@
   color: #92400E;
 }
 
-.severity-badge.severite-moyen {
+.severity-badge.severite-moyen,
+.severity-badge.severite-moyenne {
   background: #FEF08A;
   color: #713F12;
 }
 
-.severity-badge.severite-bas {
+.severity-badge.severite-bas,
+.severity-badge.severite-basse,
+.severity-badge.severite-faible {
   background: #DBEAFE;
   color: #0C4A6E;
 }

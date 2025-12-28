@@ -14,6 +14,7 @@ import (
 // ===================== CONSTANTES & TYPES =====================
 
 var ErrTransactionRefused = errors.New("transaction refusée")
+
 // ErrMissingPartnerBankCode is returned when the required environment variable is not set.
 var ErrMissingPartnerBankCode = errors.New("PARTNER_BANK_CODE environment variable not set")
 
@@ -197,41 +198,52 @@ func (re *RulesEngine) applyRulesForAccount(ctx context.Context, tx *models.Tran
 
 		switch regle.TypeRegle {
 		case "montant":
-			if regle.PeriodeReference == "7d" {
-				total, _ := re.store.GetTransactionSumForPeriod(ctx, numeroCompte, 7)
-				if total >= regle.Seuil {
-					violation = true
+			// Déterminer la période basée sur periodeReference
+			var days int
+			switch regle.PeriodeReference {
+			case "24h":
+				days = 1
+			case "7d":
+				days = 7
+			case "30d":
+				days = 30
+			default:
+				days = 7 // Par défaut: semaine
+			}
+
+			total, _ := re.store.GetTransactionSumForPeriod(ctx, numeroCompte, days)
+			if total >= regle.Seuil {
+				violation = true
+			}
+			if violation {
+				meta, err := re.store.GetAlertMetaByType(ctx, regle.TypeRegle)
+				if err != nil || meta == nil {
+					return nil, fmt.Errorf("meta-donnée d'alerte introuvable pour le type '%s'", regle.TypeRegle)
 				}
-				if violation {
-					meta, err := re.store.GetAlertMetaByType(ctx, regle.TypeRegle)
-					if err != nil || meta == nil {
-						return nil, fmt.Errorf("meta-donnée d'alerte introuvable pour le type '%s'", regle.TypeRegle)
-					}
-					// Utiliser l'action de la règle si définie, sinon fallback sur criticité
-					action := regle.Action
-					if action == "" {
-						action = actionFromCriticite(meta.NiveauCriticite)
-					}
-					alerte := &models.Alerte{
-						TransactionID:     tx.ID,
-						Code:              meta.Code,
-						Type:              meta.Type,
-						Statut:            meta.Statut,
-						Message:           meta.Message,
-						NiveauCriticite:   meta.NiveauCriticite,
-						ScoreRisque:       calculerScoreRisque(&regle, tx),
-						DateGeneration:    tx.DateOperation,
-						RegleDeclencheeID: &regleID,
-						Action:            action,
-						NumeroCompte:      numeroCompte,
-					}
-					alertes = append(alertes, alerte)
-					// Si l'action est "bloquer", refuser la transaction
-					if action == "bloquer" {
-						return alertes, fmt.Errorf("%w: transaction bloquée - règle de montant dépassée", ErrTransactionRefused)
-					}
-					continue
+				// Utiliser l'action de la règle si définie, sinon fallback sur criticité
+				action := regle.Action
+				if action == "" {
+					action = actionFromCriticite(meta.NiveauCriticite)
 				}
+				alerte := &models.Alerte{
+					TransactionID:     tx.ID,
+					Code:              meta.Code,
+					Type:              meta.Type,
+					Statut:            meta.Statut,
+					Message:           meta.Message,
+					NiveauCriticite:   meta.NiveauCriticite,
+					ScoreRisque:       calculerScoreRisque(&regle, tx),
+					DateGeneration:    tx.DateOperation,
+					RegleDeclencheeID: &regleID,
+					Action:            action,
+					NumeroCompte:      numeroCompte,
+				}
+				alertes = append(alertes, alerte)
+				// Si l'action est "bloquer", refuser la transaction
+				if action == "bloquer" {
+					return alertes, fmt.Errorf("%w: transaction bloquée - règle de montant dépassée", ErrTransactionRefused)
+				}
+				continue
 			}
 		case "frequence":
 			// Déterminer la période basée sur periodeReference
@@ -315,11 +327,17 @@ func (re *RulesEngine) checkBlacklist(ctx context.Context, tx *models.Transactio
 			}
 			if err == nil && meta != nil {
 				var scoreRisque float64 = 0
+				var action string
 				switch statusPayeur {
-				case "Interdit", "Blacklist":
+				case "Interdit":
 					scoreRisque = 1.0
+					action = "bloquer" // Obligation légale OFAC/SWIFT
+				case "Blacklist":
+					scoreRisque = 1.0
+					action = "surveiller" // Liste interne → Valider + Suivi
 				case "PEP", "Surveillés":
 					scoreRisque = 0.7
+					action = "surveiller" // Valider + Suivi
 				}
 				alerte := &models.Alerte{
 					TransactionID:     tx.ID,
@@ -330,17 +348,22 @@ func (re *RulesEngine) checkBlacklist(ctx context.Context, tx *models.Transactio
 					NiveauCriticite:   meta.NiveauCriticite,
 					ScoreRisque:       scoreRisque,
 					DateGeneration:    tx.DateOperation,
-					Action:            actionFromCriticite(meta.NiveauCriticite),
+					Action:            action,
 					RegleDeclencheeID: regleID,
 					NumeroCompte:      tx.NumeroComptePayeur,
 				}
 				alertes = append(alertes, alerte)
 			}
-			if statusPayeur == "Interdit" || statusPayeur == "Blacklist" {
+			// Seul "Interdit" bloque la transaction (obligation légale OFAC/SWIFT)
+			if statusPayeur == "Interdit" {
 				if meta == nil {
 					return alertes, fmt.Errorf("%w: meta-donnée d'alerte introuvable pour %s", ErrTransactionRefused, statusPayeur)
 				}
 				return alertes, fmt.Errorf("%w: %s", ErrTransactionRefused, meta.Message)
+			}
+			// Blacklist, PEP, Surveillés → Valider + Suivi (liste interne)
+			if statusPayeur == "Blacklist" || statusPayeur == "PEP" || statusPayeur == "Surveillés" {
+				_ = re.store.CreateSuiviBlacklist(ctx, tx.ID, tx.NumeroComptePayeur, "surveiller", statusPayeur)
 			}
 		}
 	}
@@ -359,11 +382,17 @@ func (re *RulesEngine) checkBlacklist(ctx context.Context, tx *models.Transactio
 			}
 			if err == nil && meta != nil {
 				var scoreRisque float64 = 0
+				var action string
 				switch statusPaye {
-				case "Interdit", "Blacklist":
+				case "Interdit":
 					scoreRisque = 1.0
+					action = "bloquer" // Obligation légale OFAC/SWIFT
+				case "Blacklist":
+					scoreRisque = 1.0
+					action = "surveiller" // Liste interne → Valider + Suivi
 				case "PEP", "Surveillés":
 					scoreRisque = 0.7
+					action = "surveiller" // Valider + Suivi
 				}
 				alerte := &models.Alerte{
 					TransactionID:     tx.ID,
@@ -374,17 +403,22 @@ func (re *RulesEngine) checkBlacklist(ctx context.Context, tx *models.Transactio
 					NiveauCriticite:   meta.NiveauCriticite,
 					ScoreRisque:       scoreRisque,
 					DateGeneration:    tx.DateOperation,
-					Action:            actionFromCriticite(meta.NiveauCriticite),
+					Action:            action,
 					RegleDeclencheeID: regleID,
 					NumeroCompte:      tx.NumeroComptePaye,
 				}
 				alertes = append(alertes, alerte)
 			}
-			if statusPaye == "Interdit" || statusPaye == "Blacklist" {
+			// Seul "Interdit" bloque la transaction (obligation légale OFAC/SWIFT)
+			if statusPaye == "Interdit" {
 				if meta == nil {
 					return alertes, fmt.Errorf("%w: meta-donnée d'alerte introuvable pour %s", ErrTransactionRefused, statusPaye)
 				}
 				return alertes, fmt.Errorf("%w: %s", ErrTransactionRefused, meta.Message)
+			}
+			// Blacklist, PEP, Surveillés → Valider + Suivi (liste interne)
+			if statusPaye == "Blacklist" || statusPaye == "PEP" || statusPaye == "Surveillés" {
+				_ = re.store.CreateSuiviBlacklist(ctx, tx.ID, tx.NumeroComptePaye, "surveiller", statusPaye)
 			}
 		}
 	}

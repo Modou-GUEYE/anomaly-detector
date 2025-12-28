@@ -373,6 +373,14 @@ button[disabled] {
   line-height: 1.6;
 }
 
+.form-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.8rem;
+  color: #64748b;
+  font-style: italic;
+}
+
 .modal-footer {
   display: flex;
   gap: 12px;
