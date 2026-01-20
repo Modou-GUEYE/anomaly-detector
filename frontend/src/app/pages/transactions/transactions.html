@@ -3,39 +3,33 @@
 
   <!-- Filtres -->
   <div class="filters-section">
-    <input type="search"
-           class="filter-search"
-           placeholder="Rechercher par numéro de compte, nom..."
-           [(ngModel)]="searchTerm"
-           (input)="onSearchChange()" />
-    
+    <div class="search-container">
+            <input type="search"
+              class="filter-search"
+              placeholder="Rechercher par numéro de compte ou nom..."
+              [(ngModel)]="filters.search"
+              (input)="onSearchChange()" />
+            <i class="material-icons search-icon">search</i>
+    </div>
     <div class="filters-row">
-      <select [(ngModel)]="filterPays" (change)="onFilterChange()" class="filter-select">
-        <option value="">Tous les pays</option>
+      <select [(ngModel)]="filters.pays" (change)="onFilterChange()" class="filter-select">
+        <option value="">Par Pays</option>
         <option *ngFor="let pays of getUniqueCountries()" [value]="pays">{{ pays }}</option>
       </select>
-
-      <input type="date" 
-             [(ngModel)]="filterPeriodStart" 
-             (change)="onFilterChange()" 
-             class="filter-select"
-             placeholder="Date début" />
-
-      <input type="date" 
-             [(ngModel)]="filterPeriodEnd" 
-             (change)="onFilterChange()" 
-             class="filter-select"
-             placeholder="Date fin" />
-
-      <select [(ngModel)]="filterTypeClient" (change)="onFilterChange()" class="filter-select">
-        <option value="">Tous les types client</option>
-        <option *ngFor="let type of getUniqueTypeClients()" [value]="type">{{ type }}</option>
+      <select [(ngModel)]="filters.portee" (change)="onFilterChange()" class="filter-select">
+        <option value="">Par Portée</option>
+        <option value="national">National</option>
+        <option value="international">International</option>
       </select>
-
-      <select [(ngModel)]="filterPortee" (change)="onFilterChange()" class="filter-select">
-        <option value="">Toutes les portées</option>
-        <option value="National">National</option>
-        <option value="International">International</option>
+      <select [(ngModel)]="filters.periode" (change)="onFilterChange()" class="filter-select">
+        <option value="">Par Période</option>
+        <option value="Aujourd'hui">Aujourd'hui</option>
+        <option value="7 derniers jours">7 derniers jours</option>
+        <option value="30 derniers jours">30 derniers jours</option>
+      </select>
+      <select [(ngModel)]="filters.typeClient" (change)="onFilterChange()" class="filter-select">
+        <option value="">Par Type</option>
+        <option *ngFor="let opt of typeClientOptions" [value]="opt.label">{{ opt.label }}</option>
       </select>
     </div>
   </div>
@@ -51,190 +45,73 @@
 
   <!-- Content -->
   <div *ngIf="!loading && !error" class="transactions-content">
-    <!-- Header avec compteur -->
-    <div class="transactions-header">
-      <div class="transactions-count">
-        <span class="count-number">{{ filteredTransactions.length }} Transactions</span>
+    <div class="transactions-list">
+      <div *ngFor="let t of paginatedTransactions" class="transaction-card" (click)="toggleDetails(t)">
+        <div class="transaction-row">
+          <div class="transaction-icon">
+            <span class="material-icons">swap_horiz</span>
+          </div>
+          <div class="transaction-info">
+            <div class="transaction-sens">
+              <span class="payeur">{{ t.nom_payeur }}</span>
+              <span class="arrow-sens">
+                →
+              </span>
+              <span class="paye">{{ t.nom_paye }}</span>
+            </div>
+            <div class="transaction-date">
+              {{ t.date_operation | date:'dd/MM/yyyy' }}
+              <span class="transaction-time">{{ t.date_operation | date:'HH:mm' }}</span>
+            </div>
+          </div>
+          <div class="transaction-amount" [ngClass]="'amount-debit'">
+            {{ t.montant | number:'1.0-0' }} FCFA
+          </div>
+          <div class="transaction-status">
+            <span class="status-badge" [ngClass]="getTransactionStatusClass(t)">
+              {{ getTransactionStatus(t) === 'Succès' ? 'Succès' : 'Échec' }}
+            </span>
+          </div>
+          <div class="transaction-expand">
+            <button class="btn-expand">{{ isExpanded(t) ? '▼' : '▶' }}</button>
+          </div>
+        </div>
+        <div *ngIf="isExpanded(t)" class="transaction-details-modal">
+          <div class="detail-section">
+            <h4><span class="material-icons icon-title">info</span> Infos générales</h4>
+            <p><strong>ID:</strong> {{ t.id }}</p>
+            <p><strong>Date:</strong> {{ formatDate(t.date_operation) }}</p>
+            <p><strong>Montant:</strong> {{ formatMontant(t.montant) }} FCFA</p>
+            <p><strong>Portée:</strong> {{ t.portee }}</p>
+            <p><strong>Statut:</strong> {{ getTransactionStatus(t) }}</p>
+          </div>
+          <div class="detail-section">
+            <h4><span class="material-icons icon-title">account_circle</span> Émetteur</h4>
+            <p><strong>Nom:</strong> {{ t.nom_payeur }}</p>
+            <p><strong>Compte:</strong> {{ t.numero_compte_payeur }}</p>
+            <p><strong>Type client:</strong> {{ t.type_client_payeur }}</p>
+            <p><strong>Pays:</strong> {{ getCountryNameFromCode(t.pays_payeur) }}</p>
+            <p><strong>Ville:</strong> {{ t.ville_payeur }}</p>
+            <p><strong>Adresse:</strong> {{ t.adresse_payeur }}</p>
+          </div>
+          <div class="detail-section">
+            <h4><span class="material-icons icon-title">account_circle</span> Bénéficiaire</h4>
+            <p><strong>Nom:</strong> {{ t.nom_paye }}</p>
+            <p><strong>Compte:</strong> {{ t.numero_compte_paye }}</p>
+            <p><strong>Type client:</strong> {{ t.type_client_paye }}</p>
+            <p><strong>Pays:</strong> {{ getCountryNameFromCode(t.pays_paye) }}</p>
+            <p><strong>Ville:</strong> {{ t.ville_paye }}</p>
+            <p><strong>Adresse:</strong> {{ t.adresse_paye }}</p>
+          </div>
+        </div>
       </div>
+      <div *ngIf="paginatedTransactions.length === 0" class="empty">Aucune transaction trouvée</div>
     </div>
-
-    <!-- Tableau -->
-    <div class="transactions-table-wrapper">
-      <div *ngIf="filteredTransactions.length === 0" class="empty-state">
-        <p>Aucune transaction trouvée</p>
-      </div>
-
-      <table *ngIf="filteredTransactions.length > 0" class="transactions-table">
-        <thead>
-          <tr>
-            <th class="col-date">Date</th>
-            <th class="col-montant">Montant</th>
-            <th class="col-payeur">Payeur</th>
-            <th class="col-beneficiaire">Bénéficiaire</th>
-            <th class="col-portee">Portée</th>
-            <th class="col-risque">Risque</th>
-            <th class="col-actions">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <ng-container *ngFor="let tx of paginatedTransactions">
-            <tr [class.high-risk]="isHighRisk(tx)" class="transaction-row">
-              <td class="col-date">{{ formatDate(tx.date_operation) }}</td>
-              <td class="col-montant amount">{{ formatMontant(tx.montant) }}</td>
-              <td class="col-payeur">{{ tx.nom_payeur }}</td>
-              <td class="col-beneficiaire">{{ tx.nom_paye }}</td>
-              <td class="col-portee">
-                <span class="badge" [ngClass]="tx.portee === 'International' ? 'badge-warning' : 'badge-info'">
-                  {{ tx.portee }}
-                </span>
-              </td>
-              <td class="col-risque">
-                <span class="risk-badge" [ngClass]="'risk-' + getRiskLevel(tx).toLowerCase()">
-                  {{ getRiskLevel(tx) }}
-                </span>
-              </td>
-              <td class="col-actions">
-                <div class="action-buttons">
-                  <button class="btn-expand" (click)="toggleDetails(tx)">
-                    {{ isExpanded(tx) ? '▼' : '▶' }}
-                  </button>
-                </div>
-              </td>
-            </tr>
-            <!-- Ligne de détails expandable -->
-            <tr *ngIf="isExpanded(tx)" class="details-row">
-              <td colspan="7">
-                <div class="transaction-details">
-                  <div class="details-grid">
-                    <!-- Informations générales -->
-                    <div class="details-section">
-                      <h3>Informations générales</h3>
-                      <div class="detail-item">
-                        <span class="detail-label">Date opération:</span>
-                        <span class="detail-value">{{ formatDate(tx.date_operation) }}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="detail-label">ID Transaction:</span>
-                        <span class="detail-value font-mono">{{ tx.id }}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="detail-label">Montant:</span>
-                        <span class="detail-value amount">{{ formatMontant(tx.montant) }}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="detail-label">Type risque:</span>
-                        <span class="detail-value" [ngClass]="'risk-' + getRiskLevel(tx).toLowerCase()">
-                          {{ getRiskLevel(tx) }}
-                        </span>
-                      </div>
-                    </div>
-
-                    <!-- Payeur -->
-                    <div class="details-section">
-                      <h3>Informations du payeur</h3>
-                      <div class="detail-item">
-                        <span class="detail-label">Nom:</span>
-                        <span class="detail-value">{{ tx.nom_payeur }}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="detail-label">Compte:</span>
-                        <span class="detail-value font-mono">{{ tx.numero_compte_payeur }}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="detail-label">Pays:</span>
-                        <span class="detail-value">{{ getCountryNameFromCode(tx.pays_payeur) }} ({{ tx.pays_payeur }})</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="detail-label">Ville:</span>
-                        <span class="detail-value">{{ tx.ville_payeur }}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="detail-label">Type compte:</span>
-                        <span class="detail-value">{{ tx.type_compte_payeur }}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="detail-label">Type client:</span>
-                        <span class="detail-value">{{ tx.type_client_payeur }}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="detail-label">Catégorie:</span>
-                        <span class="detail-value">{{ tx.categorie_payeur }}</span>
-                      </div>
-                    </div>
-
-                    <!-- Bénéficiaire -->
-                    <div class="details-section">
-                      <h3>Informations du bénéficiaire</h3>
-                      <div class="detail-item">
-                        <span class="detail-label">Nom:</span>
-                        <span class="detail-value">{{ tx.nom_paye }}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="detail-label">Compte:</span>
-                        <span class="detail-value font-mono">{{ tx.numero_compte_paye }}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="detail-label">Pays:</span>
-                        <span class="detail-value">{{ getCountryNameFromCode(tx.pays_paye) }} ({{ tx.pays_paye }})</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="detail-label">Ville:</span>
-                        <span class="detail-value">{{ tx.ville_paye }}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="detail-label">Type compte:</span>
-                        <span class="detail-value">{{ tx.type_compte_paye }}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="detail-label">Type client:</span>
-                        <span class="detail-value">{{ tx.type_client_paye }}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="detail-label">Catégorie:</span>
-                        <span class="detail-value">{{ tx.categorie_paye }}</span>
-                      </div>
-                    </div>
-
-                    <!-- Adresses -->
-                    <div class="details-section">
-                      <h3>Adresses</h3>
-                      <div class="detail-item">
-                        <span class="detail-label">Adresse payeur:</span>
-                        <span class="detail-value">{{ tx.adresse_payeur }}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="detail-label">Adresse bénéficiaire:</span>
-                        <span class="detail-value">{{ tx.adresse_paye }}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </td>
-            </tr>
-          </ng-container>
-        </tbody>
-      </table>
-
-      <!-- Pagination -->
-      <div *ngIf="filteredTransactions.length > 0" class="pagination">
-        <button
-          class="btn-pagination"
-          (click)="previousPage()"
-          [disabled]="currentPage === 1"
-        >
-          ← Précédent
-        </button>
-        <span class="page-info">
-          Page {{ currentPage }} / {{ totalPages }}
-        </span>
-        <button
-          class="btn-pagination"
-          (click)="nextPage()"
-          [disabled]="currentPage === totalPages"
-        >
-          Suivant →
-        </button>
-      </div>
+    <!-- Pagination -->
+    <div class="pagination" *ngIf="totalPages > 1">
+      <button class="pagination-btn" (click)="previousPage()" [disabled]="currentPage === 1">← Précédent</button>
+      <span class="pagination-info">Page {{ currentPage }} / {{ totalPages }}</span>
+      <button class="pagination-btn" (click)="nextPage()" [disabled]="currentPage === totalPages">Suivant →</button>
     </div>
   </div>
 </section>

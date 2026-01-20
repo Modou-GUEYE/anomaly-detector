@@ -19,15 +19,22 @@
 /* ===================== FILTRES ===================== */
 .filters-section {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 12px;
   margin: 0;
   flex-shrink: 0;
+  align-items: flex-start;
+}
+
+.search-container {
+  position: relative;
+  flex: 1;
+  min-width: 0;
 }
 
 .filter-search {
   width: 100%;
-  padding: 10px 14px;
+  padding: 10px 40px 10px 14px;
   border: 1px solid #E3E3E1;
   border-radius: 8px;
   font-size: 0.95rem;
@@ -40,10 +47,21 @@
   box-shadow: 0 0 0 3px rgba(46, 108, 242, 0.1);
 }
 
+.search-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 20px;
+  color: #999;
+  pointer-events: none;
+}
+
 .filters-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
+  align-items: flex-start;
 }
 
 .filter-select {
@@ -51,7 +69,9 @@
   border: 1px solid #E3E3E1;
   border-radius: 8px;
   font-size: 0.95rem;
-  background: #fff;
+  box-sizing: border-box;
+  min-width: 0;
+  background-color: white;
   cursor: pointer;
 }
 
@@ -102,6 +122,15 @@
   font-weight: 600;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn-add-entity .material-icons {
+  font-size: 18px;
+  color: #fff;
 }
 
 .btn-add-entity:hover {
@@ -552,20 +581,73 @@
 }
 
 /* Responsive */
+@media (max-width: 1024px) {
+  .blacklist-page {
+    padding: 18px;
+    gap: 14px;
+  }
+
+  .filters-section {
+    gap: 10px;
+  }
+
+  .filter-select {
+    min-width: 120px;
+  }
+}
+
 @media (max-width: 768px) {
   .blacklist-page {
     padding: 16px;
     gap: 12px;
+    height: auto;
+  }
+
+  .blacklist-page h1 {
+    font-size: 1.5rem;
+  }
+
+  .filters-section {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .search-container {
+    min-width: 100%;
+  }
+
+  .filters-grid {
+    width: 100%;
+  }
+
+  .filter-select {
+    min-width: 100%;
   }
 
   .blacklist-header {
     flex-direction: column;
     align-items: stretch;
+    gap: 12px;
   }
 
   .btn-add-entity {
     width: 100%;
     text-align: center;
+  }
+
+  .blacklist-table {
+    font-size: 0.8rem;
+    table-layout: auto;
+  }
+
+  .blacklist-table th {
+    padding: 8px 6px;
+    font-size: 0.8rem;
+  }
+
+  .blacklist-table td {
+    padding: 8px 6px;
+    font-size: 0.8rem;
   }
 
   .expanded-body {
@@ -587,5 +669,144 @@
 
   .modal-content {
     width: 95%;
+  }
+}
+
+@media (max-width: 480px) {
+  * {
+    box-sizing: border-box !important;
+  }
+
+  .blacklist-page {
+    padding: 12px;
+    gap: 10px;
+    height: auto;
+    min-height: auto;
+  }
+
+  .blacklist-page h1 {
+    font-size: 1.2rem;
+  }
+
+  .filters-section {
+    flex-direction: row;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .search-container {
+    min-width: 0 !important;
+    flex: 1;
+    max-width: calc(100% - 100px);
+  }
+
+  .filter-search {
+    font-size: 0.75rem;
+    padding: 6px 25px 6px 8px;
+    width: 100%;
+  }
+
+  .search-icon {
+    font-size: 12px;
+    right: 6px;
+  }
+
+  .filters-grid {
+    width: 90px;
+    flex: 0 0 90px;
+    flex-wrap: nowrap;
+    gap: 0;
+  }
+
+  .filter-select {
+    width: 90px !important;
+    min-width: 90px !important;
+    max-width: 90px !important;
+    padding: 5px 2px;
+    font-size: 0.65rem;
+    flex-shrink: 0;
+    text-overflow: ellipsis;
+  }
+
+  .blacklist-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .entities-count {
+    width: 100%;
+  }
+
+  .btn-add-entity {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  .blacklist-table-wrapper {
+    max-height: calc(100% - 40px);
+    border-radius: 8px;
+  }
+
+  .blacklist-table {
+    font-size: 0.7rem;
+    table-layout: auto;
+  }
+
+  .blacklist-table th {
+    padding: 6px 3px;
+    font-size: 0.65rem;
+  }
+
+  .blacklist-table td {
+    padding: 6px 3px;
+    font-size: 0.65rem;
+  }
+
+  .blacklist-table th.col-nom {
+    width: 30%;
+  }
+
+  .blacklist-table th.col-type {
+    width: 20%;
+  }
+
+  .blacklist-table th.col-compte {
+    width: 25%;
+  }
+
+  .blacklist-table th.col-date {
+    width: 15%;
+  }
+
+  .blacklist-table th.col-actions {
+    width: 10%;
+  }
+
+  .expanded-body {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-item {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .expanded-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .btn-action {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 0.75rem;
+  }
+
+  .modal-content {
+    width: calc(100% - 12px);
+    max-width: calc(100% - 12px);
+    padding: 12px;
   }
 }

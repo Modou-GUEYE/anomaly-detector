@@ -188,11 +188,9 @@ export class ReportsComponent implements OnInit, OnDestroy, AfterViewInit {
    * Initialise les filtres avec les dates par défaut
    */
   initializeFilters() {
-    const today = new Date();
-    const monthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
-    
-    this.filters.dateFin = today.toISOString().split('T')[0];
-    this.filters.dateDebut = monthAgo.toISOString().split('T')[0];
+    // Pas de dates pré-sélectionnées par défaut
+    this.filters.dateFin = '';
+    this.filters.dateDebut = '';
   }
 
   /**
@@ -499,15 +497,22 @@ export class ReportsComponent implements OnInit, OnDestroy, AfterViewInit {
    * Détermine les couleurs pour les règles violées en fonction de leur type
    */
   private getColorsForRules(data: RuleViolationData[]): { background: string[], border: string[] } {
+    // Mapping spécifique des types de règles à leurs couleurs
+    const ruleTypeColors: { [key: string]: { bg: string; border: string } } = {
+      'Montant': { bg: '#2463DE', border: '#1D4ED8' },           // Bleu principal
+      'Frequence': { bg: '#ED6A01', border: '#C2410C' },         // Orange
+      'Pays à risque': { bg: '#6D5AE0', border: '#5B21B6' },     // Violet
+      'Pays': { bg: '#6D5AE0', border: '#5B21B6' },              // Violet (alias)
+      'Blacklist': { bg: '#F59E0B', border: '#D97706' },         // Ambre
+      'PEP': { bg: '#10B981', border: '#059669' },               // Vert
+      'Interdit': { bg: '#8B5CF6', border: '#7C3AED' },          // Indigo
+      'Surveilles': { bg: '#EC4899', border: '#DB2777' },        // Rose
+      'Surveillés': { bg: '#EC4899', border: '#DB2777' }         // Rose (with accent)
+    };
+
+    // Couleurs par défaut pour les types non mappés
     const defaultColors = [
-      { bg: '#2463DE', border: '#1D4ED8' }, // Bleu principal
-      { bg: '#ED6A01', border: '#C2410C' }, // Orange
       { bg: '#EF4444', border: '#DC2626' }, // Rouge
-      { bg: '#6D5AE0', border: '#5B21B6' }, // Violet
-      { bg: '#F59E0B', border: '#D97706' }, // Ambre
-      { bg: '#10B981', border: '#059669' }, // Vert
-      { bg: '#8B5CF6', border: '#7C3AED' }, // Indigo
-      { bg: '#EC4899', border: '#DB2777' }, // Rose
       { bg: '#06B6D4', border: '#0891B2' }, // Cyan
       { bg: '#9CA3AF', border: '#6B7280' }  // Gris
     ];
@@ -516,7 +521,22 @@ export class ReportsComponent implements OnInit, OnDestroy, AfterViewInit {
     const borderColors: string[] = [];
 
     data.forEach((item, index) => {
-      const colors = defaultColors[index % defaultColors.length];
+      let colors = defaultColors[index % defaultColors.length];
+      
+      // Chercher une correspondance exacte
+      if (ruleTypeColors[item.ruleName]) {
+        colors = ruleTypeColors[item.ruleName];
+      } else {
+        // Chercher une correspondance partielle (case-insensitive)
+        const lowerRuleName = item.ruleName.toLowerCase();
+        for (const [key, value] of Object.entries(ruleTypeColors)) {
+          if (lowerRuleName.includes(key.toLowerCase()) || key.toLowerCase().includes(lowerRuleName)) {
+            colors = value;
+            break;
+          }
+        }
+      }
+      
       backgroundColors.push(colors.bg);
       borderColors.push(colors.border);
     });

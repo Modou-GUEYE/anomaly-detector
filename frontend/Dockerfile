@@ -1,5 +1,5 @@
 # Single-stage Dockerfile for anomaly-detector frontend
-FROM node:20-alpine
+FROM --platform=linux/amd64 node:20-alpine
 
 # Install nginx
 RUN apk add --no-cache nginx
@@ -9,7 +9,7 @@ WORKDIR /app
 
 # Copy package files and install dependencies
 COPY package.json package-lock.json* ./
-COPY .npmrc* ./
+# COPY .npmrc* ./
 RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
 
 # Copy source code and build
@@ -27,4 +27,7 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 
 # Run nginx
-CMD ["nginx", "-g", "daemon off;"]
+ENTRYPOINT ["nginx"]
+CMD ["-g", "daemon off;"]
+
+

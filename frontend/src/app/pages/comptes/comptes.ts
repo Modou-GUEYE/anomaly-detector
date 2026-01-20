@@ -60,35 +60,75 @@ export class ComptesComponent implements OnInit, OnDestroy {
 
   // Cache liste pays (amélioration #3)
   allCountries: string[] = [];
+  
+  // Map des profils clients (ID → Nom) pour affichage optimisé
+  profilsClientMap: Map<string, string> = new Map();
+
+  // Détection responsive
+  isMobileOrTablet = false;
 
   private destroy$ = new Subject<void>();
 
-  constructor(private profileService: ProfileService) {}
+  constructor(private profileService: ProfileService) {
+    this.checkScreenSize();
+  }
 
   ngOnInit() {
     if (typeof window === 'undefined') return;
     // Enregistrer la locale française
     countries.registerLocale(fr);
     this.loadComptes();
+    
+    // Écouter les changements de taille d'écran
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', () => this.checkScreenSize());
+    }
   }
 
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
+    
+    // Nettoyer l'écouteur de resize
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('resize', () => this.checkScreenSize());
+    }
+  }
+
+  checkScreenSize() {
+    if (typeof window !== 'undefined') {
+      this.isMobileOrTablet = window.innerWidth <= 1024;
+    }
+  }
+
+  getDisplayNumeroCompte(numeroCompte: string): string {
+    if (this.isMobileOrTablet && numeroCompte && numeroCompte.length > 10) {
+      return numeroCompte.substring(0, 6) + '...';
+    }
+    return numeroCompte;
   }
 
   loadComptes() {
     this.loading = true;
     this.error = '';
     
-    // Charger les comptes et le suivi en parallèle
+    // Charger les comptes, suivi ET profils clients en parallèle
     forkJoin({
       accounts: this.profileService.getAccounts(),
-      suivi: this.profileService.getSuiviBlacklist()
+      suivi: this.profileService.getSuiviBlacklist(),
+      profils: this.profileService.getProfilsClient()
     })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (result: any) => {
+          // Construire la Map profils (ID → Nom)
+          this.profilsClientMap.clear();
+          if (result.profils && Array.isArray(result.profils)) {
+            result.profils.forEach((p: any) => {
+              this.profilsClientMap.set(p.id, p.nomProfil);
+            });
+          }
+          
           // Construire la map de suivi
           this.suiviMap.clear();
           if (result.suivi && Array.isArray(result.suivi)) {
@@ -284,6 +324,11 @@ export class ComptesComponent implements OnInit, OnDestroy {
     const options = this.getTypeClientOptions();
     const codeUpper = code?.toUpperCase() || '';
     return options.find(o => o.code === codeUpper)?.label || code;
+  }
+
+  getProfileClientName(profilClientId: string | undefined): string {
+    if (!profilClientId) return '—';
+    return this.profilsClientMap.get(profilClientId) || profilClientId;
   }
 
   // Compter les comptes sous surveillance

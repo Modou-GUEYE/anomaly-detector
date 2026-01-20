@@ -49,7 +49,6 @@
             <div class="kpi-value" *ngIf="!loadingStates.performance">{{ performanceData.anomaliesGenerees | number }}</div>
             <div class="loading-spinner" *ngIf="loadingStates.performance"><img class="spinner" src="../../../assets/spinner.svg" alt="Chargement"/> </div>
             <div class="kpi-label">Alertes Générées</div>
-            <div class="kpi-period">{{ getPeriodLabel() }}</div>
           </div>
         </div>
         
@@ -59,7 +58,6 @@
             <div class="kpi-value" *ngIf="!loadingStates.performance">{{ performanceData.anomaliesTraitees | number }}</div>
             <div class="loading-spinner" *ngIf="loadingStates.performance"><img class="spinner" src="../../../assets/spinner.svg" alt="Chargement"/></div>
             <div class="kpi-label">Alertes Traitées</div>
-            <div class="kpi-period">{{ getPeriodLabel() }}</div>
           </div>
         </div>
         
@@ -69,7 +67,6 @@
             <div class="kpi-value" *ngIf="!loadingStates.performance">{{ performanceData.transactionsAnalysees | number }}</div>
             <div class="loading-spinner" *ngIf="loadingStates.performance"><img class="spinner" src="../../../assets/spinner.svg" alt="Chargement"/></div>
             <div class="kpi-label">Transactions Analysées</div>
-            <div class="kpi-period">{{ getPeriodLabel() }}</div>
           </div>
         </div>
 
@@ -79,7 +76,6 @@
             <div class="kpi-value" *ngIf="!loadingStates.performance">{{ regulatoryData.transactionsBloquees | number }}</div>
             <div class="loading-spinner" *ngIf="loadingStates.performance"><img class="spinner" src="../../../assets/spinner.svg" alt="Chargement"/></div>
             <div class="kpi-label">Transactions Bloquées</div>
-            <div class="kpi-period">{{ getPeriodLabel() }}</div>
           </div>
         </div>
         
@@ -89,7 +85,6 @@
             <div class="kpi-value" *ngIf="!loadingStates.performance">{{ regulatoryData.comptesSurveilles | number }}</div>
             <div class="loading-spinner" *ngIf="loadingStates.performance"><img class="spinner" src="../../../assets/spinner.svg" alt="Chargement"/></div>
             <div class="kpi-label">Comptes Surveillés</div>
-            <div class="kpi-period">{{ getPeriodLabel() }}</div>
           </div>
         </div>
       </div>

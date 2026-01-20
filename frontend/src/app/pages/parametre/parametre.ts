@@ -13,14 +13,18 @@ import { Router } from '@angular/router';
   styleUrls: ['./parametre.scss']
 })
 export class ParametreComponent implements OnInit {
-  activeTab: 'profile' | 'security' | 'notifications' = 'profile';
+  activeTab: 'profile' | 'security' = 'profile';
 
   profile: any = null;
   saving = false;
   message = '';
   messageType: 'success' | 'error' | '' = '';
+  oldPassword = '';
   newPassword = '';
   confirmPassword = '';
+  showOldPassword = false;
+  showNewPassword = false;
+  showConfirmPassword = false;
   private originalProfile: string | null = null;
 
   constructor(private profileService: ProfileService, private authState: AuthStateService, private router: Router) {}
@@ -66,8 +70,12 @@ export class ParametreComponent implements OnInit {
     this.loadProfile();
   }
 
-  setTab(t: 'profile' | 'security' | 'notifications') { this.activeTab = t; this.clearMessage(); }
+  setTab(t: 'profile' | 'security') { this.activeTab = t; this.clearMessage(); }
   clearMessage() { this.message = ''; this.messageType = ''; }
+
+  toggleOldPassword() { this.showOldPassword = !this.showOldPassword; }
+  toggleNewPassword() { this.showNewPassword = !this.showNewPassword; }
+  toggleConfirmPassword() { this.showConfirmPassword = !this.showConfirmPassword; }
 
   // Save profile edits (name/email)
   saveProfileEdits() {
@@ -95,35 +103,26 @@ export class ParametreComponent implements OnInit {
   }
 
   // Change password
-  changePassword(newPassword: string, confirm: string) {
+  changePassword(oldPassword: string, newPassword: string, confirm: string) {
     this.clearMessage();
-    if (!newPassword || newPassword.length < 6) { this.message = 'Le mot de passe doit contenir au moins 6 caractères.'; this.messageType = 'error'; return; }
+    if (!oldPassword) { this.message = 'Veuillez saisir votre ancien mot de passe.'; this.messageType = 'error'; return; }
+    if (!newPassword || newPassword.length < 6) { this.message = 'Le nouveau mot de passe doit contenir au moins 6 caractères.'; this.messageType = 'error'; return; }
     if (newPassword !== confirm) { this.message = 'La confirmation ne correspond pas.'; this.messageType = 'error'; return; }
     this.saving = true;
-    this.profileService.updateProfile({ password: newPassword }).subscribe({
-      next: () => { this.saving = false; this.message = 'Mot de passe mis à jour.'; this.messageType = 'success'; },
-      error: (err: any) => { this.saving = false; this.message = err?.error?.error || 'Erreur lors de la mise à jour du mot de passe'; this.messageType = 'error'; }
-    });
-  }
-
-  // Save notifications preferences
-  saveNotifications() {
-    if (!this.profile) return;
-    this.clearMessage();
-    this.saving = true;
-    const payload: any = { notificationsEnabled: !!this.profile.notificationsEnabled };
-    this.profileService.updateProfile(payload).subscribe({
-      next: (updated: any) => {
-        this.saving = false;
-        this.profile = { ...this.profile, ...(updated || {}) };
-        this.message = 'Préférences mises à jour.';
-        this.messageType = 'success';
-        this.setOriginalSnapshot();
+    this.profileService.updateProfile({ oldPassword: oldPassword, password: newPassword }).subscribe({
+      next: () => { 
+        this.saving = false; 
+        this.message = 'Mot de passe mis à jour avec succès.'; 
+        this.messageType = 'success'; 
+        this.oldPassword = ''; 
+        this.newPassword = ''; 
+        this.confirmPassword = ''; 
       },
-      error: (err: any) => {
-        this.saving = false;
-        this.message = err?.error?.error || 'Erreur lors de la sauvegarde des préférences';
-        this.messageType = 'error';
+      error: (err: any) => { 
+        this.saving = false; 
+        console.error('Password change error:', err);
+        this.message = err?.error?.error || err?.message || 'Erreur lors de la mise à jour du mot de passe'; 
+        this.messageType = 'error'; 
       }
     });
   }

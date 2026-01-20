@@ -1,6 +1,8 @@
 <div class="app-layout">
+  <!-- SIDEBAR OVERLAY RESPONSIVE -->
+  <div class="sidebar-overlay" *ngIf="sidebarOpen" (click)="closeSidebar()"></div>
   <!-- SIDEBAR -->
-  <aside class="dashboard-sidebar" aria-label="Menu latéral">
+  <aside class="dashboard-sidebar" [class.sidebar-open]="sidebarOpen" aria-label="Menu latéral">
     <div class="sidebar-user">
         <div class="sidebar-avatar-container">
         <img src="../../../assets/avatar.png" alt="Photo de profil" class="sidebar-avatar" />
@@ -108,6 +110,9 @@
     <!-- HEADER -->
     <header class="dashboard-header">
       <div class="header-left">
+        <button class="burger-menu" (click)="toggleSidebar()" aria-label="Ouvrir le menu" *ngIf="true" tabindex="0">
+          <span></span><span></span><span></span>
+        </button>
         <img src="../../../assets/faviconBis.png" alt="Logo BIS" class="header-logo" />
         <div class="dashboard-title">
           <span class="dashboard-welcome">Bienvenue {{ profile?.nomUtilisateur || 'User' }} !</span>

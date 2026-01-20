@@ -13,10 +13,10 @@ export class AuthStateService {
 
   async initializeAuth(): Promise<void> {
     try {
-      // Vérifier s'il existe un token en localStorage et initialiser l'état d'authentification
+      // Vérifier s'il existe un token en sessionStorage et initialiser l'état d'authentification
       try {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          const token = localStorage.getItem('token');
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+          const token = sessionStorage.getItem('token');
           if (token) {
             // valider le claim exp s'il est présent
             let valide = true;
@@ -32,7 +32,7 @@ export class AuthStateService {
             if (valide) {
               this.isAuthenticated.set(true);
             } else {
-              try { localStorage.removeItem('token'); } catch (e) {}
+              try { sessionStorage.removeItem('token'); } catch (e) {}
               this.isAuthenticated.set(false);
             }
           }

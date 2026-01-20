@@ -1,4 +1,64 @@
+@use '../login/_variables.scss' as *;
+@use '../login/login.scss' as *;
+
+@media (max-width: 480px) {
+	.login-center {
+		padding: 8px !important;
+	}
+	.login-panel {
+		width: 86vw !important;
+		min-width: 0 !important;
+		max-width: 90vw !important;
+		margin: 0 auto !important;
+		padding: 12px 4px !important;
+		border-radius: 12px !important;
+		box-shadow: 0 6px 18px rgba(2,10,34,0.10) !important;
+		background: linear-gradient(180deg, $primary 0%, $accent 100%) !important;
+	}
+	.login-panel__title {
+		font-size: 1.2rem !important;
+		margin-bottom: 2px !important;
+	}
+	.login-panel__subtitle {
+		font-size: 0.85rem !important;
+		margin-bottom: 10px !important;
+	}
+	.login-form {
+		gap: 8px !important;
+	}
+	.input {
+		font-size: 0.95rem !important;
+		padding: 10px 10px !important;
+		border-radius: 8px !important;
+		height: 46px !important;
+	}
+	.login-btn {
+		font-size: 1rem !important;
+		padding: 10px 8px !important;
+		border-radius: 18px !important;
+	}
+	.signup {
+		font-size: 0.78rem !important;
+		margin-top: 6px !important;
+	}
+	.forgot {
+		font-size: 0.78rem !important;
+	}
+	.name-row {
+		flex-direction: column !important;
+		gap: 6px !important;
+	}
+	.policy {
+		font-size: 0.78rem !important;
+		flex-direction: row !important;
+		align-items: center !important;
+		gap: 6px !important;
+		flex-wrap: nowrap !important;
+		white-space: nowrap !important;
+	}
+}
 /* Reuse login panel styles; import the main login stylesheet and apply small overrides */
+@import '../login/_variables.scss';
 @import '../login/login.scss';
 
 /* Ensure the signin page keeps the login visual but tweak specifics for the mockup */

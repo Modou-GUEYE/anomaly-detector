@@ -3,11 +3,14 @@
 
   <!-- Filtres -->
   <div class="filters-section">
-    <input type="search"
-           class="filter-search"
-           placeholder="Rechercher un pays..."
-           [(ngModel)]="searchTerm"
-           (ngModelChange)="onSearch()" />
+    <div class="search-container">
+      <input type="search"
+             class="filter-search"
+             placeholder="Rechercher un pays..."
+             [(ngModel)]="searchTerm"
+             (ngModelChange)="onSearch()" />
+      <i class="material-icons search-icon">search</i>
+    </div>
   </div>
 
   <!-- Loading -->
@@ -164,20 +167,7 @@
             </td>
             <td class="col-actions">
               <div class="action-buttons">
-                <button
-                  class="btn-edit"
-                  (click)="startEdit(p)"
-                  title="Éditer"
-                >
-                  ✏️ Éditer
-                </button>
-                <button
-                  class="btn-delete"
-                  (click)="deletePays(p)"
-                  title="Supprimer"
-                >
-                  🗑️ Supprimer
-                </button>
+                <i class="material-icons icon-edit" (click)="startEdit(p)" title="Éditer">create</i><i class="material-icons icon-delete" (click)="deletePays(p)" title="Supprimer">delete</i>
               </div>
             </td>
           </tr>

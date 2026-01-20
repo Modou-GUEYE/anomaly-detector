@@ -11,7 +11,7 @@
 
     <div class="filters-grid">
       <select [(ngModel)]="filters.type" (change)="applyFilters()" class="filter-select">
-        <option value="">Tous les types</option>
+        <option value="">Types</option>
         <option value="Montant">Montant</option>
         <option value="frequence">Fréquence</option>
         <option value="Pays à risque">Pays à risque</option>
@@ -22,12 +22,12 @@
       </select>
 
       <select [(ngModel)]="filters.severite" (change)="applyFilters()" class="filter-select">
-        <option value="">Tous les niveaux</option>
+        <option value="">Niveaux</option>
         <option *ngFor="let s of severityOptions" [value]="s">{{ s }}</option>
       </select>
 
       <select [(ngModel)]="filters.statut" (change)="applyFilters()" class="filter-select">
-        <option value="">Tous les statuts</option>
+        <option value="">Statuts</option>
         <option value="Traité">Traité</option>
         <option value="En cours">En cours</option>
       </select>

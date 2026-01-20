@@ -24,7 +24,10 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
       const status = err instanceof HttpErrorResponse ? err.status : (err && err.status) || null;
       const url: string = (request && (request.url || '')) as string;
       const isAuthLogin = url.includes('/auth/login') || url.includes('/auth/refresh');
-      if (status === 401 && !isAuthLogin) {
+      const isProfileUpdate = url.includes('/api/v1/profile');
+
+      // Pour le changement de mot de passe, on ne redirige pas automatiquement afin d'afficher l'erreur (ancien mot de passe invalide)
+      if (status === 401 && !isAuthLogin && !isProfileUpdate) {
         try {
           // vider le token et forcer la redirection vers /login
           auth.logout().subscribe(() => {

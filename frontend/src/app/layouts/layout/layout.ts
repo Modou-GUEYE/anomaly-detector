@@ -21,6 +21,7 @@ export class LayoutComponent implements OnInit {
   kpi = {
     notifications: 0
   };
+  sidebarOpen = false;
 
   constructor(
     private profileService: ProfileService,
@@ -154,7 +155,17 @@ export class LayoutComponent implements OnInit {
   }
 
   navigateTo(path: string) {
-    // Normal navigation (server enforces disabled accounts)
     this.router.navigate([path]);
+    // Fermer le sidebar sur mobile/tablette
+    if (window.innerWidth <= 980) {
+      this.sidebarOpen = false;
+    }
+  }
+
+  toggleSidebar() {
+    this.sidebarOpen = !this.sidebarOpen;
+  }
+  closeSidebar() {
+    this.sidebarOpen = false;
   }
 }

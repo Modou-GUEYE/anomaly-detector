@@ -47,7 +47,9 @@ export class LoginComponent {
     this.success = false;
     if (this.email && this.password && this.role) {
       this.message = 'Connexion...';
-      this.authService.login(this.email, this.password, this.role).subscribe((ok) => {
+      // Convertir l'email en minuscules pour être insensible à la casse
+      const emailLowerCase = this.email.toLowerCase();
+      this.authService.login(emailLowerCase, this.password, this.role).subscribe((ok) => {
         if (ok) {
           this.success = true;
           try { this.authState.isAuthenticated.set(true); } catch (e) {}

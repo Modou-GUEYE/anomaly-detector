@@ -3,15 +3,18 @@
 
   <!-- Filtres -->
   <div class="filters-section">
-    <input type="search" 
-           class="filter-search"
-           placeholder="Rechercher par Nom ou Numéro de Compte..."
-           [(ngModel)]="filters.search" 
-           (ngModelChange)="applyFilters()" />
+    <div class="search-container">
+      <input type="search" 
+             class="filter-search"
+             placeholder="Rechercher par Nom ou Numéro de Compte..."
+             [(ngModel)]="filters.search" 
+             (ngModelChange)="applyFilters()" />
+      <i class="material-icons search-icon">search</i>
+    </div>
 
     <div class="filters-grid">
       <select [(ngModel)]="filters.typeEntite" (change)="applyFilters()" class="filter-select">
-        <option value="">Tous les types</option>
+        <option value="">Types</option>
         <option *ngFor="let type of typeOptions" [value]="type">{{ type }}</option>
       </select>
     </div>
@@ -31,7 +34,7 @@
         <span class="count-number">{{ padNumber(filteredEntities.length) }} Entités</span>
       </div>
       <button class="btn-add-entity" (click)="openAddModal()">
-        ➕ Ajouter une entité
+        <i class="material-icons">add</i> Ajouter une entité
       </button>
     </div>
 

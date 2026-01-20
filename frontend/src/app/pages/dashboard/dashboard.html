@@ -1,10 +1,7 @@
 <section class="tracking-page dashboard-tracking" *ngIf="!loading; else loadingTpl">
   <h1>Tableau de bord</h1>
   <div class="tracking-content">
-    <div class="dashboard-section">
-      <div class="dashboard-provider">
-
-        <div class="kpis-grid">
+    <div class="kpis-grid">
       <div class="kpi-card">
         <div class="kpi-icon"><img src="../../../assets/analytics.svg" alt="Transactions"/></div>
         <div class="kpi-content">
@@ -12,14 +9,14 @@
           <div class="kpi-label">Transactions Analysées</div>
         </div>
       </div>
-  <div class="kpi-card kpi-alert-detected">
+      <div class="kpi-card kpi-alert-detected">
         <div class="kpi-icon"><img src="../../../assets/bell.svg" alt="Anomalies"/></div>
         <div class="kpi-content">
           <div class="kpi-value">{{ kpi.anomaliesDetectees | number:'1.0-0' }}</div>
           <div class="kpi-label">Anomalies Détectées</div>
         </div>
-  </div>
-  <div class="kpi-card kpi-alert-treated">
+      </div>
+      <div class="kpi-card kpi-alert-treated">
         <div class="kpi-icon"><img src="../../../assets/shield-check.svg" alt="Traitée"/></div>
         <div class="kpi-content">
           <div class="kpi-value">{{ kpi.anomaliesTraitees | number:'1.0-0' }}</div>
@@ -33,116 +30,84 @@
           <div class="kpi-label">Comptes Surveillés</div>
         </div>
       </div>
-  </div>
+    </div>
+    <h2 class="section-title">Transactions récentes</h2>
+    <div class="events-controls">
 
-  <h2 class="section-title">Transactions récentes</h2>
-  
-
-      <div class="events-controls">
-        <div class="controls-row">
+      <div class="controls-row">
+        <div class="search-container">
           <input type="search" class="provider-search"
-                 placeholder="Rechercher une transaction…"
+                 placeholder="Rechercher par numéro de compte ou nom..."
                  [(ngModel)]="filters.search"
                  (ngModelChange)="applyFilters(); currentPage = 1"
                  (keyup.enter)="applyFilters()" />
-
-          <div class="actions-group">
-          </div>
+          <i class="material-icons search-icon">search</i>
         </div>
-
-        <div class="provider-filters provider-filters-grid">
-          <div class="filter-row">
-            <select [(ngModel)]="filters.pays" (change)="applyFilters()" class="filter-select">
-              <option value="">Filtrer par Pays</option>
-              <option *ngFor="let p of pays" [value]="p">{{ p }}</option>
-            </select>
-            <select [(ngModel)]="filters.portee" (change)="applyFilters()" class="filter-select">
-              <option value="">Filtrer par Portée</option>
-              <option value="national">National</option>
-              <option value="international">International</option>
-            </select>
-          </div>
-          <div class="filter-row">
-            <select [(ngModel)]="filters.periode" (change)="applyFilters(); currentPage = 1" class="filter-select">
-              <option value="">Filtrer par Période</option>
-              <option value="Aujourd'hui">Aujourd'hui</option>
-              <option value="7 derniers jours">7 derniers jours</option>
-              <option value="30 derniers jours">30 derniers jours</option>
-            </select>
-            <select [(ngModel)]="filters.typeClient" (change)="applyFilters()" class="filter-select">
-              <option value="">Filtrer par Type de Compte</option>
-              <option *ngFor="let opt of typeClientOptions" [value]="opt.label">{{ opt.label }}</option>
-            </select>
-          </div>
+        <div class="actions-group">
         </div>
       </div>
-      
-      <div class="provider-table-container">
-        <table class="provider-table">
-          <thead>
-            <tr>
-              <th>Date & Heure</th>
-              <th>Émetteur</th>
-              <th>Bénéficiaire</th>
-              <th>Montant</th>
-              <th>Portée</th>
-              <th>Statut</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let t of paginatedTransactions" class="provider-row">
-              <td class="transaction-date">
-                <div class="date-main">{{ t.date_operation | date:'dd/MM/yyyy' }}</div>
-                <div class="date-time">{{ t.date_operation | date:'HH:mm' }}</div>
-              </td>
-              <td class="nom-payeur">
-                <div class="client-name">{{ t.nom_payeur }}</div>
-                <div class="client-details">
-                  <small class="account-number">{{ t.numero_compte_payeur }}</small>
-                  <small class="client-type">{{ getTypeClientLabel(t.type_client_payeur) }}</small>
-                  <small class="client-country">{{ getCountryNameFromCode(t.pays_payeur) }}</small>
-                </div>
-              </td>
-              <td class="nom-beneficiaire">
-                <div class="client-name">{{ t.nom_paye }}</div>
-                <div class="client-details">
-                  <small class="account-number">{{ t.numero_compte_paye }}</small>
-                  <small class="client-type">{{ getTypeClientLabel(t.type_client_paye) }}</small>
-                  <small class="client-country">{{ getCountryNameFromCode(t.pays_paye) }}</small>
-                </div>
-              </td>
-              <td class="transaction-amount">
-                <div class="amount-main">{{ t.montant | number:'1.0-0' }} FCFA</div>
-              </td>
-              <td class="transaction-scope">
-                <span class="scope-badge" [class.scope-national]="t.pays_payeur === t.pays_paye" 
-                      [class.scope-international]="t.pays_payeur !== t.pays_paye">
-                  {{ t.pays_payeur === t.pays_paye ? 'National' : 'International' }}
-                </span>
-              </td>
-              <td class="transaction-status">
-                <span class="status-badge" [ngClass]="getTransactionStatusClass(t)">
-                  {{ getTransactionStatus(t) === 'Succès' ? 'Succès' : 'Échec' }}
-                </span>
-              </td>
-              <td class="transaction-actions">
-                <button class="action-btn view-btn" title="Voir détails" (click)="viewTransaction(t)">Voir</button>
-              </td>
-            </tr>
-            <tr *ngIf="(paginatedTransactions?.length || 0) === 0">
-              <td colspan="7" class="empty">Aucune transaction trouvée pour ces filtres.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      
-      <div class="pagination" *ngIf="totalPages > 1">
-        <button class="pagination-btn" (click)="prevPage()" [disabled]="currentPage === 1">← Précédent</button>
-        <span class="pagination-info">Page {{ currentPage }} / {{ totalPages }}</span>
-        <button class="pagination-btn" (click)="nextPage()" [disabled]="currentPage === totalPages">Suivant →</button>
+
+      <div class="provider-filters provider-filters-grid">
+        <div class="filter-row">
+          <select [(ngModel)]="filters.pays" (change)="applyFilters()" class="filter-select">
+            <option value="">Par Pays</option>
+            <option *ngFor="let p of pays" [value]="p">{{ p }}</option>
+          </select>
+          <select [(ngModel)]="filters.portee" (change)="applyFilters()" class="filter-select">
+            <option value="">Par Portée</option>
+            <option value="national">National</option>
+            <option value="international">International</option>
+          </select>
+        </div>
+        <div class="filter-row">
+          <select [(ngModel)]="filters.periode" (change)="applyFilters(); currentPage = 1" class="filter-select">
+            <option value="">Par Période</option>
+            <option value="Aujourd'hui">Aujourd'hui</option>
+            <option value="7 derniers jours">7 derniers jours</option>
+            <option value="30 derniers jours">30 derniers jours</option>
+          </select>
+          <select [(ngModel)]="filters.typeClient" (change)="applyFilters()" class="filter-select">
+            <option value="">Par Type</option>
+            <option *ngFor="let opt of typeClientOptions" [value]="opt.label">{{ opt.label }}</option>
+          </select>
+        </div>
       </div>
     </div>
+    <div class="transactions-list">
+      <div *ngFor="let t of paginatedTransactions" class="transaction-card" (click)="viewTransaction(t)">
+        <div class="transaction-row">
+          <div class="transaction-icon">
+            <span class="material-icons">swap_horiz</span>
+          </div>
+          <div class="transaction-info">
+            <div class="transaction-sens">
+              <span class="payeur">{{ t.nom_payeur }}</span>
+              <span class="arrow-sens" [ngClass]="{'arrow-vertical': isMobileScreen}">
+                {{ isMobileScreen ? '↓' : '→' }}
+              </span>
+              <span class="paye">{{ t.nom_paye }}</span>
+            </div>
+            <div class="transaction-date">
+              {{ t.date_operation | date:'dd/MM/yyyy' }}
+              <span class="transaction-time">{{ t.date_operation | date:'HH:mm' }}</span>
+            </div>
+          </div>
+          <div class="transaction-amount" [ngClass]="'amount-debit'">
+            {{ t.montant | number:'1.0-0' }} FCFA
+          </div>
+          <div class="transaction-status">
+            <span class="status-badge" [ngClass]="getTransactionStatusClass(t)">
+              {{ getTransactionStatus(t) === 'Succès' ? 'Succès' : 'Échec' }}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div *ngIf="(paginatedTransactions.length || 0) === 0" class="empty">Aucune transaction trouvée pour ces filtres.</div>
+    </div>
+    <div class="pagination" *ngIf="totalPages > 1">
+      <button class="pagination-btn" (click)="prevPage()" [disabled]="currentPage === 1">← Précédent</button>
+      <span class="pagination-info">Page {{ currentPage }} / {{ totalPages }}</span>
+      <button class="pagination-btn" (click)="nextPage()" [disabled]="currentPage === totalPages">Suivant →</button>
     </div>
   </div>
 </section>
@@ -158,13 +123,12 @@
   <div class="modal-content dashboard-card" (click)="$event.stopPropagation()">
     <div class="modal-header">
         <h3 id="transactionModalTitle">{{ selectedTransaction['action_effectuee'] || 'Détails de la transaction' }}</h3>
-  <button class="close-btn" aria-label="Fermer" (click)="closeTransactionDetail()"><img class="btn-icon" src="../../../assets/close.svg" alt="Fermer"/></button>
     </div>
 
     <div class="modal-body">
       <div class="detail-grid">
         <div class="detail-section">
-          <h4>Infos générales</h4>
+          <h4><span class="material-icons icon-title">info</span> Infos générales</h4>
           <p><strong>ID:</strong> {{ selectedTransaction.id }}</p>
           <p><strong>Date:</strong> {{ selectedTransaction.date_operation | date:'dd/MM/yyyy HH:mm' }}</p>
           <p><strong>Montant:</strong> {{ selectedTransaction.montant | number:'1.0-0' }} FCFA</p>
@@ -173,7 +137,7 @@
         </div>
 
         <div class="detail-section">
-          <h4>Émetteur</h4>
+          <h4><span class="material-icons icon-title">account_circle</span> Émetteur</h4>
           <p><strong>Nom:</strong> {{ selectedTransaction.nom_payeur }}</p>
           <p><strong>Compte:</strong> {{ selectedTransaction.numero_compte_payeur }}</p>
           <p><strong>Type client:</strong> {{ getTypeClientLabel(selectedTransaction.type_client_payeur || 'P') }}</p>
@@ -183,7 +147,7 @@
         </div>
 
         <div class="detail-section">
-          <h4>Bénéficiaire</h4>
+          <h4><span class="material-icons icon-title">account_circle</span> Bénéficiaire</h4>
           <p><strong>Nom:</strong> {{ selectedTransaction.nom_paye }}</p>
           <p><strong>Compte:</strong> {{ selectedTransaction.numero_compte_paye }}</p>
           <p><strong>Type client:</strong> {{ getTypeClientLabel(selectedTransaction.type_client_paye || 'P') }}</p>
@@ -193,8 +157,8 @@
         </div>
       </div>
 
-      <div class="detail-section" *ngIf="selectedAlertes?.length">
-        <h4>Alertes associées ({{ selectedAlertes.length }})</h4>
+      <div class="detail-section" *ngIf="selectedAlertes.length">
+        <h4 class="alertes-title"><span class="material-icons icon-title">warning</span> Alertes associées ({{ selectedAlertes.length }})</h4>
         <ul class="alertes-list">
           <li *ngFor="let a of selectedAlertes">
             <strong>{{ a.type || 'Alerte' }}</strong>

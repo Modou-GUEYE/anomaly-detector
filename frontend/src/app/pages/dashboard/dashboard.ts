@@ -1,4 +1,3 @@
-
 import { Component, OnInit, HostListener } from '@angular/core';
 import { getCountryNameFromCode as countryNameFromCode, getAllCountriesFR } from '../../utils/country';
 // Fonction utilitaire pour normaliser les chaînes (sans accents, minuscule)
@@ -165,6 +164,7 @@ export class DashboardComponent implements OnInit {
     paysARisque: 0
   };
 
+  isMobileScreen = false;
 
   constructor(
     private dashboardService: DashboardService,
@@ -188,6 +188,13 @@ export class DashboardComponent implements OnInit {
 
     // Charger le dashboard (réutilisable depuis refresh)
     this.loadSummary();
+
+    this.checkScreenSize();
+    window.addEventListener('resize', this.checkScreenSize.bind(this));
+  }
+
+  checkScreenSize() {
+    this.isMobileScreen = window.innerWidth <= 768;
   }
 
   // Extraire la logique de chargement pour pouvoir rafraîchir depuis l'UI
@@ -319,6 +326,22 @@ export class DashboardComponent implements OnInit {
   getTransactionStatusClass(transaction: Transaction): string {
     const status = this.getTransactionStatus(transaction);
     return status === 'Succès' ? 'status-success' : 'status-failure';
+  }
+
+  // Retourne l'URL d'une icône selon la catégorie ou le type de transaction
+  getCategoryIcon(t: Transaction): string | null {
+    // Exemple simple : selon le type_client_payeur ou une catégorie
+    if (t['type_client_payeur'] === 'Particulier') {
+      return 'assets/icons/user.svg';
+    }
+    if (t['type_client_payeur'] === 'Entreprise' || t['type_client_payeur'] === 'Business') {
+      return 'assets/icons/business.svg';
+    }
+    if (t['type_client_payeur'] === 'Commerçant') {
+      return 'assets/icons/shop.svg';
+    }
+    // Ajoutez d'autres règles selon vos besoins
+    return null;
   }
 
   // Filtrage local (appelle ceci sur (ngModelChange) si tu veux filtrage live)

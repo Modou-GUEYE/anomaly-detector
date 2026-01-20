@@ -2,10 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TransactionService, Transaction } from '../../services/transaction.service';
+import { DashboardService } from '../../services/dashboard.service';
 import { getCountryNameFromCode, getAllCountriesFR } from '../../utils/country';
-
-// Charger la langue française
-// (Import fr retiré: registration gérée dans utilitaire pays)
 
 // Fonction utilitaire pour normaliser les chaînes (sans accents, minuscule)
 function normalizeStr(str: string): string {
@@ -22,119 +20,153 @@ function normalizeStr(str: string): string {
 export class TransactionsComponent implements OnInit {
   transactions: Transaction[] = [];
   filteredTransactions: Transaction[] = [];
+  paginatedTransactions: Transaction[] = [];
   loading = true;
   error = '';
   expandedRowId: string | null = null;
-  // Propriétés inutilisées (selectedTransaction, Math) retirées
-
-  // Filtres
-  searchTerm = '';
-  filterPays = ''; // Par pays
-  filterPeriodStart = ''; // Début période
-  filterPeriodEnd = ''; // Fin période
-  filterTypeClient = ''; // Type client (Personne/Entreprise)
-  filterPortee = ''; // Portée (Nationale/Internationale)
-  sortBy: 'date' | 'amount' | 'pays' = 'date';
-  // Pagination
+  alertes: any[] = [];
+  isMobileScreen = false;
   currentPage = 1;
-  itemsPerPage = 5;  // 5 transactions par page
+  pageSize = 5;
+  totalPages = 0;
+  filters = {
+    search: '',
+    pays: '',
+    portee: '',
+    periode: '',
+    typeClient: ''
+  };
+  typeClientOptions = [
+    { code: 'P', label: 'Particulier' },
+    { code: 'M', label: 'Entreprise' },
+    { code: 'C', label: 'Commerçant' },
+    { code: 'B', label: 'Business' },
+  ];
 
-  constructor(private transactionService: TransactionService) {}
+  constructor(private transactionService: TransactionService, private dashboardService: DashboardService) {}
 
   ngOnInit() {
     if (typeof window === 'undefined') {
       return;
     }
+    this.checkScreenSize();
+    window.addEventListener('resize', this.checkScreenSize.bind(this));
     this.loadTransactions();
+  }
+
+  checkScreenSize() {
+    this.isMobileScreen = window.innerWidth <= 768;
   }
 
   loadTransactions() {
     this.loading = true;
     this.error = '';
-    this.transactionService.getRecentTransactions().subscribe({
-      next: (data) => {
-        this.transactions = data || [];
+    this.dashboardService.getDashboardSummary().subscribe({
+      next: (data: any) => {
+        this.transactions = data.recent_transactions || [];
+        this.alertes = data.recent_anomalies || [];
         this.applyFilters();
         this.loading = false;
       },
       error: (err) => {
         this.error = 'Erreur lors du chargement des transactions';
         this.loading = false;
-        // Log retiré pour éviter bruit en prod; l'erreur est reflétée dans l'UI
       }
     });
   }
 
   applyFilters() {
-    let filtered = [...this.transactions];
+    const txt = (this.filters.search || '').toLowerCase();
+    this.filteredTransactions = this.transactions.filter(t => {
+      const okTxt =
+        !txt ||
+        `${t.nom_payeur} ${t.nom_paye} ${t.numero_compte_payeur} ${t.numero_compte_paye}`
+          .toLowerCase()
+          .includes(txt);
 
-    const term = this.searchTerm.trim().toLowerCase();
-    const hasSearch = term.length > 0;
-    const hasPays = !!this.filterPays;
-    const hasPeriodStart = !!this.filterPeriodStart;
-    const hasPeriodEnd = !!this.filterPeriodEnd;
-    const hasTypeClient = !!this.filterTypeClient;
-    const hasPortee = !!this.filterPortee;
-
-    // Pré-calcul dates pour éviter conversions répétées
-    let startDate: Date | null = null;
-    let endDate: Date | null = null;
-    if (hasPeriodStart) startDate = new Date(this.filterPeriodStart);
-    if (hasPeriodEnd) {
-      endDate = new Date(this.filterPeriodEnd);
-      endDate.setHours(23, 59, 59, 999);
-    }
-
-    const normalizedPays = hasPays ? normalizeStr(this.filterPays) : '';
-
-    filtered = filtered.filter(t => {
-      // Recherche
-      if (hasSearch) {
-        const matchSearch = (
-          t.numero_compte_payeur?.toLowerCase().includes(term) ||
-          t.numero_compte_paye?.toLowerCase().includes(term) ||
-          t.nom_payeur?.toLowerCase().includes(term) ||
-          t.nom_paye?.toLowerCase().includes(term)
-        );
-        if (!matchSearch) return false;
-      }
-      // Pays
-      if (hasPays) {
+      let okPays = true;
+      if (this.filters.pays) {
         const nomPaysPayeur = this.getCountryNameFromCode(t.pays_payeur);
         const nomPaysPaye = this.getCountryNameFromCode(t.pays_paye);
-        const matchPays = normalizeStr(nomPaysPayeur) === normalizedPays || normalizeStr(nomPaysPaye) === normalizedPays;
-        if (!matchPays) return false;
+        const normalizedPaysFilter = normalizeStr(this.filters.pays);
+        okPays = 
+          normalizeStr(nomPaysPayeur) === normalizedPaysFilter || 
+          normalizeStr(nomPaysPaye) === normalizedPaysFilter;
       }
-      // Période
-      if (startDate || endDate) {
-        const opDate = new Date(t.date_operation);
-        if (startDate && opDate < startDate) return false;
-        if (endDate && opDate > endDate) return false;
-      }
-      // Type client
-      if (hasTypeClient) {
-        const typeMatch = (
-          t.type_client_payeur?.toLowerCase() === this.filterTypeClient.toLowerCase() ||
-          t.type_client_paye?.toLowerCase() === this.filterTypeClient.toLowerCase()
-        );
-        if (!typeMatch) return false;
-      }
+
       // Portée
-      if (hasPortee && t.portee !== this.filterPortee) return false;
-      return true;
+      let okPortee = true;
+      if (this.filters.portee) {
+        const hasPayeur = !!t.pays_payeur;
+        const hasPaye = !!t.pays_paye;
+        const isNational = hasPayeur && hasPaye && t.pays_payeur === t.pays_paye;
+        const isInternational = hasPayeur && hasPaye && t.pays_payeur !== t.pays_paye;
+        const wanted = this.filters.portee.toLowerCase();
+        okPortee = (wanted === 'national' && isNational) || (wanted === 'international' && isInternational);
+      }
+
+      // Type client (par label lisible)
+      let okTypeClient = true;
+      if (this.filters.typeClient) {
+        const payeurLabel = this.getTypeClientLabel(t.type_client_payeur);
+        const payeLabel = this.getTypeClientLabel(t.type_client_paye);
+        okTypeClient = payeurLabel === this.filters.typeClient || payeLabel === this.filters.typeClient;
+      }
+
+      // Période
+      const okPeriode = this.isInSelectedPeriode(t.date_operation);
+
+      return okTxt && okPays && okPortee && okTypeClient && okPeriode;
     });
+    this.updatePagination();
+  }
 
-    // Tri factorisé
-    const sortStrategies: Record<string, (a: Transaction, b: Transaction) => number> = {
-      date: (a, b) => new Date(b.date_operation).getTime() - new Date(a.date_operation).getTime(),
-      amount: (a, b) => b.montant - a.montant,
-      pays: (a, b) => (a.pays_payeur || '').localeCompare(b.pays_payeur || '')
+  getTypeClientLabel(code: string): string {
+    const map: { [key: string]: string } = {
+      P: 'Particulier',
+      M: 'Entreprise',
+      C: 'Commerçant',
+      B: 'Business',
     };
-    const sorter = sortStrategies[this.sortBy] || sortStrategies['date'];
-    filtered.sort(sorter);
+    return map[code] || 'Particulier';
+  }
 
-    this.filteredTransactions = filtered;
-    this.currentPage = 1;
+  private isInSelectedPeriode(dateOp: string | Date): boolean {
+    if (!this.filters.periode) return true;
+    const d = new Date(dateOp);
+    if (!d) return false;
+    const now = new Date();
+    const dMidnight = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diff = Math.floor((nowMidnight.getTime() - dMidnight.getTime()) / (1000 * 60 * 60 * 24));
+    if (this.filters.periode === "Aujourd'hui") return diff === 0;
+    if (this.filters.periode === '7 derniers jours') return diff >= 0 && diff <= 7;
+    if (this.filters.periode === '30 derniers jours') return diff >= 0 && diff <= 30;
+    return true;
+  }
+
+  updatePagination() {
+    this.totalPages = Math.ceil(this.filteredTransactions.length / this.pageSize);
+    if (this.currentPage > this.totalPages && this.totalPages > 0) {
+      this.currentPage = this.totalPages;
+    }
+    const start = (this.currentPage - 1) * this.pageSize;
+    const end = start + this.pageSize;
+    this.paginatedTransactions = this.filteredTransactions.slice(start, end);
+  }
+
+  nextPage() {
+    if (this.currentPage < this.totalPages) {
+      this.currentPage++;
+      this.updatePagination();
+    }
+  }
+
+  previousPage() {
+    if (this.currentPage > 1) {
+      this.currentPage--;
+      this.updatePagination();
+    }
   }
 
   onSearchChange() {
@@ -149,27 +181,6 @@ export class TransactionsComponent implements OnInit {
     this.applyFilters();
   }
 
-  get paginatedTransactions(): Transaction[] {
-    const start = (this.currentPage - 1) * this.itemsPerPage;
-    const end = start + this.itemsPerPage;
-    return this.filteredTransactions.slice(start, end);
-  }
-
-  get totalPages(): number {
-    return Math.ceil(this.filteredTransactions.length / this.itemsPerPage);
-  }
-
-  previousPage() {
-    if (this.currentPage > 1) {
-      this.currentPage--;
-    }
-  }
-
-  nextPage() {
-    if (this.currentPage < this.totalPages) {
-      this.currentPage++;
-    }
-  }
 
   toggleRowExpand(transactionId: string) {
     this.expandedRowId = this.expandedRowId === transactionId ? null : transactionId;
@@ -229,22 +240,17 @@ export class TransactionsComponent implements OnInit {
   }
 
   getUniqueCountries(): string[] {
-    // Restreindre aux pays présents dans les données (optimisation UX)
-    const set = new Set<string>();
-    this.transactions.forEach(t => {
-      if (t.pays_payeur) set.add(this.getCountryNameFromCode(t.pays_payeur));
-      if (t.pays_paye) set.add(this.getCountryNameFromCode(t.pays_paye));
-    });
-    return Array.from(set).sort();
+    // Retourner tous les pays disponibles (comme dans Comptes)
+    return getAllCountriesFR();
   }
 
-  getUniqueTypeClients(): string[] {
-    const types = new Set<string>();
-    this.transactions.forEach(t => {
-      if (t.type_client_payeur) types.add(t.type_client_payeur);
-      if (t.type_client_paye) types.add(t.type_client_paye);
-    });
-    return Array.from(types).sort();
+  getUniqueTypeClients(): { code: string; label: string }[] {
+    return [
+      { code: 'P', label: 'Particulier' },
+      { code: 'M', label: 'Entreprise' },
+      { code: 'C', label: 'Commerçant' },
+      { code: 'B', label: 'Business' }
+    ];
   }
 
   getTransactionStats() {
@@ -281,5 +287,41 @@ export class TransactionsComponent implements OnInit {
 
   isExpanded(transaction: Transaction): boolean {
     return this.expandedRowId === transaction.id;
+  }
+
+  // Retourne le statut de la transaction (Succès/Échec) selon la logique dashboard
+  getTransactionStatus(tx: Transaction): 'Succès' | 'Échec' {
+    if (!tx.id || !this.alertes || this.alertes.length === 0) {
+      return 'Succès';
+    }
+    // Chercher les alertes liées à cette transaction
+    const alertesTransaction = this.alertes.filter((alerte: any) => 
+      alerte.transactionId === tx.id
+    );
+    if (alertesTransaction.length === 0) {
+      return 'Succès';
+    }
+    // Vérifier s'il y a des alertes de blocage
+    const alertesBlocage = alertesTransaction.filter((alerte: any) => 
+      alerte.action && alerte.action.toLowerCase() === 'bloquer'
+    );
+    if (alertesBlocage.length > 0) {
+      return 'Échec';
+    }
+    // Seul "Interdit" est un échec
+    const alertesInterdites = alertesTransaction.filter((alerte: any) => 
+      alerte.type === 'Interdit'
+    );
+    if (alertesInterdites.length > 0) {
+      return 'Échec';
+    }
+    // Blacklist, PEP, Surveillés = transaction validée sous surveillance
+    return 'Succès';
+  }
+
+  // Retourne la classe CSS du badge statut (comme dashboard)
+  getTransactionStatusClass(tx: Transaction): string {
+    const status = this.getTransactionStatus(tx);
+    return status === 'Succès' ? 'success' : 'failed';
   }
 }

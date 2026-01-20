@@ -54,6 +54,14 @@ export class SigninComponent {
       this.message = 'Veuillez remplir tous les champs requis.';
       return;
     }
+    
+    // Validation du format email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(this.email)) {
+      this.message = 'Format d\'email invalide. Veuillez saisir une adresse email valide (ex: utilisateur@domaine.com).';
+      return;
+    }
+    
     if (!this.acceptedPolicy) {
       this.message = 'Vous devez accepter la politique de confidentialité pour vous inscrire.';
       return;

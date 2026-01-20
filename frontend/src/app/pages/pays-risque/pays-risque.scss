@@ -28,9 +28,14 @@
   flex-shrink: 0;
 }
 
+.search-container {
+  position: relative;
+  width: 100%;
+}
+
 .filter-search {
   width: 100%;
-  padding: 10px 14px;
+  padding: 10px 40px 10px 14px;
   border: 1px solid #E3E3E1;
   border-radius: 8px;
   font-size: 0.95rem;
@@ -41,6 +46,16 @@
   outline: none;
   border-color: #2E6CF2;
   box-shadow: 0 0 0 3px rgba(46, 108, 242, 0.1);
+}
+
+.search-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 20px;
+  color: #999;
+  pointer-events: none;
 }
 
 /* ===================== MESSAGES ===================== */
@@ -116,6 +131,11 @@
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
+}
+
+.btn-add-pays .btn-icon,
+.btn-import-pays .btn-icon {
+  filter: brightness(0) invert(1);
 }
 
 .btn-add-pays:hover:not(:disabled),
@@ -385,28 +405,82 @@
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
   justify-content: flex-end;
 }
 
+.icon-edit,
+.icon-delete {
+  cursor: pointer;
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.icon-edit {
+  color: #ff9800;
+}
+
+.icon-edit:hover {
+  color: #f57c00;
+  transform: scale(1.1);
+}
+
+.icon-delete {
+  color: #dc3545;
+}
+
+.icon-delete:hover {
+  color: #c82333;
+  transform: scale(1.1);
+}
+
 .btn-edit,
 .btn-delete {
-  padding: 8px 12px;
   border: none;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
+  margin: 0;
+}
+
+.btn-icon-only {
+  padding: 0;
+  justify-content: center;
+  background: transparent !important;
+  margin: 0;
+  border-radius: 0;
+}
+
+.btn-icon-only .material-icons {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+}
+
+.btn-icon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  font-size: 12px;
+  line-height: 12px;
 }
 
 .btn-edit {
   background-color: #ffc107;
   color: #333;
+}
+
+.btn-edit.btn-icon-only {
+  color: #ff9800;
 }
 
 .btn-edit:hover {
@@ -415,15 +489,31 @@
   box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
 }
 
+.btn-edit.btn-icon-only:hover {
+  background: transparent !important;
+  color: #f57c00;
+  box-shadow: none;
+}
+
 .btn-delete {
   background-color: #dc3545;
   color: white;
+}
+
+.btn-delete.btn-icon-only {
+  color: #dc3545;
 }
 
 .btn-delete:hover {
   background-color: #c82333;
   transform: translateY(-2px);
   box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+.btn-delete.btn-icon-only:hover {
+  background: transparent !important;
+  color: #c82333;
+  box-shadow: none;
 }
 
 /* ===================== PAGINATION ===================== */
@@ -604,4 +694,232 @@
 
 .btn-cancel:hover {
   background: #D1D5DB;
+}
+
+/* ===================== TABLET: 1024px et moins ===================== */
+@media (max-width: 1024px) {
+  .pays-risque-page {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .pays-risque-page h1 {
+    font-size: 1.5rem;
+  }
+
+  .pays-risque-header {
+    gap: 12px;
+  }
+
+  .header-actions {
+    gap: 8px;
+  }
+
+  .btn-add-pays,
+  .btn-import-pays {
+    padding: 8px 14px;
+    font-size: 0.9rem;
+  }
+
+  .pays-risque-table {
+    font-size: 0.9rem;
+  }
+
+  .pays-risque-table td,
+  .pays-risque-table th {
+    padding: 8px;
+  }
+}
+
+/* ===================== MOBILE: 768px et moins ===================== */
+@media (max-width: 768px) {
+  .pays-risque-page {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .pays-risque-page h1 {
+    font-size: 1.3rem;
+  }
+
+  .filter-search {
+    font-size: 0.9rem;
+    padding: 8px 12px;
+  }
+
+  .pays-risque-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .header-actions {
+    width: 100%;
+    gap: 8px;
+  }
+
+  .btn-add-pays,
+  .btn-import-pays {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+  }
+
+  .form-section {
+    padding: 12px;
+  }
+
+  .form-section h3 {
+    font-size: 1rem;
+    margin-bottom: 10px;
+  }
+
+  .input-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .form-input-name,
+  .form-input-code {
+    width: 100%;
+  }
+
+  .pays-risque-table {
+    font-size: 0.85rem;
+  }
+
+  .pays-risque-table th,
+  .pays-risque-table td {
+    padding: 8px 4px;
+  }
+
+  .btn-edit,
+  .btn-delete,
+  .btn-submit,
+  .btn-cancel {
+    font-size: 0.8rem;
+    padding: 6px 10px;
+  }
+}
+
+/* ===================== MOBILE: 480px et moins ===================== */
+@media (max-width: 480px) {
+  .pays-risque-page {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .pays-risque-page h1 {
+    font-size: 1.1rem;
+  }
+
+  .filter-search {
+    font-size: 0.8rem;
+    padding: 6px 10px;
+  }
+
+  .pays-count {
+    font-size: 0.95rem;
+  }
+
+  .header-actions {
+    width: 100%;
+    gap: 6px;
+  }
+
+  .btn-add-pays,
+  .btn-import-pays {
+    flex: 1;
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    gap: 4px;
+  }
+
+  .btn-icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  .form-section {
+    padding: 10px;
+  }
+
+  .form-section h3 {
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+  }
+
+  .input-row {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .form-input {
+    font-size: 0.8rem;
+    padding: 6px 8px;
+  }
+
+  .pays-risque-table {
+    font-size: 0.7rem;
+    table-layout: auto;
+  }
+
+  .pays-risque-table th {
+    padding: 6px 3px;
+    font-size: 0.7rem;
+  }
+
+  .pays-risque-table th.col-pays {
+    width: 40%;
+  }
+
+  .pays-risque-table th.col-code {
+    width: 20%;
+  }
+
+  .pays-risque-table th.col-actions {
+    width: 40%;
+  }
+
+  .pays-risque-table td {
+    padding: 6px 3px;
+    font-size: 0.7rem;
+  }
+
+  .code-badge {
+    padding: 2px 4px;
+    font-size: 0.65rem;
+  }
+
+  .action-buttons {
+    flex-direction: row;
+    gap: 6px;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .icon-edit,
+  .icon-delete {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+
+  .btn-edit,
+  .btn-delete,
+  .btn-submit,
+  .btn-cancel {
+    font-size: 0.7rem;
+    padding: 5px 8px;
+  }
+
+  .modal-content {
+    width: calc(100% - 12px);
+    max-width: calc(100% - 12px);
+  }
+
+  .empty-state {
+    height: 120px;
+    font-size: 0.9rem;
+  }
 }

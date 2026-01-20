@@ -20,14 +20,15 @@
 /* ===================== FILTRES ===================== */
 .filters-section {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 12px;
   margin: 0;
+  align-items: flex-start;
 }
 
 .filter-search {
   width: 100%;
-  padding: 10px 14px;
+  padding: 10px 40px 10px 14px;
   border: 1px solid #E3E3E1;
   border-radius: 8px;
   font-size: 0.95rem;
@@ -45,9 +46,27 @@
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
+  flex: 1;
+}
+
+.search-container {
+  position: relative;
+  flex: 0 0 300px;
+  min-width: 250px;
+}
+
+.search-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 20px;
+  color: #999;
+  pointer-events: none;
 }
 
 .filter-select {
+  flex: 1;
   padding: 8px 12px;
   border: 1px solid #E3E3E1;
   border-radius: 6px;
@@ -166,13 +185,10 @@
   border-top-right-radius: 12px;
 }
 
-.comptes-table th.col-actions {
-  text-align: right;
-}
-
 .comptes-table tbody tr {
   border-bottom: 1px solid #e0e0e0;
   transition: background-color 0.2s;
+  cursor: pointer;
 }
 
 .comptes-table tbody tr:hover {
@@ -188,10 +204,6 @@
   font-size: 0.95rem;
   color: #333;
   vertical-align: middle;
-}
-
-.comptes-table td.col-actions {
-  text-align: right;
 }
 
 /* ===================== BADGES ===================== */
@@ -211,30 +223,6 @@
 
 .text-muted {
   color: #999;
-}
-
-/* ===================== ACTION BUTTONS ===================== */
-.action-buttons {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: flex-end;
-}
-
-.btn-expand {
-  background: none;
-  border: none;
-  font-size: 0.8rem;
-  color: #2E6CF2;
-  cursor: pointer;
-  padding: 4px 8px;
-  transition: color 0.2s;
-  width: 24px;
-  display: inline-block;
-}
-
-.btn-expand:hover {
-  color: #1f4db8;
 }
 
 /* ===================== DETAILS ROW ===================== */
@@ -302,6 +290,248 @@
 .btn-pagination:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* ===================== TABLET (768px - 1024px) ===================== */
+@media (max-width: 1024px) {
+  .comptes-page {
+    padding: 18px;
+    gap: 14px;
+  }
+
+  .comptes-page h1 {
+    font-size: 1.5rem;
+  }
+
+  .filters-section {
+    flex-direction: row;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .search-container {
+    flex: 0 0 250px;
+    min-width: 200px;
+  }
+
+  .filters-row {
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+    flex: 1;
+  }
+
+  .filter-select {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+
+  .comptes-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .comptes-table {
+    font-size: 0.85rem;
+  }
+
+  .comptes-table th {
+    padding: 10px 8px;
+    font-size: 0.85rem;
+  }
+
+  .comptes-table td {
+    padding: 8px;
+    font-size: 0.85rem;
+  }
+}
+
+/* ===================== MOBILE (480px - 768px) ===================== */
+@media (max-width: 768px) {
+  .comptes-page {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .comptes-page h1 {
+    font-size: 1.3rem;
+  }
+
+  .filters-section {
+    flex-direction: row;
+    gap: 6px;
+    align-items: flex-start;
+  }
+
+  .search-container {
+    flex: 0 0 180px;
+    min-width: 150px;
+  }
+
+  .filters-row {
+    flex-direction: row;
+    gap: 6px;
+    flex: 1;
+  }
+
+  .filter-select {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+  }
+
+  .comptes-table {
+    font-size: 0.75rem;
+  }
+
+  .comptes-table th,
+  .comptes-table td {
+    padding: 6px 4px;
+    font-size: 0.75rem;
+  }
+}
+
+/* ===================== SMALL MOBILE (< 480px) ===================== */
+@media (max-width: 480px) {
+  * {
+    box-sizing: border-box !important;
+  }
+
+  .comptes-page {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .comptes-page h1 {
+    font-size: 1.1rem;
+  }
+
+  .filters-section {
+    flex-direction: row;
+    gap: 4px;
+    align-items: flex-start;
+  }
+
+  .search-container {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .filter-search {
+    font-size: 0.8rem;
+    padding: 6px 25px 6px 10px;
+  }
+
+  .search-icon {
+    font-size: 16px;
+    right: 8px;
+  }
+
+  .filters-row {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    flex: 0 0 auto;
+    width: auto;
+  }
+
+  .filter-select {
+    flex: 1;
+    width: 70px;
+    min-width: 60px;
+    padding: 6px 4px;
+    font-size: 0.7rem;
+  }
+
+  .comptes-content {
+    gap: 10px;
+  }
+
+  .comptes-table-wrapper {
+    border-radius: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .comptes-table {
+    font-size: 0.65rem;
+    table-layout: auto;
+  }
+
+  .comptes-table thead {
+    position: static;
+  }
+
+  .comptes-table th {
+    padding: 5px 3px;
+    font-size: 0.6rem;
+    white-space: nowrap;
+  }
+
+  .comptes-table td {
+    padding: 5px 3px;
+    font-size: 0.6rem;
+  }
+
+  .comptes-table th.col-numero {
+    width: 15%;
+  }
+
+  .comptes-table th.col-nom {
+    width: 18%;
+  }
+
+  .comptes-table th.col-type {
+    width: 12%;
+  }
+
+  .comptes-table th.col-ville {
+    width: 12%;
+  }
+
+  .comptes-table th.col-pays {
+    width: 12%;
+  }
+
+  .comptes-table th.col-categorie {
+    width: 13%;
+  }
+
+  .comptes-table th.col-date {
+    width: 10%;
+  }
+
+  .comptes-table th.col-surveillance {
+    width: 12%;
+  }
+
+  .badge {
+    padding: 2px 4px;
+    font-size: 0.5rem;
+  }
+
+  .pagination {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .btn-pagination {
+    padding: 4px 8px;
+    font-size: 0.65rem;
+  }
+
+  .page-info {
+    font-size: 0.65rem;
+    min-width: auto;
+    order: 3;
+    width: 100%;
+    margin-top: 4px;
+  }
 }
 
 .page-info {

@@ -1,9 +1,60 @@
-/* Palette proche du mockup */
+
+@use './_variables.scss' as *;
+
+@media (max-width: 480px) {
+    .login-page {
+      background-size: cover !important;
+      background-position: center !important;
+      background-repeat: no-repeat !important;
+      background-color: #2463DE !important;
+    }
+  .login-center {
+    padding: 8px !important;
+  }
+  .login-panel {
+    width: 92vw !important;
+    min-width: 0 !important;
+    max-width: 96vw !important;
+    margin: 0 auto !important;
+    padding: 12px 6px !important;
+    border-radius: 12px !important;
+    box-shadow: 0 6px 18px rgba(2,10,34,0.10) !important;
+    background: linear-gradient(180deg, $primary 0%, $accent 100%) !important;
+  }
+  .login-panel__title {
+    font-size: 1.2rem !important;
+    margin-bottom: 2px !important;
+  }
+  .login-panel__subtitle {
+    font-size: 0.85rem !important;
+    margin-bottom: 10px !important;
+  }
+  .login-form {
+    gap: 8px !important;
+  }
+  .input {
+    font-size: 0.95rem !important;
+    padding: 10px 10px !important;
+    border-radius: 8px !important;
+  }
+  .login-btn {
+    font-size: 1rem !important;
+    padding: 10px 8px !important;
+    border-radius: 18px !important;
+  }
+  .signup {
+    font-size: 0.78rem !important;
+    margin-top: 6px !important;
+  }
+  .forgot {
+    font-size: 0.78rem !important;
+  }
+}
+/* Palette BIS */
 $primary: #2463DE;   // bleu (palette projet)
 $accent:  #0F274A;   // bleu profond (palette projet)
 $orange:  #ED6A01;   // ton chaud du dégradé
 
-/* Conteneur principal */
 /* Conteneur principal */
 .login-page {
   min-height: 100vh;
@@ -14,8 +65,6 @@ $orange:  #ED6A01;   // ton chaud du dégradé
   background-position: center;
   background-repeat: no-repeat;
 }
-
-/* Colonne gauche (illustration pleine page) */
 
 /* Top bar */
 .topbar {

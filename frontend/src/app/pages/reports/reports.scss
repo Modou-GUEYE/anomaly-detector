@@ -95,8 +95,12 @@
   gap: 8px;
 }
 
+.btn-icon {
+  filter: brightness(0) saturate(100%) invert(45%) sepia(95%) saturate(2177%) hue-rotate(4deg) brightness(98%) contrast(101%);
+}
+
 .btn-export {
-  background: #2E6CF2;
+  background: #6D5AE0;
   color: white;
   border: none;
   padding: 10px 16px;
@@ -107,7 +111,7 @@
   transition: all 0.2s;
   
   &:hover {
-    background: #1E4FCC;
+    background: #5845c7;
     transform: translateY(-1px);
   }
 }
@@ -167,10 +171,10 @@
   background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
   border: 1px solid #E2E8F0;
   border-radius: 12px;
-  padding: 20px;
+  padding: 10px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
   transition: all 0.2s;
   
   &:hover {
@@ -181,19 +185,19 @@
 
 .kpi-icon {
   font-size: 2rem;
-  width: 50px;
-  height: 50px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(46, 108, 242, 0.1);
+  background: rgba(109, 90, 224, 0.1);
   border-radius: 10px;
 }
 
 /* Ensure SVG icons are sized and inherit color */
 .kpi-icon img {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
 }
 
 /* Specific styles for alert KPIs */
@@ -217,21 +221,21 @@
 }
 
 .kpi-value {
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   font-weight: 700;
   color: #2E6CF2;
   line-height: 1.2;
 }
 
 .kpi-label {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #6B7280;
   font-weight: 500;
   margin-top: 2px;
 }
 
 .kpi-period {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: #9CA3AF;
   font-style: italic;
 }
@@ -268,6 +272,9 @@
   border: 1px solid #D1D5DB;
   border-radius: 8px;
   overflow: hidden;
+  min-width: 0;
+  width: 100%;
+  min-width: 0;
 }
 
 .period-btn {
@@ -590,48 +597,401 @@
 }
 
 /* ===================== RESPONSIVE ===================== */
-@media (max-width: 768px) {
+
+/* Tablette (1024px et moins) */
+@media (max-width: 1024px) {
   .reports-page {
-    padding: 16px;
+    padding: 20px;
+  }
+  
+  .reports-page h1 {
+    font-size: 1.6rem;
   }
   
   .reports-header {
     flex-direction: column;
     align-items: stretch;
+    gap: 16px;
   }
   
   .period-selector {
-    flex-direction: column;
-    align-items: stretch;
+    flex-wrap: wrap;
     gap: 8px;
+    
+    .filter-input {
+      min-width: 120px;
+      flex: 1;
+    }
   }
   
   .export-actions {
+    flex-wrap: wrap;
     justify-content: center;
   }
   
+  .btn-export,
+  .btn-refresh {
+    flex: 1;
+    min-width: 120px;
+  }
+  
   .kpis-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  
+  .kpi-card {
+    flex: 1 1 calc(33.333% - 8px);
+    min-width: 180px;
+  }
+  
+  .kpi-card:nth-child(4),
+  .kpi-card:nth-child(5) {
+    flex: 1 1 calc(50% - 6px);
+  }
+  
+  .charts-container {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .chart-wrapper {
+    height: 350px;
+  }
+  
+  .charts-controls {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  
+  .control-group {
+    flex: 1 1 100%;
+    min-width: 200px;
+    
+    label {
+      font-size: 0.85rem;
+    }
+  }
+  
+  .period-buttons {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+  }
+  
+  .period-btn {
+    flex: 1;
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+  
+  .rule-select {
+    flex: 1;
+    min-width: 180px;
+  }
+}
+
+/* Mobile (768px et moins) */
+@media (max-width: 768px) {
+  .reports-page {
+    padding: 16px;
+    gap: 16px;
+  }
+  
+  .reports-page h1 {
+    font-size: 1.4rem;
+  }
+  
+  .reports-header {
+    padding: 16px;
+  }
+  
+  .period-selector {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    
+    label {
+      font-size: 0.85rem;
+      flex: 0 0 100%;
+    }
+    
+    .filter-input {
+      flex: 1;
+      min-width: 120px;
+    }
+    
+    span {
+      flex: 0 0 auto;
+    }
+  }
+
+  .charts-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .period-buttons {
+    width: 100%;
+    min-width: 0;
+    flex-wrap: nowrap;
+  }
+  
+  .period-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 8px 10px;
+    font-size: 0.8rem;
+  }
+  
+  .export-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .btn-export,
+  .btn-refresh {
+    flex: 1;
+    min-width: 100px;
+    justify-content: center;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+  }
+  
+  .btn-icon {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .kpis-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  
+  .kpi-card {
+    flex: 1 1 calc(50% - 8px);
+    min-width: 160px;
+    padding: 12px;
+  }
+  
+  .kpi-icon {
+    width: 44px;
+    height: 44px;
+    
+    img {
+      width: 20px;
+      height: 20px;
+    }
+  }
+  
+  .kpi-value {
+    font-size: 1.3rem;
+  }
+  
+  .kpi-label {
+    font-size: 0.8rem;
+  }
+  
+  .section-title {
+    font-size: 1.1rem;
+  }
+  
+  .performance-section,
+  .compliance-section,
+  .regulatory-section {
+    padding: 16px;
+  }
+  
+  .charts-controls {
+    padding: 16px;
+  }
+  
+  .chart-card {
+    padding: 12px;
+    
+    h3 {
+      font-size: 0.95rem;
+    }
+  }
+  
+  .chart-wrapper {
+    height: 300px;
   }
   
   .charts-container {
     grid-template-columns: 1fr;
   }
-  
-  .regulatory-cards {
-    grid-template-columns: 1fr;
+}
+
+/* Petit mobile (480px et moins) */
+@media (max-width: 480px) {
+  .reports-page {
+    padding: 12px;
+    gap: 12px;
   }
-  
-  .filters-row {
+
+  .control-group {
+    display: flex;
     flex-direction: column;
     align-items: stretch;
+    gap: 4px;
+  }
+
+  .control-group label {
+    font-size: 0.7rem;
+    flex: 0 0 auto;
   }
   
-  .audit-table-wrapper {
-    overflow-x: auto;
+  .period-selector {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    
+    label {
+      font-size: 0.7rem;
+      flex: 0 0 100%;
+    }
+    
+    .filter-input {
+      padding: 5px 8px;
+      font-size: 0.75rem;
+      flex: 1 1 120px;
+      min-width: 0;
+    }
+    
+    span {
+      font-size: 0.7rem;
+      flex: 0 0 auto;
+      text-align: center;
+    }
+  }
+
+  .charts-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    padding: 4px;
+    width: 100%;
+    box-sizing: border-box;
   }
   
-  .audit-table {
-    min-width: 800px;
+  .period-buttons {
+    width: 100%;
+    min-width: 0;
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid #D1D5DB;
+    border-radius: 4px;
+    box-sizing: border-box;
+    white-space: nowrap;
+  }
+  
+  .period-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 1px 2px;
+    font-size: 0.52rem;
+    line-height: 1;
+    letter-spacing: -0.25px;
+    white-space: nowrap;
+  }
+  
+  .rule-select {
+    width: 100%;
+    min-width: 0;
+    font-size: 0.65rem;
+    padding: 4px 6px;
+  }
+  
+  .btn-export,
+  .btn-refresh {
+    padding: 8px 10px;
+    font-size: 0.8rem;
+    flex: 1;
+    min-width: 90px;
+  }
+  
+  .btn-icon {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .kpi-card {
+    padding: 10px;
+    gap: 10px;
+    flex: 1 1 calc(50% - 8px);
+    min-width: 140px;
+  }
+  
+  .kpi-icon {
+    width: 40px;
+    height: 40px;
+    
+    img {
+      width: 18px;
+      height: 18px;
+    }
+  }
+  
+  .kpi-value {
+    font-size: 1.2rem;
+  }
+  
+  .kpi-label {
+    font-size: 0.75rem;
+  }
+  
+  .kpi-period {
+    font-size: 0.7rem;
+  }
+  
+  .section-title {
+    font-size: 1rem;
+    margin-bottom: 12px;
+  }
+  
+  .performance-section,
+  .compliance-section,
+  .regulatory-section {
+    padding: 12px;
+  }
+  
+  .charts-controls {
+    padding: 12px;
+    gap: 12px;
+  }
+  
+  .period-btn {
+    padding: 8px 10px;
+    font-size: 0.85rem;
+  }
+  
+  .rule-select {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+  }
+  
+  .chart-card {
+    padding: 10px;
+    
+    h3 {
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+    }
+  }
+  
+  .chart-wrapper {
+    height: 250px;
   }
 }

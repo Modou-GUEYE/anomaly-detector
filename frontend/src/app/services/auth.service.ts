@@ -23,8 +23,8 @@ export class AuthService {
 
   private loadTokenFromStorage() {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const t = localStorage.getItem('token');
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        const t = sessionStorage.getItem('token');
         if (t) this.accessToken = t;
       }
     } catch (e) {
@@ -38,11 +38,11 @@ export class AuthService {
     if (role) body.role = role;
     return this.http.post<LoginResp>(this.loginUrl, body, { withCredentials: true }).pipe(
       tap((res) => {
-        // Sauvegarder le token en mémoire et en localStorage pour les rechargements de page
+        // Sauvegarder le token en mémoire et en sessionStorage pour les rechargements de page
         this.accessToken = res.access_token;
         try {
-          if (typeof window !== 'undefined' && window.localStorage) {
-            localStorage.setItem('token', res.access_token);
+          if (typeof window !== 'undefined' && window.sessionStorage) {
+            sessionStorage.setItem('token', res.access_token);
           }
         } catch (e) {
           // ignore storage errors
@@ -57,7 +57,7 @@ export class AuthService {
   logout(): Observable<boolean> {
     this.accessToken = null;
     try {
-      localStorage.removeItem('token');
+      sessionStorage.removeItem('token');
     } catch (e) {
       // ignore storage errors
     }

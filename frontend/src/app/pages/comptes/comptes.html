@@ -3,27 +3,30 @@
 
   <!-- Filtres -->
   <div class="filters-section">
-    <input type="search"
-           class="filter-search"
-           placeholder="Rechercher par numéro, nom, ville..."
-           [(ngModel)]="searchTerm"
-           (input)="applyFilters()" />
+    <div class="search-container">
+      <input type="search"
+             class="filter-search"
+             placeholder="Rechercher par numéro, nom, ville..."
+             [(ngModel)]="searchTerm"
+             (input)="applyFilters()" />
+      <i class="material-icons search-icon">search</i>
+    </div>
     
     <div class="filters-row">
       <select [(ngModel)]="filterPays" (change)="applyFilters()" class="filter-select">
-        <option value="">Tous les pays</option>
+        <option value="">Pays</option>
         <option *ngFor="let pays of getUniqueCountries()" [value]="pays">{{ pays }}</option>
       </select>
 
       <select [(ngModel)]="filterType" (change)="applyFilters()" class="filter-select">
-        <option value="">Tous les types</option>
+        <option value="">Types</option>
         <option *ngFor="let type of getTypeClientOptions()" [value]="type.code">
           {{ type.label }}
         </option>
       </select>
 
       <select [(ngModel)]="filterSurveilles" (change)="applyFilters()" class="filter-select">
-        <option value="">Tous les comptes</option>
+        <option value="">Comptes</option>
         <option value="true">Surveillés</option>
         <option value="false">Non surveillés</option>
       </select>
@@ -63,14 +66,16 @@
             <th class="col-categorie">Catégorie</th>
             <th class="col-date">Date</th>
             <th class="col-surveillance">Surveillance</th>
-            <th class="col-actions">Actions</th>
           </tr>
         </thead>
         <tbody>
           <ng-container *ngFor="let compte of paginatedComptes">
             <!-- Ligne principale -->
-            <tr class="compte-row" [class.expanded]="expandedAccountId === compte.id" [class.surveilled]="compte.isSurveilled">
-              <td class="col-numero">{{ compte.numeroCompte }}</td>
+            <tr class="compte-row" 
+                [class.expanded]="expandedAccountId === compte.id" 
+                [class.surveilled]="compte.isSurveilled"
+                (click)="toggleDetails(compte)">
+              <td class="col-numero">{{ getDisplayNumeroCompte(compte.numeroCompte) }}</td>
               <td class="col-nom">{{ compte.nomClient }}</td>
               <td class="col-type"><span class="badge">{{ getTypeClientLabel(compte.typeClient) }}</span></td>
               <td class="col-ville">{{ compte.ville }}</td>
@@ -79,43 +84,74 @@
               <td class="col-date">{{ compte.dateCreation | date: 'dd/MM/yyyy' }}</td>
               <td class="col-surveillance">
                 <span *ngIf="compte.isSurveilled" class="badge badge-danger" title="Statut: {{ compte.suiviStatus }}">
-                  🔴 Surveillé
+                  Surveillé
                 </span>
                 <span *ngIf="!compte.isSurveilled" class="text-muted">-</span>
-              </td>
-              <td class="col-actions">
-                <div class="action-buttons">
-                  <button class="btn-expand" (click)="toggleDetails(compte)">
-                    {{ expandedAccountId === compte.id ? '▼' : '▶' }}
-                  </button>
-                </div>
               </td>
             </tr>
 
             <!-- Ligne de détails -->
             <tr *ngIf="expandedAccountId === compte.id" class="details-row">
-              <td [attr.colspan]="9">
+              <td [attr.colspan]="8">
                 <div class="details-box">
+                  <h4>Informations Complètes</h4>
                   <div class="detail-grid">
+                    <!-- Informations du compte -->
                     <div class="detail-item">
-                      <label>Adresse:</label>
-                      <span>{{ compte.adresse }}</span>
-                    </div>
-                    <div class="detail-item">
-                      <label>Profil:</label>
-                      <span>{{ compte.profilClientId || '—' }}</span>
+                      <label>Numéro Compte:</label>
+                      <span class="font-mono">{{ compte.numeroCompte }}</span>
                     </div>
                     <div class="detail-item">
                       <label>Type Compte:</label>
                       <span>{{ compte.typeCompte }}</span>
                     </div>
-                    <div class="detail-item" *ngIf="compte.isSurveilled">
-                      <label>Raison de la surveillance:</label>
-                      <span class="badge badge-danger">{{ compte.suiviRaison || 'Inconnue' }}</span>
+                    <div class="detail-item">
+                      <label>Profil Client:</label>
+                      <span>{{ getProfileClientName(compte.profilClientId) }}</span>
+                    </div>
+                    <div class="detail-item">
+                      <label>Catégorie:</label>
+                      <span>{{ compte.categorie }}</span>
+                    </div>
+                    
+                    <!-- Titulaire du compte -->
+                    <div class="detail-item">
+                      <label>Nom Client:</label>
+                      <span>{{ compte.nomClient }}</span>
+                    </div>
+                    
+                    <!-- Localisation -->
+                    <div class="detail-item">
+                      <label>Pays:</label>
+                      <span>{{ getCountryNameFromCode(compte.pays) }}</span>
+                    </div>
+                    <div class="detail-item">
+                      <label>Ville:</label>
+                      <span>{{ compte.ville }}</span>
+                    </div>
+                    <div class="detail-item">
+                      <label>Adresse:</label>
+                      <span>{{ compte.adresse }}</span>
+                    </div>
+                    
+                    <!-- Dates -->
+                    <div class="detail-item">
+                      <label>Date Création:</label>
+                      <span>{{ compte.dateCreation | date: 'dd/MM/yyyy' }}</span>
                     </div>
                     <div class="detail-item" *ngIf="compte.isSurveilled">
-                      <label>Date de détection:</label>
+                      <label>Date Détection:</label>
                       <span>{{ compte.suiviDate | date: 'dd/MM/yyyy à HH:mm' }}</span>
+                    </div>
+                    
+                    <!-- Surveillance (si applicable) -->
+                    <div class="detail-item" *ngIf="compte.isSurveilled">
+                      <label>Statut Surveillance:</label>
+                      <span class="badge badge-danger">{{ compte.suiviStatus || 'Surveillé' }}</span>
+                    </div>
+                    <div class="detail-item" *ngIf="compte.isSurveilled">
+                      <label>Raison:</label>
+                      <span class="badge badge-danger">{{ compte.suiviRaison || 'Inconnue' }}</span>
                     </div>
                   </div>
                 </div>

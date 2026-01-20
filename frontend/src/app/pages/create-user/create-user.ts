@@ -149,12 +149,6 @@ export class CreateUserComponent implements OnInit {
     });
   }
 
-  clearFilters() {
-    this.filterText = '';
-    this.filterRole = 'all';
-    this.filterActif = 'all';
-  }
-
   toggleActive(user: any) {
     const newActif = !user.actif;
     this.actionLoading[user.id] = true;
@@ -247,7 +241,10 @@ export class CreateUserComponent implements OnInit {
       };
     }
     // handle common auth/permission errors
-    if (lower.includes('permission') || lower.includes('forbidden') || lower.includes('unauthorized') || lower.includes('401') || lower.includes('403')) {
+    if (lower.includes('vous ne pouvez pas désactiver') || lower.includes('cannot disable your own') || lower.includes('cannot delete your own') || lower.includes('403')) {
+      return { blocked: false, message: "Action interdite : vous ne pouvez pas désactiver ou supprimer votre propre compte." };
+    }
+    if (lower.includes('permission') || lower.includes('forbidden') || lower.includes('unauthorized') || lower.includes('401')) {
       return { blocked: false, message: "Action interdite : vous n'avez pas la permission de supprimer cet utilisateur." };
     }
     // generic

@@ -13,7 +13,6 @@ body { margin: 0; font-family: 'Inter', system-ui, -apple-system, Segoe UI, Robo
   display: none; /* Safari et Chrome */
 }
 
-/* You can add global styles to this file, and also import other style files */
 
 /* Button icon helper */
 .btn-icon {
@@ -33,3 +32,17 @@ body { margin: 0; font-family: 'Inter', system-ui, -apple-system, Segoe UI, Robo
   margin-right: 8px;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Force la couleur du sidebar sur tous les écrans et garantit l'opacité */
+aside.dashboard-sidebar {
+  background: #FAFAFA !important;
+  opacity: 1 !important;
+  z-index: 1202 !important;
+  box-shadow: 2px 0 16px rgba(36, 99, 222, 0.12);
+}
+
+.app-layout {
+  background: #F7F8FA !important;
+}
+
+

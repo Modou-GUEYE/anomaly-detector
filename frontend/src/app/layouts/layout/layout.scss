@@ -1,18 +1,152 @@
+@media (max-width: 480px) {
+        .burger-menu {
+          margin: 0 !important;
+          padding: 0 !important;
+          left: 0 !important;
+        }
+      .dashboard-title {
+        max-width: 48vw;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .dashboard-welcome {
+        font-size: 0.62rem !important;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .dashboard-system {
+        font-size: 0.45rem !important;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .header-right {
+        min-width: 48px;
+      }
+      .notification-icon, .logout-icon, .header-avatar {
+        width: 14px !important;
+        height: 14px !important;
+        min-width: 14px !important;
+        min-height: 14px !important;
+        font-size: 0.38rem !important;
+        padding: 0 !important;
+      }
+    .dashboard-title {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: flex-start !important;
+      font-size: 0.80rem;
+      gap: 2px !important;
+      text-align: left !important;
+      width: max-content !important;
+      justify-content: flex-start !important;
+      margin-left: 0 !important;
+    }
+    .dashboard-title .dashboard-welcome,
+    .dashboard-title .dashboard-system {
+      padding-left: 0 !important;
+      margin-left: 0 !important;
+      text-align: left !important;
+      display: block !important;
+    }
+  .dashboard-header {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-wrap: nowrap !important;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+    padding-left: 0 !important;
+    padding-right: 10px !important;
+    gap: 0 !important;
+    min-height: 1px !important;
+  }
+  .header-right {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 4px !important;
+    justify-content: flex-end !important;
+    flex-wrap: nowrap !important;
+    width: auto !important;
+    white-space: nowrap !important;
+  }
+  .notification-icon, .logout-icon, .header-avatar {
+    width: 22px !important;
+    height: 22px !important;
+    min-width: 22px !important;
+    min-height: 22px !important;
+    font-size: 0.55rem !important;
+    padding: 0 !important;
+  }
+  .header-logo {
+    height: 26px;
+    width: 26px;
+    padding: 2px;
+    margin-left: 0;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        padding: 8px 6px;
+        gap: 0;
+        min-height: 1px;
+    text-align: left;
+    width: auto;
+  }
+  .dashboard-welcome {
+    font-size: 0.80rem;
+    white-space: normal;
+  }
+  .dashboard-system {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 6px;
+        width: auto;
+    width: 100%;
+    justify-content: flex-end;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    white-space: nowrap;
+  }
+  .notification-icon, .logout-icon {
+    width: 28px;
+    height: 28px;
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 8px;
+        justify-content: flex-end;
+        width: auto;
+        white-space: nowrap;
+    height: 14px;
+    font-size: 0.55rem;
+    top: -4px;
+    right: -4px;
+  }
+}
 .app-layout {
   display: flex;
   height: 100vh; /* Hauteur fixe pour éviter le scroll global */
   background: #F7F8FA;
-  overflow: hidden; /* Empêche le scroll sur le layout principal */
-}
-
-/* Sidebar */
-.dashboard-sidebar {
-  width: 240px;
-  background: #EDECF3;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 28px 0 16px;
+      .header-right {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 6px !important;
+        justify-content: flex-end !important;
+        flex-wrap: nowrap !important;
+        width: auto !important;
+        white-space: nowrap !important;
+      }
+  padding: 0 0 16px;
   box-shadow: 2px 0 16px rgba(36, 99, 222, 0.06);
   overflow-y: auto; /* Scroll seulement si le contenu dépasse */
   height: 100vh; /* Hauteur fixe */
@@ -22,6 +156,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding-top: 10px;
   margin-bottom: 20px;
 }
 
@@ -126,8 +261,6 @@
   }
 }
 
-/* (disabled sidebar styles removed — reverting to original look) */
-
 /* Main */
 .layout-main {
   flex: 1;
@@ -143,7 +276,7 @@
   align-items: center;
   justify-content: space-between;
   background: linear-gradient(90deg, #2E6CF2 0%, #6D5AE0 100%);
-  padding: 16px 24px;
+  padding: 24px 16px;
   border-radius: 0 0 18px 18px;
   box-shadow: 0 4px 24px rgba(36, 99, 222, 0.08);
   color: #fff;
@@ -276,6 +409,31 @@
   min-height: 0; /* Important pour que le contenu enfant puisse scroller */
 }
 
+/* Burger Menu */
+.burger-menu {
+  display: none;
+  background: none;
+  border: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  margin-right: 4px;
+  cursor: pointer;
+  z-index: 1201;
+
+  span {
+    display: block;
+    width: 26px;
+    height: 3px;
+    background: #fff;
+    margin: 4px 0;
+    border-radius: 2px;
+    transition: all 0.3s;
+  }
+}
+
 /* Responsive */
 @media (max-width: 980px) {
   .app-layout {
@@ -284,11 +442,12 @@
   }
 
   .dashboard-sidebar {
-    width: 100%;
+    width: 140px;
+    min-width: 110px;
     height: auto;
     border-right: none;
     border-bottom: 1px solid #e5e7eb;
-    padding: 16px;
+    padding: 12px 0 6px;
     display: none;
   }
 
@@ -304,6 +463,81 @@
   .layout-content {
     padding: 16px;
   }
-}
 
-/* Disabled state and popup removed — server enforces disabled accounts. */
+  .burger-menu {
+    display: flex;
+  }
+
+  .dashboard-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 260px;
+    height: 100vh;
+    z-index: 1202;
+    box-shadow: 2px 0 16px rgba(36, 99, 222, 0.12);
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(.4,2,.6,1);
+    display: block;
+    padding: 28px 0 16px;
+  }
+
+  .dashboard-sidebar.sidebar-open {
+    transform: translateX(0);
+  }
+
+  .sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(36,99,222,0.18);
+    z-index: 1200;
+    display: block;
+  }
+
+  .dashboard-title {
+    align-items: center;
+    text-align: center;
+    width: 100%;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0;
+    white-space: normal;
+  }
+
+  .dashboard-welcome {
+    font-size: 0.92rem;
+    white-space: nowrap;
+  }
+
+  .dashboard-system {
+    font-size: 0.62rem;
+  }
+
+  .header-left {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .header-logo {
+    height: 32px;
+    width: 32px;
+    padding: 3px;
+    margin-left: 0;
+  }
+
+  .sidebar-link {
+    padding: 10px 16px;
+    font-size: 0.85rem;
+  }
+
+  .sidebar-username {
+    font-size: 0.92rem;
+  }
+
+  .sidebar-role {
+    font-size: 0.82rem;
+  }
+}

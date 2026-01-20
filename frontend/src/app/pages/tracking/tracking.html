@@ -44,12 +44,33 @@
 
     
     <div class="events-controls">
-      <div class="controls-row">
+      <div class="search-wrapper">
         <input type="search" 
                class="provider-search"
                placeholder="Rechercher par utilisateur, description..."
                [(ngModel)]="filters.search" 
                (ngModelChange)="applyFilters()">
+        <i class="material-icons search-icon">search</i>
+      </div>
+
+      <div class="controls-row">
+        <div class="provider-filters-grid">
+          <div class="filter-row">
+            <select [(ngModel)]="filters.severity" (ngModelChange)="applyFilters()">
+              <option value="">Tous les résultats</option>
+              <option *ngFor="let severity of severityOptions" [value]="severity">
+                {{ severity.toUpperCase() }}
+              </option>
+            </select>
+
+            <select [(ngModel)]="filters.module" (ngModelChange)="applyFilters()">
+              <option value="">Tous les modules</option>
+              <option *ngFor="let module of moduleOptions" [value]="module">
+                {{ module }}
+              </option>
+            </select>
+          </div>
+        </div>
 
         <div class="actions-group">
           <button class="btn-export" (click)="exportData('excel')" title="Exporter en Excel">
@@ -57,25 +78,8 @@
           </button>
           <button class="btn-refresh" (click)="refreshData()" title="Actualiser">
             <img class="btn-icon" src="../../../assets/refresh-alt.svg" alt="Actualiser"/>
+            Actualiser
           </button>
-        </div>
-      </div>
-
-      <div class="provider-filters-grid">
-        <div class="filter-row">
-          <select [(ngModel)]="filters.severity" (ngModelChange)="applyFilters()">
-            <option value="">Tous les résultats</option>
-            <option *ngFor="let severity of severityOptions" [value]="severity">
-              {{ severity.toUpperCase() }}
-            </option>
-          </select>
-
-          <select [(ngModel)]="filters.module" (ngModelChange)="applyFilters()">
-            <option value="">Tous les modules</option>
-            <option *ngFor="let module of moduleOptions" [value]="module">
-              {{ module }}
-            </option>
-          </select>
         </div>
       </div>
     </div>

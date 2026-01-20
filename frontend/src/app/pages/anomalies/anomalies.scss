@@ -713,3 +713,232 @@
     margin-left: 0;
   }
 }
+
+/* ===================== TABLET (768px - 1024px) ===================== */
+@media (max-width: 1024px) {
+  .anomalies-page {
+    padding: 18px;
+    gap: 14px;
+  }
+
+  .filters-section {
+    gap: 10px;
+  }
+
+  .filter-select {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+
+  .anomalies-table {
+    font-size: 0.85rem;
+  }
+
+  .anomalies-table th {
+    padding: 10px 8px;
+    font-size: 0.85rem;
+  }
+
+  .anomalies-table td {
+    padding: 8px;
+    font-size: 0.85rem;
+  }
+}
+
+/* ===================== MOBILE (480px - 768px) ===================== */
+@media (max-width: 768px) {
+  .anomalies-page {
+    padding: 16px;
+    gap: 12px;
+    height: auto;
+  }
+
+  .anomalies-page h1 {
+    font-size: 1.5rem;
+  }
+
+  .filters-section {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .filter-search {
+    width: 100%;
+    font-size: 0.9rem;
+    padding: 8px 12px;
+  }
+
+  .filters-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .filter-select {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+  }
+
+  .anomalies-header {
+    gap: 12px;
+  }
+
+  .anomalies-table {
+    font-size: 0.75rem;
+    table-layout: auto;
+  }
+
+  .anomalies-table th {
+    padding: 8px 6px;
+    font-size: 0.75rem;
+  }
+
+  .anomalies-table td {
+    padding: 6px;
+    font-size: 0.75rem;
+  }
+
+  .severity-badge,
+  .status-badge {
+    padding: 4px 8px;
+    font-size: 0.65rem;
+  }
+
+  .btn-action {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+  }
+}
+
+/* ===================== SMALL MOBILE (-480px) ===================== */
+@media (max-width: 480px) {
+  * {
+    box-sizing: border-box !important;
+  }
+
+  .anomalies-page {
+    padding: 12px;
+    gap: 10px;
+    height: auto;
+    min-height: auto;
+  }
+
+  .anomalies-page h1 {
+    font-size: 1.2rem;
+  }
+
+  .filters-section {
+    flex-direction: row;
+    gap: 4px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .filter-search {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.8rem;
+    padding: 6px 10px;
+    order: 1;
+  }
+
+  .filters-grid {
+    display: flex;
+    flex-direction: row;
+    width: auto;
+    gap: 2px;
+    flex-wrap: nowrap;
+    order: 2;
+  }
+
+  .filter-select {
+    width: 70px;
+    min-width: 70px;
+    max-width: 70px;
+    padding: 5px 4px;
+    font-size: 0.6rem;
+    flex-shrink: 0;
+  }
+
+  .anomalies-count {
+    width: 100%;
+  }
+
+  .anomalies-table-wrapper {
+    border-radius: 8px;
+    max-height: auto;
+  }
+
+  .anomalies-table {
+    font-size: 0.65rem;
+    table-layout: auto;
+  }
+
+  .anomalies-table thead {
+    position: static;
+  }
+
+  .anomalies-table th {
+    padding: 5px 3px;
+    font-size: 0.6rem;
+    white-space: nowrap;
+  }
+
+  .anomalies-table td {
+    padding: 5px 3px;
+    font-size: 0.6rem;
+  }
+
+  .anomalies-table th.col-code {
+    width: 15%;
+  }
+
+  .anomalies-table th.col-type {
+    width: 20%;
+  }
+
+  .anomalies-table th.col-severite {
+    width: 15%;
+  }
+
+  .anomalies-table th.col-date {
+    width: 15%;
+  }
+
+  .anomalies-table th.col-statut {
+    width: 15%;
+  }
+
+  .anomalies-table th.col-actions {
+    width: 20%;
+  }
+
+  .severity-badge,
+  .status-badge {
+    padding: 2px 4px;
+    font-size: 0.5rem;
+  }
+
+  .btn-expand {
+    padding: 3px 6px;
+    font-size: 0.6rem;
+  }
+
+  .btn-action {
+    padding: 4px 8px;
+    font-size: 0.6rem;
+  }
+
+  .pagination {
+    gap: 8px;
+  }
+
+  .pagination-btn {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+
+  .pagination-info {
+    font-size: 0.7rem;
+  }
+}
