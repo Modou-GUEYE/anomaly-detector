@@ -9,10 +9,7 @@ import (
 	"log"
 	"os"
 
-	"time"
-
 	"github.com/joho/godotenv"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // @title           API du Moteur de Détection d'Anomalies
@@ -29,6 +26,8 @@ import (
 
 func main() {
 	loadDotEnv()
+
+	ctx := context.Background()
 
 	connStr := buildDatabaseURL()
 	dbStore, err := store.NewStore(connStr)
@@ -58,10 +57,16 @@ func main() {
 			&models.AlertMeta{},
 			&models.SuiviBlacklist{},
 			&models.LogAudit{},
+			&models.SystemeExterne{},
 		); err != nil {
 			log.Fatalf("AutoMigrate failed: %v", err)
 		}
-		seedDefaultUsers(dbStore)
+		// L'initialisation des utilisateurs par défaut est désormais dans InitializeRequiredData
+	}
+
+	// Initialiser les données requises (profils clients + méta-données d'alertes + utilisateurs)
+	if err := dbStore.InitializeRequiredData(ctx); err != nil {
+		log.Fatalf("Impossible d'initialiser les données requises: %v", err)
 	}
 
 	server := api.NewServer(dbStore)
@@ -98,29 +103,6 @@ func loadDotEnv() {
 		}
 	}
 	log.Println(".env not loaded (ok in prod), continuing")
-}
-
-func seedDefaultUsers(s *store.Store) {
-	users := []struct{ email, username, password, role string }{
-		{getEnv("DEFAULT_ADMIN_EMAIL", "admin@gsie.sn"), "admin", getEnv("DEFAULT_ADMIN_PASSWORD", "admin123"), "admin"},
-		{getEnv("DEFAULT_ANALYST_EMAIL", "analyste@gsie.sn"), "analyste", getEnv("DEFAULT_ANALYST_PASSWORD", "analyste123"), "analyst"},
-	}
-
-	ctx := context.Background()
-	for _, u := range users {
-		if _, err := s.GetUserByEmail(ctx, u.email); err == nil {
-			continue
-		}
-		hashed, _ := bcrypt.GenerateFromPassword([]byte(u.password), 14)
-		s.CreateUser(ctx, &models.Utilisateur{
-			NomUtilisateur: u.username,
-			Email:          u.email,
-			MotDePasseHash: string(hashed),
-			Role:           u.role,
-			Actif:          true,
-			DateCreation:   time.Now(),
-		})
-	}
 }
 
 func getEnv(key, def string) string {

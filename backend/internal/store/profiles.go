@@ -8,7 +8,7 @@ import (
 // ===================== PROFILS CLIENTS =====================
 
 // GetProfilClientIDByCode retourne l'ID du profil client à partir du code type client.
-func (s *Store) GetProfilClientIDByCode(ctx context.Context, code string) (string, error) {
+func (s *Store) GetProfilClientIDByCode(ctx context.Context, code string) (*string, error) {
 	var nomProfil string
 	switch code {
 	case "P":
@@ -23,11 +23,12 @@ func (s *Store) GetProfilClientIDByCode(ctx context.Context, code string) (strin
 		nomProfil = "Particulier"
 	}
 	var profil models.ProfilClient
-	result := s.gormDB.WithContext(ctx).Where("nom_profil = ?", nomProfil).First(&profil)
+	// Recherche case-insensitive pour supporter différentes variations
+	result := s.gormDB.WithContext(ctx).Where("LOWER(nom_profil) = LOWER(?)", nomProfil).First(&profil)
 	if result.Error != nil {
-		return "", result.Error
+		return nil, result.Error
 	}
-	return profil.ID, nil
+	return &profil.ID, nil
 }
 
 // CreateProfilClient insère un nouveau profil client dans la base de données.

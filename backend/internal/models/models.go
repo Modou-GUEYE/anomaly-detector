@@ -13,12 +13,12 @@ import (
 // @Description Utilisateur du système (admin ou analyste)
 type Utilisateur struct {
 	ID             string    `json:"id" gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
-	NomUtilisateur string    `json:"nomUtilisateur"`
-	Email          string    `json:"email"`
-	MotDePasseHash string    `json:"password"`
-	Role           string    `json:"role"`
-	Actif          bool      `json:"actif"`
-	DateCreation   time.Time `json:"dateCreation"`
+	NomUtilisateur string    `json:"nomUtilisateur" gorm:"column:nom_utilisateur;not null"`
+	Email          string    `json:"email" gorm:"column:email;unique;not null"`
+	MotDePasseHash string    `json:"password" gorm:"column:mot_de_passe_hash;not null"`
+	Role           string    `json:"role" gorm:"column:role;not null"`
+	Actif          bool      `json:"actif" gorm:"column:actif"`
+	DateCreation   time.Time `json:"dateCreation" gorm:"column:date_creation;autoCreateTime"`
 }
 
 // ===================== COMPTES =====================
@@ -27,16 +27,16 @@ type Utilisateur struct {
 // @Description Client du système (personne physique ou morale) obtenu lors de l'analyse des transactions
 type Compte struct {
 	ID             string    `json:"id" gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
-	NumeroCompte   string    `json:"numeroCompte"`
-	NomClient      string    `json:"nomClient"`
-	TypeClient     string    `json:"typeClient"`
-	TypeCompte     string    `json:"typeCompte"`
-	Categorie      string    `json:"categorie"`
-	Pays           string    `json:"pays"` // Code pays ISO alpha-2 (ex: SN, ML, CI) - Compatible SPI
-	Ville          string    `json:"ville"`
-	Adresse        string    `json:"adresse"`
-	ProfilClientID string    `json:"profilClientId,omitempty"`
-	DateCreation   time.Time `json:"dateCreation"`
+	NumeroCompte   string    `json:"numeroCompte" gorm:"column:numero_compte;unique;not null"`
+	NomClient      string    `json:"nomClient" gorm:"column:nom_client"`
+	TypeClient     string    `json:"typeClient" gorm:"column:type_client"`
+	TypeCompte     string    `json:"typeCompte" gorm:"column:type_compte"`
+	Categorie      string    `json:"categorie" gorm:"column:categorie"`
+	Pays           string    `json:"pays" gorm:"column:pays"` // Code pays ISO alpha-2 (ex: SN, ML, CI) - Compatible SPI
+	Ville          string    `json:"ville" gorm:"column:ville"`
+	Adresse        string    `json:"adresse" gorm:"column:adresse"`
+	ProfilClientID *string   `json:"profilClientId,omitempty" gorm:"column:profil_client_id;type:uuid"`
+	DateCreation   time.Time `json:"dateCreation" gorm:"column:date_creation;autoCreateTime"`
 }
 
 // ===================== TRANSACTIONS =====================
@@ -44,27 +44,27 @@ type Compte struct {
 // Transaction représente une transaction financière
 // @Description Transaction financière entre deux entités
 type Transaction struct {
-	ID                 string    `json:"id,omitempty" gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
-	DateOperation      time.Time `json:"date_operation"`
-	Montant            float64   `json:"montant"`
-	Portee             string    `json:"portee"`
-	PaysPayeur         string    `json:"pays_payeur"` // Code pays ISO alpha-2 (ex: SN, ML, CI) - Compatible SPI
-	VillePayeur        string    `json:"ville_payeur"`
-	AdressePayeur      string    `json:"adresse_payeur"`
-	TypeComptePayeur   string    `json:"type_compte_payeur"`
-	TypeClientPayeur   string    `json:"type_client_payeur"`
-	CategoriePayeur    string    `json:"categorie_payeur"`
-	NumeroComptePayeur string    `json:"numero_compte_payeur"`
-	NomPayeur          string    `json:"nom_payeur"`
-	PaysPaye           string    `json:"pays_paye"` // Code pays ISO alpha-2 (ex: SN, ML, CI) - Compatible SPI
-	VillePaye          string    `json:"ville_paye"`
-	AdressePaye        string    `json:"adresse_paye"`
-	TypeComptePaye     string    `json:"type_compte_paye"`
-	TypeClientPaye     string    `json:"type_client_paye"`
-	CategoriePaye      string    `json:"categorie_paye"`
-	NumeroComptePaye   string    `json:"numero_compte_paye"`
-	NomPaye            string    `json:"nom_paye"`
-	RawData            []byte    `json:"raw_data"`
+	ID                 string         `json:"id,omitempty" gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
+	DateOperation      time.Time      `json:"date_operation" gorm:"column:date_operation"`
+	Montant            float64        `json:"montant" gorm:"column:montant"`
+	Portee             string         `json:"portee" gorm:"column:portee"`
+	PaysPayeur         string         `json:"pays_payeur" gorm:"column:pays_payeur"` // Code pays ISO alpha-2 (ex: SN, ML, CI) - Compatible SPI
+	VillePayeur        string         `json:"ville_payeur" gorm:"column:ville_payeur"`
+	AdressePayeur      string         `json:"adresse_payeur" gorm:"column:adresse_payeur"`
+	TypeComptePayeur   string         `json:"type_compte_payeur" gorm:"column:type_compte_payeur"`
+	TypeClientPayeur   string         `json:"type_client_payeur" gorm:"column:type_client_payeur"`
+	CategoriePayeur    string         `json:"categorie_payeur" gorm:"column:categorie_payeur"`
+	NumeroComptePayeur string         `json:"numero_compte_payeur" gorm:"column:numero_compte_payeur"`
+	NomPayeur          string         `json:"nom_payeur" gorm:"column:nom_payeur"`
+	PaysPaye           string         `json:"pays_paye" gorm:"column:pays_paye"` // Code pays ISO alpha-2 (ex: SN, ML, CI) - Compatible SPI
+	VillePaye          string         `json:"ville_paye" gorm:"column:ville_paye"`
+	AdressePaye        string         `json:"adresse_paye" gorm:"column:adresse_paye"`
+	TypeComptePaye     string         `json:"type_compte_paye" gorm:"column:type_compte_paye"`
+	TypeClientPaye     string         `json:"type_client_paye" gorm:"column:type_client_paye"`
+	CategoriePaye      string         `json:"categorie_paye" gorm:"column:categorie_paye"`
+	NumeroComptePaye   string         `json:"numero_compte_paye" gorm:"column:numero_compte_paye"`
+	NomPaye            string         `json:"nom_paye" gorm:"column:nom_paye"`
+	RawData            datatypes.JSON `json:"raw_data" gorm:"column:raw_data;type:jsonb"`
 }
 
 // ===================== BLACKLIST =====================
@@ -89,8 +89,8 @@ func (EntiteBlacklist) TableName() string { return "entites_blacklist" }
 // @Description Profil de client avec règles spécifiques
 type ProfilClient struct {
 	ID          string `json:"id" gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
-	NomProfil   string `json:"nomProfil"`
-	Description string `json:"description"`
+	NomProfil   string `json:"nomProfil" gorm:"column:nom_profil;unique;not null"`
+	Description string `json:"description" gorm:"column:description"`
 }
 
 // TableName indique à GORM d'utiliser la table 'profils_clients'
@@ -143,7 +143,7 @@ func (PaysRisque) TableName() string { return "pays_risque" }
 // @Description Alerte générée lors du déclenchement d'une règle
 type Alerte struct {
 	ID                string     `json:"id" gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
-	TransactionID     string     `json:"transactionId"`
+	TransactionID     *string    `json:"transactionId,omitempty"`
 	Code              string     `json:"code"` // Code d'alerte unique
 	Type              string     `json:"type"` // Type d'alerte (ex: "Montant", "Pays à risque", "Surveillé", etc.)
 	Statut            string     `json:"statut"`
@@ -173,12 +173,15 @@ type Alerte struct {
 // AlertMeta représente la meta-donnée d'une alerte (code, type, statut, message, criticité)
 // @Description Meta-donnée d'alerte pour gestion dynamique
 type AlertMeta struct {
-	Code            string `json:"code"`
-	Type            string `json:"type"`
-	Statut          string `json:"statut"`
-	Message         string `json:"message"`
-	NiveauCriticite string `json:"niveauCriticite"`
+	Code            string `json:"code" gorm:"primaryKey;size:10"`
+	Type            string `json:"type" gorm:"not null"`
+	Statut          string `json:"statut" gorm:"not null"`
+	Message         string `json:"message" gorm:"not null"`
+	NiveauCriticite string `json:"niveauCriticite" gorm:"column:niveau_criticite;not null"`
 }
+
+// TableName indique à GORM d'utiliser la table 'alertes_meta'
+func (AlertMeta) TableName() string { return "alertes_meta" }
 
 // ===================== SUIVI BLACKLIST =====================
 
@@ -217,3 +220,15 @@ type LogAudit struct {
 func (LogAudit) TableName() string {
 	return "logs_audit"
 }
+
+// ===================== SYSTEMES EXTERNES =====================
+
+type SystemeExterne struct {
+	ID    string `gorm:"primaryKey" json:"id"`
+	Nom   string `json:"nom"`
+	Role  string `json:"role"`
+	Actif bool   `json:"actif"`
+}
+
+// TableName indique à GORM d'utiliser la table 'systemes_externes'
+func (SystemeExterne) TableName() string { return "systemes_externes" }

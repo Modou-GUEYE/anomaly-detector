@@ -16,9 +16,8 @@ import (
 // CreateCompte insère un nouveau compte dans la base de données.
 func (s *Store) CreateCompte(ctx context.Context, compte *models.Compte, userID string) (*models.Compte, error) {
 	// Remplissage automatique du profil si vide
-	if compte.ProfilClientID == "" && compte.TypeClient != "" {
-		profilID, err := s.GetProfilClientIDByCode(ctx, compte.TypeClient)
-		if err == nil && profilID != "" {
+	if (compte.ProfilClientID == nil || *compte.ProfilClientID == "") && compte.TypeClient != "" {
+		if profilID, err := s.GetProfilClientIDByCode(ctx, compte.TypeClient); err == nil && profilID != nil {
 			compte.ProfilClientID = profilID
 		}
 	}
@@ -26,51 +25,44 @@ func (s *Store) CreateCompte(ctx context.Context, compte *models.Compte, userID 
 	if compte.DateCreation.IsZero() {
 		compte.DateCreation = time.Now()
 	}
-	// --- GORM ---
-	result := s.gormDB.WithContext(ctx).Create(compte)
-	if result.Error != nil {
-		return nil, result.Error
+
+	if err := s.gormDB.WithContext(ctx).Create(compte).Error; err != nil {
+		return nil, err
 	}
 
-	// Logging d'audit avec l'utilisateur fourni
-	actionDescription := fmt.Sprintf("Création du compte '%s'", compte.NumeroCompte)
-	err := s.LogAction(ctx, "MDA", actionDescription, "Comptes", compte.ID, fmt.Sprintf("Création du compte: %s (%s)", compte.NumeroCompte, compte.NomClient), "succès")
-	if err != nil {
-		// Ne pas faire échouer la création si le logging échoue, mais logger l'erreur
-		fmt.Printf("Erreur lors du logging d'audit pour la création de compte %s: %v\n", compte.ID, err)
-	}
+	// Logging d'audit (ne fait pas échouer la création)
+	actionDesc := fmt.Sprintf("Création du compte '%s'", compte.NumeroCompte)
+	details := fmt.Sprintf("Création du compte: %s (%s)", compte.NumeroCompte, compte.NomClient)
+	_ = s.LogAction(ctx, "MDA", actionDesc, "Comptes", compte.ID, details, "succès")
 
 	return compte, nil
 }
 
 // GetCompteByCompte recherche un client par son numéro de compte unique.
 func (s *Store) GetCompteByCompte(ctx context.Context, numeroCompte string) (*models.Compte, error) {
-
 	var compte models.Compte
-	result := s.gormDB.WithContext(ctx).Where("numero_compte = ?", numeroCompte).First(&compte)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			// Aucun compte trouvé, retourne un compte vide
-			return &models.Compte{}, nil
+	err := s.gormDB.WithContext(ctx).Where("numero_compte = ?", numeroCompte).First(&compte).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return &models.Compte{}, nil // Aucun compte trouvé, retourne un compte vide
 		}
-		return nil, result.Error
+		return nil, err
 	}
 	return &compte, nil
 }
 
 // GetReglesForCompte récupère les règles actives associées au profil client d'un compte donné.
 func (s *Store) GetReglesForCompte(ctx context.Context, numeroCompte string) ([]models.RegleControle, error) {
-	// On récupère le profil client du compte
 	var compte models.Compte
 	if err := s.gormDB.WithContext(ctx).Where("numero_compte = ?", numeroCompte).First(&compte).Error; err != nil {
 		return nil, err
 	}
+
 	var regles []models.RegleControle
-	result := s.gormDB.WithContext(ctx).Where("profil_client_id = ? AND active = ?", compte.ProfilClientID, true).Find(&regles)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-	return regles, nil
+	err := s.gormDB.WithContext(ctx).
+		Where("profil_client_id = ? AND active = ?", compte.ProfilClientID, true).
+		Find(&regles).Error
+	return regles, err
 }
 
 // GetAllComptes retourne la liste de tous les comptes clients enregistrés.

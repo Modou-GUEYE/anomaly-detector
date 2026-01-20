@@ -26,6 +26,7 @@ func (s *Store) CreateUser(ctx context.Context, user *models.Utilisateur) (strin
 	}
 	// Créer l'utilisateur
 	result := s.gormDB.WithContext(ctx).Create(user)
+	fmt.Printf("[DEBUG] SQL generated for user creation: %+v\n", user)
 	if result.Error != nil {
 		return "", result.Error
 	}
@@ -35,7 +36,8 @@ func (s *Store) CreateUser(ctx context.Context, user *models.Utilisateur) (strin
 // GetUserByEmail récupère un utilisateur par son adresse email.
 func (s *Store) GetUserByEmail(ctx context.Context, email string) (*models.Utilisateur, error) {
 	var user models.Utilisateur
-	result := s.gormDB.WithContext(ctx).Where("email = ?", email).First(&user)
+	// Recherche case-insensitive pour l'email
+	result := s.gormDB.WithContext(ctx).Where("LOWER(email) = LOWER(?)", email).First(&user)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -80,8 +82,26 @@ func (s *Store) UpdateUser(ctx context.Context, id string, updates map[string]in
 	return &user, nil
 }
 
-// DeleteUser supprime un utilisateur par ID
+// DeleteUser supprime un utilisateur s'il n'a aucune trace, sinon le désactive
 func (s *Store) DeleteUser(ctx context.Context, id string) error {
-	result := s.gormDB.WithContext(ctx).Delete(&models.Utilisateur{}, "id = ?", id)
-	return result.Error
+	// Vérifier s'il existe des logs liés à cet utilisateur
+	var count int64
+	err := s.gormDB.WithContext(ctx).Model(&models.LogAudit{}).Where("utilisateur_id = ?", id).Count(&count).Error
+	fmt.Printf("[DEBUG] DeleteUser: id=%s, log_count=%d, err=%v\n", id, count, err)
+	if err != nil {
+		return err
+	}
+	if count > 0 {
+		// Désactiver si des traces existent
+		fmt.Printf("[DEBUG] Désactivation de l'utilisateur %s (traces trouvées)\n", id)
+		err := s.gormDB.WithContext(ctx).Model(&models.Utilisateur{}).Where("id = ?", id).Update("actif", false).Error
+		if err != nil {
+			return err
+		}
+		// Retourne une erreur spéciale pour signaler au handler qu'il faut afficher le bouton Désactiver
+		return fmt.Errorf("blocked:disabled")
+	}
+	// Sinon, supprimer physiquement
+	fmt.Printf("[DEBUG] Suppression physique de l'utilisateur %s (aucune trace)\n", id)
+	return s.gormDB.WithContext(ctx).Delete(&models.Utilisateur{}, "id = ?", id).Error
 }

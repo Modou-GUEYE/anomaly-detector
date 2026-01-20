@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"gorm.io/gorm"
@@ -18,141 +19,106 @@ func (s *Store) CreateBlacklistEntry(ctx context.Context, entry *models.EntiteBl
 	if entry.DateAjout.IsZero() {
 		entry.DateAjout = time.Now()
 	}
-	result := s.gormDB.WithContext(ctx).Create(entry)
-	if result.Error != nil {
-		// Logger l'échec si userID fourni
+	if err := s.gormDB.WithContext(ctx).Create(entry).Error; err != nil {
 		if userID != "" {
-			details := fmt.Sprintf("Échec lors de l'ajout d'entité à la blacklist - Nom: %s, Type: %s, Erreur: %v",
-				entry.Nom, entry.TypeEntite, result.Error)
-			actionDescription := fmt.Sprintf("Ajout d'entité '%s' à la liste de surveillance", entry.TypeEntite)
-			_ = s.LogAction(ctx, userID, actionDescription, "Blacklist", "", details, "échec")
+			_ = s.LogAction(ctx, userID, fmt.Sprintf("Ajout d'entité '%s' à la liste de surveillance", entry.TypeEntite),
+				"Blacklist", "", fmt.Sprintf("Échec - Nom: %s, Type: %s, Erreur: %v", entry.Nom, entry.TypeEntite, err), "échec")
 		}
-		return nil, result.Error
+		return nil, err
 	}
 
-	// Log d'ajout à la blacklist si userID fourni
 	if userID != "" {
-		details := fmt.Sprintf("Nouvelle entité ajoutée à la blacklist - Nom: %s, Type: %s",
-			entry.Nom, entry.TypeEntite)
-		actionDescription := fmt.Sprintf("Ajout d'entité '%s' à la liste de surveillance", entry.TypeEntite)
-
-		logErr := s.LogAction(ctx, userID, actionDescription, "Blacklist", entry.ID, details, "succès")
-		if logErr != nil {
-			fmt.Printf("Erreur lors du logging d'audit pour l'ajout blacklist %s: %v\n", entry.ID, logErr)
+		if err := s.LogAction(ctx, userID, fmt.Sprintf("Ajout d'entité '%s' à la liste de surveillance", entry.TypeEntite),
+			"Blacklist", entry.ID, fmt.Sprintf("Nouvelle entité - Nom: %s, Type: %s", entry.Nom, entry.TypeEntite), "succès"); err != nil {
+			log.Printf("Erreur logging audit blacklist %s: %v", entry.ID, err)
 		}
 	}
-
 	return entry, nil
 }
 
 // GetBlacklistEntries récupère toutes les entités de la blacklist.
 func (s *Store) GetBlacklistEntries(ctx context.Context) ([]models.EntiteBlacklist, error) {
 	var entries []models.EntiteBlacklist
-	result := s.gormDB.WithContext(ctx).Find(&entries)
-	if result.Error != nil {
-		return nil, result.Error
+	if err := s.gormDB.WithContext(ctx).Find(&entries).Error; err != nil {
+		return nil, err
 	}
 	return entries, nil
 }
 
 // UpdateBlacklistEntry met à jour une entité existante dans la blacklist.
 func (s *Store) UpdateBlacklistEntry(ctx context.Context, id string, entry *models.EntiteBlacklist, userID string) (*models.EntiteBlacklist, error) {
-	// GORM : mise à jour par ID
 	entry.ID = id
-	result := s.gormDB.WithContext(ctx).Model(&models.EntiteBlacklist{}).Where("id = ?", id).
-		Updates(map[string]interface{}{
-			"nom":                          entry.Nom,
-			"type_entite":                  entry.TypeEntite,
-			"informations_supplementaires": entry.InformationsSupplementaires,
-		})
-	if result.Error != nil {
-		// Logger l'échec
+	db := s.gormDB.WithContext(ctx)
+	if err := db.Model(&models.EntiteBlacklist{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"nom":                          entry.Nom,
+		"type_entite":                  entry.TypeEntite,
+		"informations_supplementaires": entry.InformationsSupplementaires,
+	}).Error; err != nil {
 		if userID != "" {
-			details := fmt.Sprintf("Échec lors de la modification d'entité blacklist - ID: %s, Erreur: %v", id, result.Error)
-			actionDescription := fmt.Sprintf("Modification d'entité '%s' de la liste de surveillance", entry.TypeEntite)
-			_ = s.LogAction(ctx, userID, actionDescription, "Blacklist", id, details, "échec")
+			_ = s.LogAction(ctx, userID, fmt.Sprintf("Modification d'entité '%s' de la liste de surveillance", entry.TypeEntite),
+				"Blacklist", id, fmt.Sprintf("Échec - ID: %s, Erreur: %v", id, err), "échec")
 		}
-		return nil, result.Error
+		return nil, err
 	}
-	// Recharger l'entité mise à jour pour obtenir la dateAjout
+
 	var updated models.EntiteBlacklist
-	if err := s.gormDB.WithContext(ctx).First(&updated, "id = ?", id).Error; err != nil {
-		// Logger l'échec de rechargement
+	if err := db.First(&updated, "id = ?", id).Error; err != nil {
 		if userID != "" {
-			details := fmt.Sprintf("Échec lors du rechargement d'entité blacklist - ID: %s, Erreur: %v", id, err)
-			actionDescription := fmt.Sprintf("Modification d'entité '%s' de la liste de surveillance", entry.TypeEntite)
-			_ = s.LogAction(ctx, userID, actionDescription, "Blacklist", id, details, "échec")
+			_ = s.LogAction(ctx, userID, fmt.Sprintf("Modification d'entité '%s' de la liste de surveillance", entry.TypeEntite),
+				"Blacklist", id, fmt.Sprintf("Échec rechargement - ID: %s, Erreur: %v", id, err), "échec")
 		}
 		return nil, err
 	}
 	*entry = updated
 
-	// Log d'audit si userID fourni
 	if userID != "" {
-		details := fmt.Sprintf("Entité blacklist mise à jour - Nom: %s, Type: %s",
-			updated.Nom, updated.TypeEntite)
-		actionDescription := fmt.Sprintf("Modification d'entité '%s' de la liste de surveillance", updated.TypeEntite)
-
-		logErr := s.LogAction(ctx, userID, actionDescription, "Blacklist", id, details, "succès")
-		if logErr != nil {
-			fmt.Printf("Erreur lors du logging d'audit pour la modification blacklist %s: %v\n", id, logErr)
+		if err := s.LogAction(ctx, userID, fmt.Sprintf("Modification d'entité '%s' de la liste de surveillance", updated.TypeEntite),
+			"Blacklist", id, fmt.Sprintf("Mise à jour - Nom: %s, Type: %s", updated.Nom, updated.TypeEntite), "succès"); err != nil {
+			log.Printf("Erreur logging audit blacklist %s: %v", id, err)
 		}
 	}
-
 	return entry, nil
 }
 
 // DeleteBlacklistEntry supprime une entité de la blacklist par son ID.
 func (s *Store) DeleteBlacklistEntry(ctx context.Context, id string, userID string) error {
-	// Récupérer les informations de l'entité avant suppression pour le logging
 	var entry models.EntiteBlacklist
+	db := s.gormDB.WithContext(ctx)
+
 	if userID != "" {
-		if err := s.gormDB.WithContext(ctx).First(&entry, "id = ?", id).Error; err != nil {
-			// Logger l'échec de récupération
-			details := fmt.Sprintf("Échec lors de la suppression d'entité blacklist - ID introuvable: %s, Erreur: %v", id, err)
-			actionDescription := "Suppression d'entité de la liste de surveillance"
-			_ = s.LogAction(ctx, userID, actionDescription, "Blacklist", id, details, "échec")
+		if err := db.First(&entry, "id = ?", id).Error; err != nil {
+			_ = s.LogAction(ctx, userID, "Suppression d'entité de la liste de surveillance",
+				"Blacklist", id, fmt.Sprintf("Échec - ID introuvable: %s, Erreur: %v", id, err), "échec")
 			return err
 		}
 	}
 
-	result := s.gormDB.WithContext(ctx).Delete(&models.EntiteBlacklist{}, "id = ?", id)
-	if result.Error != nil {
-		// Logger l'échec de suppression
+	if err := db.Delete(&models.EntiteBlacklist{}, "id = ?", id).Error; err != nil {
 		if userID != "" {
-			details := fmt.Sprintf("Échec lors de la suppression d'entité blacklist - Nom: %s, Type: %s, Erreur: %v",
-				entry.Nom, entry.TypeEntite, result.Error)
-			actionDescription := fmt.Sprintf("Suppression d'entité '%s' de la liste de surveillance", entry.TypeEntite)
-			_ = s.LogAction(ctx, userID, actionDescription, "Blacklist", id, details, "échec")
+			_ = s.LogAction(ctx, userID, fmt.Sprintf("Suppression d'entité '%s' de la liste de surveillance", entry.TypeEntite),
+				"Blacklist", id, fmt.Sprintf("Échec - Nom: %s, Type: %s, Erreur: %v", entry.Nom, entry.TypeEntite, err), "échec")
 		}
-		return result.Error
+		return err
 	}
 
-	// Log d'audit si userID fourni
 	if userID != "" {
-		details := fmt.Sprintf("Entité blacklist supprimée - Nom: %s, Type: %s",
-			entry.Nom, entry.TypeEntite)
-		actionDescription := fmt.Sprintf("Suppression d'entité '%s' de la liste de surveillance", entry.TypeEntite)
-
-		logErr := s.LogAction(ctx, userID, actionDescription, "Blacklist", id, details, "succès")
-		if logErr != nil {
-			fmt.Printf("Erreur lors du logging d'audit pour la suppression blacklist %s: %v\n", id, logErr)
+		if err := s.LogAction(ctx, userID, fmt.Sprintf("Suppression d'entité '%s' de la liste de surveillance", entry.TypeEntite),
+			"Blacklist", id, fmt.Sprintf("Supprimé - Nom: %s, Type: %s", entry.Nom, entry.TypeEntite), "succès"); err != nil {
+			log.Printf("Erreur logging audit blacklist %s: %v", id, err)
 		}
 	}
-
 	return nil
 }
 
 // GetBlacklistStatusForCompte vérifie si un compte est dans la blacklist et retourne le type d'entité s'il y est.
 func (s *Store) GetBlacklistStatusForCompte(ctx context.Context, compteID string) (string, error) {
-
 	var entite models.EntiteBlacklist
-	result := s.gormDB.WithContext(ctx).Where("numero_compte = ?", compteID).First(&entite)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return "", nil
-		}
-		return "", result.Error
+	err := s.gormDB.WithContext(ctx).Where("numero_compte = ?", compteID).First(&entite).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
 	}
 	return entite.TypeEntite, nil
 }
@@ -160,27 +126,18 @@ func (s *Store) GetBlacklistStatusForCompte(ctx context.Context, compteID string
 // IsAccountOnBlacklist vérifie si un KYC ID est sur la blacklist.
 func (s *Store) IsAccountOnBlacklist(ctx context.Context, kycID string) (string, error) {
 	var entite models.EntiteBlacklist
+	db := s.gormDB.WithContext(ctx)
 
-	// Recherche exacte d'abord
-	result := s.gormDB.WithContext(ctx).Where("numero_compte = ?", kycID).First(&entite)
-	if result.Error == nil {
-		// Trouvé avec correspondance exacte
+	if err := db.Where("numero_compte = ?", kycID).First(&entite).Error; err == nil {
 		return entite.TypeEntite, nil
 	}
 
-	// Si pas trouvé avec correspondance exacte, essayer recherche insensible à la casse
-	result = s.gormDB.WithContext(ctx).Where("UPPER(numero_compte) = UPPER(?)", kycID).First(&entite)
-	if result.Error == nil {
-		// Trouvé avec correspondance insensible à la casse
-		return entite.TypeEntite, nil
-	}
-
-	// Si toujours pas trouvé
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		// Pas trouvé dans la blacklist
+	err := db.Where("UPPER(numero_compte) = UPPER(?)", kycID).First(&entite).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return "", nil
 	}
-
-	// Erreur de base de données
-	return "", result.Error
+	if err != nil {
+		return "", err
+	}
+	return entite.TypeEntite, nil
 }

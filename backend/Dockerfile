@@ -14,7 +14,7 @@ WORKDIR /app
 COPY . .
 
 # Build the API binary
-ENV CGO_ENABLED=0
+ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
 RUN go mod tidy && \
     go build -o /usr/local/bin/anomaly-api ./cmd/api && \
     chown anomaly:anomaly /usr/local/bin/anomaly-api

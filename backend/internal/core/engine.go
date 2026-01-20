@@ -102,20 +102,7 @@ func (re *RulesEngine) AnalyzeTransaction(ctx context.Context, tx *models.Transa
 						if action == "" {
 							action = actionFromCriticite(meta.NiveauCriticite)
 						}
-						alerte := &models.Alerte{
-							TransactionID:     tx.ID,
-							Code:              meta.Code,
-							Type:              meta.Type,
-							Statut:            meta.Statut,
-							Message:           meta.Message,
-							NiveauCriticite:   meta.NiveauCriticite,
-							ScoreRisque:       calculerScoreRisque(reglePaysRisque, tx),
-							DateGeneration:    tx.DateOperation,
-							Action:            action,
-							NumeroCompte:      tx.NumeroComptePayeur,
-							PaysRisque:        &paysRisque,
-							RegleDeclencheeID: &regleID,
-						}
+						alerte := makeAlerte(meta, regleID, tx, tx.NumeroComptePayeur, action, calculerScoreRisque(reglePaysRisque, tx), &paysRisque)
 						alertesGenerees = append(alertesGenerees, alerte)
 						// Si l'action est "bloquer", refuser la transaction
 						if action == "bloquer" {
@@ -130,20 +117,7 @@ func (re *RulesEngine) AnalyzeTransaction(ctx context.Context, tx *models.Transa
 						if action == "" {
 							action = actionFromCriticite(meta.NiveauCriticite)
 						}
-						alerte := &models.Alerte{
-							TransactionID:     tx.ID,
-							Code:              meta.Code,
-							Type:              meta.Type,
-							Statut:            meta.Statut,
-							Message:           meta.Message,
-							NiveauCriticite:   meta.NiveauCriticite,
-							ScoreRisque:       calculerScoreRisque(reglePaysRisque, tx),
-							DateGeneration:    tx.DateOperation,
-							Action:            action,
-							NumeroCompte:      tx.NumeroComptePaye,
-							PaysRisque:        &paysRisque,
-							RegleDeclencheeID: &regleID,
-						}
+						alerte := makeAlerte(meta, regleID, tx, tx.NumeroComptePaye, action, calculerScoreRisque(reglePaysRisque, tx), &paysRisque)
 						alertesGenerees = append(alertesGenerees, alerte)
 						// Si l'action est "bloquer", refuser la transaction
 						if action == "bloquer" {
@@ -182,6 +156,34 @@ func actionFromCriticite(criticite string) string {
 		return "surveiller"
 	default:
 		return "surveiller"
+	}
+}
+
+// makeAlerte construit une alerte avec des valeurs communes, en évitant les chaînes vides pour les UUID optionnels.
+func makeAlerte(meta *models.AlertMeta, regleID string, tx *models.Transaction, numeroCompte string, action string, score float64, paysRisque *string) *models.Alerte {
+	var reglePtr *string
+	if regleID != "" {
+		reglePtr = &regleID
+	}
+
+	return &models.Alerte{
+		TransactionID:   nil,
+		Code:            meta.Code,
+		Type:            meta.Type,
+		Statut:          meta.Statut,
+		Message:         meta.Message,
+		NiveauCriticite: meta.NiveauCriticite,
+		ScoreRisque:     score,
+		DateGeneration:  tx.DateOperation,
+		Action:          action,
+		RegleDeclencheeID: func() *string {
+			if reglePtr != nil && *reglePtr != "" {
+				return reglePtr
+			}
+			return nil
+		}(),
+		NumeroCompte: numeroCompte,
+		PaysRisque:   paysRisque,
 	}
 }
 
@@ -225,19 +227,7 @@ func (re *RulesEngine) applyRulesForAccount(ctx context.Context, tx *models.Tran
 				if action == "" {
 					action = actionFromCriticite(meta.NiveauCriticite)
 				}
-				alerte := &models.Alerte{
-					TransactionID:     tx.ID,
-					Code:              meta.Code,
-					Type:              meta.Type,
-					Statut:            meta.Statut,
-					Message:           meta.Message,
-					NiveauCriticite:   meta.NiveauCriticite,
-					ScoreRisque:       calculerScoreRisque(&regle, tx),
-					DateGeneration:    tx.DateOperation,
-					RegleDeclencheeID: &regleID,
-					Action:            action,
-					NumeroCompte:      numeroCompte,
-				}
+				alerte := makeAlerte(meta, regleID, tx, numeroCompte, action, calculerScoreRisque(&regle, tx), nil)
 				alertes = append(alertes, alerte)
 				// Si l'action est "bloquer", refuser la transaction
 				if action == "bloquer" {
@@ -262,16 +252,6 @@ func (re *RulesEngine) applyRulesForAccount(ctx context.Context, tx *models.Tran
 			count, _ := re.store.GetTransactionCountForPeriod(ctx, numeroCompte, days)
 			if count >= int64(regle.Seuil) {
 				violation = true
-				// Ajout du suivi_blacklist pour violation de la règle de fréquence
-				meta, err := re.store.GetAlertMetaByType(ctx, regle.TypeRegle)
-				if err == nil && meta != nil {
-					// Utiliser l'action de la règle si définie, sinon fallback sur criticité
-					action := regle.Action
-					if action == "" {
-						action = actionFromCriticite(meta.NiveauCriticite)
-					}
-					_ = re.store.CreateSuiviBlacklist(ctx, tx.ID, numeroCompte, action, regle.TypeRegle)
-				}
 			}
 		}
 
@@ -285,19 +265,7 @@ func (re *RulesEngine) applyRulesForAccount(ctx context.Context, tx *models.Tran
 			if action == "" {
 				action = actionFromCriticite(meta.NiveauCriticite)
 			}
-			alerte := &models.Alerte{
-				TransactionID:     tx.ID,
-				Code:              meta.Code,
-				Type:              meta.Type,
-				Statut:            meta.Statut,
-				Message:           meta.Message,
-				NiveauCriticite:   meta.NiveauCriticite,
-				ScoreRisque:       calculerScoreRisque(&regle, tx),
-				DateGeneration:    tx.DateOperation,
-				Action:            action,
-				RegleDeclencheeID: &regleID,
-				NumeroCompte:      numeroCompte,
-			}
+			alerte := makeAlerte(meta, regleID, tx, numeroCompte, action, calculerScoreRisque(&regle, tx), nil)
 			alertes = append(alertes, alerte)
 			// Si l'action est "bloquer", refuser la transaction
 			if action == "bloquer" {
@@ -339,19 +307,11 @@ func (re *RulesEngine) checkBlacklist(ctx context.Context, tx *models.Transactio
 					scoreRisque = 0.7
 					action = "surveiller" // Valider + Suivi
 				}
-				alerte := &models.Alerte{
-					TransactionID:     tx.ID,
-					Code:              meta.Code,
-					Type:              meta.Type,
-					Statut:            meta.Statut,
-					Message:           meta.Message,
-					NiveauCriticite:   meta.NiveauCriticite,
-					ScoreRisque:       scoreRisque,
-					DateGeneration:    tx.DateOperation,
-					Action:            action,
-					RegleDeclencheeID: regleID,
-					NumeroCompte:      tx.NumeroComptePayeur,
+				regleVal := ""
+				if regleID != nil {
+					regleVal = *regleID
 				}
+				alerte := makeAlerte(meta, regleVal, tx, tx.NumeroComptePayeur, action, scoreRisque, nil)
 				alertes = append(alertes, alerte)
 			}
 			// Seul "Interdit" bloque la transaction (obligation légale OFAC/SWIFT)
@@ -360,10 +320,6 @@ func (re *RulesEngine) checkBlacklist(ctx context.Context, tx *models.Transactio
 					return alertes, fmt.Errorf("%w: meta-donnée d'alerte introuvable pour %s", ErrTransactionRefused, statusPayeur)
 				}
 				return alertes, fmt.Errorf("%w: %s", ErrTransactionRefused, meta.Message)
-			}
-			// Blacklist, PEP, Surveillés → Valider + Suivi (liste interne)
-			if statusPayeur == "Blacklist" || statusPayeur == "PEP" || statusPayeur == "Surveillés" {
-				_ = re.store.CreateSuiviBlacklist(ctx, tx.ID, tx.NumeroComptePayeur, "surveiller", statusPayeur)
 			}
 		}
 	}
@@ -394,19 +350,11 @@ func (re *RulesEngine) checkBlacklist(ctx context.Context, tx *models.Transactio
 					scoreRisque = 0.7
 					action = "surveiller" // Valider + Suivi
 				}
-				alerte := &models.Alerte{
-					TransactionID:     tx.ID,
-					Code:              meta.Code,
-					Type:              meta.Type,
-					Statut:            meta.Statut,
-					Message:           meta.Message,
-					NiveauCriticite:   meta.NiveauCriticite,
-					ScoreRisque:       scoreRisque,
-					DateGeneration:    tx.DateOperation,
-					Action:            action,
-					RegleDeclencheeID: regleID,
-					NumeroCompte:      tx.NumeroComptePaye,
+				regleVal := ""
+				if regleID != nil {
+					regleVal = *regleID
 				}
+				alerte := makeAlerte(meta, regleVal, tx, tx.NumeroComptePaye, action, scoreRisque, nil)
 				alertes = append(alertes, alerte)
 			}
 			// Seul "Interdit" bloque la transaction (obligation légale OFAC/SWIFT)
@@ -415,10 +363,6 @@ func (re *RulesEngine) checkBlacklist(ctx context.Context, tx *models.Transactio
 					return alertes, fmt.Errorf("%w: meta-donnée d'alerte introuvable pour %s", ErrTransactionRefused, statusPaye)
 				}
 				return alertes, fmt.Errorf("%w: %s", ErrTransactionRefused, meta.Message)
-			}
-			// Blacklist, PEP, Surveillés → Valider + Suivi (liste interne)
-			if statusPaye == "Blacklist" || statusPaye == "PEP" || statusPaye == "Surveillés" {
-				_ = re.store.CreateSuiviBlacklist(ctx, tx.ID, tx.NumeroComptePaye, "surveiller", statusPaye)
 			}
 		}
 	}

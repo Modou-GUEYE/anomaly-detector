@@ -98,6 +98,17 @@ func (h *AuthHandler) HandleGetSystemToken(ctx *gin.Context) {
 		return
 	}
 
+	// Vérification en base du system_id ET du rôle
+	allowed, err := h.store.IsSystemIDAllowed(ctx, req.SystemID, req.Role)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur interne lors de la vérification du system_id"})
+		return
+	}
+	if !allowed {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "system_id ou rôle non autorisé"})
+		return
+	}
+
 	accessTTL := time.Duration(0)
 	// Détermine la durée de vie via `KEY_JWT_ACCESS_TTL_MIN` uniquement.
 	if v := os.Getenv("KEY_JWT_ACCESS_TTL_MIN"); v != "" && v != "0" {

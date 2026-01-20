@@ -8,7 +8,7 @@ import (
 
 // gormLoggerSilent retourne un logger GORM en mode silent
 func gormLoggerSilent() gormLogger.Interface {
-	return gormLogger.Default.LogMode(gormLogger.Silent)
+	return gormLogger.Default.LogMode(gormLogger.Info)
 }
 
 // Store contient le pool de connexions à la base de données.

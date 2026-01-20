@@ -39,7 +39,7 @@ type StoreInterface interface {
 	GetSuiviBlacklist(ctx context.Context) ([]*models.SuiviBlacklist, error)
 
 	// Profils clients
-	GetProfilClientIDByCode(ctx context.Context, code string) (string, error)
+	GetProfilClientIDByCode(ctx context.Context, code string) (*string, error)
 	CreateProfilClient(ctx context.Context, profil *models.ProfilClient) (*models.ProfilClient, error)
 	GetProfilsClient(ctx context.Context) ([]models.ProfilClient, error)
 	UpdateProfilClient(ctx context.Context, id string, profil *models.ProfilClient) (*models.ProfilClient, error)
@@ -97,4 +97,7 @@ type StoreInterface interface {
 	GetLogsAudit(ctx context.Context, filters map[string]interface{}) ([]models.LogAudit, error)
 	GetAuditStatistics(ctx context.Context, periode int) (map[string]interface{}, error)
 	GetComplianceMetrics(ctx context.Context) (map[string]interface{}, error)
+
+	// Systèmes externes
+	IsSystemIDAllowed(ctx context.Context, id string, role string) (bool, error)
 }

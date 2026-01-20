@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -14,9 +15,8 @@ import (
 // GetAlertes récupère toutes les alertes du système.
 func (s *Store) GetAlertes(ctx context.Context) ([]models.Alerte, error) {
 	var alertes []models.Alerte
-	result := s.gormDB.WithContext(ctx).Order("date_generation DESC").Find(&alertes)
-	if result.Error != nil {
-		return nil, result.Error
+	if err := s.gormDB.WithContext(ctx).Order("date_generation DESC").Find(&alertes).Error; err != nil {
+		return nil, err
 	}
 	return alertes, nil
 }
@@ -36,15 +36,14 @@ func (s *Store) GetAlertCountsByMonthAndType(ctx context.Context, months int) (m
 	since := time.Now().AddDate(0, -months, 0)
 
 	// Utiliser GORM avec Raw pour PostgreSQL EXTRACT qui n'a pas d'équivalent direct GORM
-	result := s.gormDB.WithContext(ctx).
+	if err := s.gormDB.WithContext(ctx).
 		Table("alertes").
 		Select("type, EXTRACT(YEAR FROM date_generation)::int AS year, EXTRACT(MONTH FROM date_generation)::int AS month, COUNT(*) as count").
 		Where("date_generation >= ?", since).
 		Group("type, EXTRACT(YEAR FROM date_generation), EXTRACT(MONTH FROM date_generation)").
 		Order("type, EXTRACT(YEAR FROM date_generation), EXTRACT(MONTH FROM date_generation)").
-		Scan(&rows)
-	if result.Error != nil {
-		return nil, result.Error
+		Scan(&rows).Error; err != nil {
+		return nil, err
 	}
 	out := make(map[string][]map[string]int64)
 	for _, r := range rows {
@@ -62,9 +61,8 @@ func (s *Store) CreateAlerte(ctx context.Context, alerte *models.Alerte, userID 
 		alerte.DateTraitement = &now
 	}
 
-	result := s.gormDB.WithContext(ctx).Create(alerte)
-	if result.Error != nil {
-		return nil, result.Error
+	if err := s.gormDB.WithContext(ctx).Create(alerte).Error; err != nil {
+		return nil, err
 	}
 
 	// Log synchrone de création d'alerte
@@ -74,27 +72,13 @@ func (s *Store) CreateAlerte(ctx context.Context, alerte *models.Alerte, userID 
 	actionDescription := fmt.Sprintf("Génération alerte '%s'", alerte.Type)
 
 	// Déterminer le résultat selon l'action de l'alerte
-	resultat := "succès"
-	switch strings.ToLower(alerte.Action) {
-	case "bloquer":
-		resultat = "bloqué"
-	case "surveiller":
-		resultat = "surveillance"
-	default:
-		// Par défaut, traiter comme surveillance
+	resultat := map[string]string{"bloquer": "bloqué", "surveiller": "surveillance"}[strings.ToLower(alerte.Action)]
+	if resultat == "" {
 		resultat = "surveillance"
 	}
 
-	logErr := s.LogAction(ctx,
-		"MDA", // Toujours MDA pour les alertes automatiques
-		actionDescription,
-		"Alertes",
-		alerte.ID,
-		details,
-		resultat)
-
-	if logErr != nil {
-		fmt.Printf("Erreur lors de l'enregistrement du log d'audit: %v\n", logErr)
+	if err := s.LogAction(ctx, "MDA", actionDescription, "Alertes", alerte.ID, details, resultat); err != nil {
+		log.Printf("Erreur lors de l'enregistrement du log d'audit: %v", err)
 	}
 
 	return alerte, nil
@@ -113,7 +97,7 @@ func (s *Store) FixAlertesTaitesesSansDateTraitement(ctx context.Context) error 
 		return err
 	}
 
-	fmt.Printf("Correction de %d alertes traitées sans date_traitement\n", len(alertes))
+	log.Printf("Correction de %d alertes traitées sans date_traitement", len(alertes))
 
 	// Pour chaque alerte, définir date_traitement = date_generation
 	for _, alerte := range alertes {
@@ -123,12 +107,12 @@ func (s *Store) FixAlertesTaitesesSansDateTraitement(ctx context.Context) error 
 			Update("date_traitement", alerte.DateGeneration).Error
 
 		if err != nil {
-			fmt.Printf("Erreur lors de la correction de l'alerte %s: %v\n", alerte.ID, err)
+			log.Printf("Erreur lors de la correction de l'alerte %s: %v", alerte.ID, err)
 			return err
 		}
 	}
 
-	fmt.Printf("Correction terminée pour %d alertes\n", len(alertes))
+	log.Printf("Correction terminée pour %d alertes", len(alertes))
 	return nil
 }
 
@@ -155,9 +139,8 @@ func (s *Store) UpdateAlerteStatus(ctx context.Context, alerteID string, analyst
 	}
 
 	// Met à jour le statut, l'analyste et potentiellement la date de traitement
-	result := s.gormDB.WithContext(ctx).Model(&models.Alerte{}).Where("id = ?", alerteID).Updates(updates)
-	if result.Error != nil {
-		return nil, result.Error
+	if err := s.gormDB.WithContext(ctx).Model(&models.Alerte{}).Where("id = ?", alerteID).Updates(updates).Error; err != nil {
+		return nil, err
 	}
 
 	// Recharge l'alerte mise à jour
@@ -171,16 +154,8 @@ func (s *Store) UpdateAlerteStatus(ctx context.Context, alerteID string, analyst
 
 	actionDescription := fmt.Sprintf("Mise à jour alerte '%s' vers '%s'", alerte.Type, newStatus)
 
-	logErr := s.LogAction(ctx,
-		analysteID,
-		actionDescription,
-		"Alertes",
-		alerteID,
-		details,
-		"succès")
-
-	if logErr != nil {
-		fmt.Printf("Erreur lors de l'enregistrement du log d'audit: %v\n", logErr)
+	if err := s.LogAction(ctx, analysteID, actionDescription, "Alertes", alerteID, details, "succès"); err != nil {
+		log.Printf("Erreur lors de l'enregistrement du log d'audit: %v", err)
 	}
 
 	return &alerte, nil
@@ -208,6 +183,7 @@ func (s *Store) GetAlertesBloquerActivesByCompte(ctx context.Context, numeroComp
 		Find(&transactions).Error; err != nil {
 		return nil, err
 	}
+	transactionIDs = make([]string, 0, len(transactions))
 	for _, tx := range transactions {
 		transactionIDs = append(transactionIDs, tx.ID)
 	}

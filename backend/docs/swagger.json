@@ -1,868 +1,869 @@
 {
-    "schemes": [
-        "http"
-    ],
-    "swagger": "2.0",
-    "info": {
-        "description": "Backend pour le projet MDA de GSIE Technology, conçu pour la détection de fraudes LBC/FT.",
-        "title": "API du Moteur de Détection d'Anomalies",
-        "termsOfService": "https://gsietechnology.com/terms",
-        "contact": {
-            "name": "Modou GUEYE",
-            "email": "modou.gueye@gsietechnology.com"
+  "basePath": "/api/v1",
+  "definitions": {
+    "models.Alerte": {
+      "description": "Alerte générée lors du déclenchement d'une règle",
+      "properties": {
+        "action": {
+          "type": "string"
         },
-        "license": {
-            "name": "MIT",
-            "url": "https://opensource.org/licenses/MIT"
+        "analysteAssigneID": {
+          "type": "string"
         },
-        "version": "1.0"
-    },
-    "host": "localhost:8080",
-    "basePath": "/api/v1",
-    "paths": {
-        "/accounts/{number}/rules": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Récupère toutes les règles actives associées au profil client d'un compte donné.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Règles"
-                ],
-                "summary": "Lister les règles actives d'un compte",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Numéro de compte",
-                        "name": "numeroCompte",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/models.RegleControle"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
+        "code": {
+          "description": "Code d'alerte unique",
+          "type": "string"
         },
-        "/anomalies": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Récupère la liste de toutes les alertes générées par le système.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Anomalies"
-                ],
-                "summary": "Lister toutes les alertes",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/models.Alerte"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
+        "dateGeneration": {
+          "type": "string"
         },
-        "/anomalies/analyze": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Soumet une transaction pour analyse par le MDA, en appliquant les règles à la fois pour le client source et le client destinataire.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Moteur de Détection"
-                ],
-                "summary": "Analyser une transaction (bidirectionnel)",
-                "parameters": [
-                    {
-                        "description": "Détails de la transaction à analyser",
-                        "name": "transaction",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.Transaction"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Aucune anomalie détectée",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "201": {
-                        "description": "Anomalie(s) détectée(s) et alerte(s) créée(s)",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "403": {
-                        "description": "Transaction refusée (client interdit)",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
+        "dateTraitement": {
+          "description": "Date de traitement/résolution",
+          "type": "string"
         },
-        "/anomalies/{id}/status": {
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Permet à un analyste de changer le statut d'une alerte.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Anomalies"
-                ],
-                "summary": "Mettre à jour le statut d'une alerte",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID de l'alerte",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Nouveau statut de l'alerte",
-                        "name": "status",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "statut": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.Alerte"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
+        "id": {
+          "type": "string"
         },
-        "/auth/login": {
-            "post": {
-                "description": "Authentifie un utilisateur avec email et mot de passe et renvoie un token JWT.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Authentification"
-                ],
-                "summary": "Connecter un utilisateur",
-                "parameters": [
-                    {
-                        "description": "Identifiants de l'utilisateur",
-                        "name": "credentials",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "email": {
-                                    "type": "string"
-                                },
-                                "password": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Renvoie un token JWT",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
+        "message": {
+          "type": "string"
         },
-        "/entities": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Récupère toutes les entités de la liste de surveillance.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Entités"
-                ],
-                "summary": "Lister les entrées de la blacklist",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/models.EntiteBlacklist"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Ajoute une nouvelle entité à la liste de surveillance.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Entités"
-                ],
-                "summary": "Créer une entrée dans la blacklist",
-                "parameters": [
-                    {
-                        "description": "Détails de l'entité à ajouter",
-                        "name": "blacklistEntry",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.EntiteBlacklist"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/models.EntiteBlacklist"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
+        "niveauCriticite": {
+          "type": "string"
         },
-        "/entities/{id}": {
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Modifie une entité de la liste de surveillance.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Entités"
-                ],
-                "summary": "Mettre à jour une entrée de la blacklist",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID de l'entité",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Nouvelles données de l'entité",
-                        "name": "blacklistEntry",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.EntiteBlacklist"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.EntiteBlacklist"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Supprime une entité de la liste de surveillance par son ID.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Entités"
-                ],
-                "summary": "Supprimer une entrée de la blacklist",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID de l'entité",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No Content"
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
+        "numeroCompte": {
+          "type": "string"
         },
-        "/rules": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Crée une nouvelle règle de contrôle.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Règles"
-                ],
-                "summary": "Créer une règle de contrôle",
-                "parameters": [
-                    {
-                        "description": "Détails de la règle",
-                        "name": "regle",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.RegleControle"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/models.RegleControle"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
+        "paysRisque": {
+          "type": "string"
         },
-        "/rules/{id}": {
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Modifie une règle de contrôle.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Règles"
-                ],
-                "summary": "Mettre à jour une règle de contrôle",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID de la règle",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Nouvelles données de la règle",
-                        "name": "regle",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.RegleControle"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.RegleControle"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Supprime une règle de contrôle.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Règles"
-                ],
-                "summary": "Supprimer une règle de contrôle",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID de la règle",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No Content"
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
+        "regleDeclencheeID": {
+          "type": "string"
         },
-        "/rules/{id}/profiles": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Récupère toutes les règles associées à un profil client.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Règles"
-                ],
-                "summary": "Lister les règles d'un profil",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID du Profil Client",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/models.RegleControle"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
+        "scoreRisque": {
+          "type": "number"
         },
-        "/rules/{id}/status": {
-            "patch": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Change le statut actif/inactif d'une règle de contrôle.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Règles"
-                ],
-                "summary": "Activer/Désactiver une règle de contrôle",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID de la règle",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Nouveau statut",
-                        "name": "status",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "active": {
-                                    "type": "boolean"
-                                }
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.RegleControle"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
+        "statut": {
+          "type": "string"
+        },
+        "transactionId": {
+          "type": "string"
+        },
+        "type": {
+          "description": "Type d'alerte (ex: \"Montant\", \"Pays à risque\", \"Surveillé\", etc.)",
+          "type": "string"
         }
+      },
+      "type": "object"
     },
-    "definitions": {
-        "models.Alerte": {
-            "description": "Alerte générée lors du déclenchement d'une règle",
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string"
-                },
-                "analysteAssigneID": {
-                    "type": "string"
-                },
-                "code": {
-                    "description": "Code d'alerte unique",
-                    "type": "string"
-                },
-                "dateGeneration": {
-                    "type": "string"
-                },
-                "dateTraitement": {
-                    "description": "Date de traitement/résolution",
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "message": {
-                    "type": "string"
-                },
-                "niveauCriticite": {
-                    "type": "string"
-                },
-                "numeroCompte": {
-                    "type": "string"
-                },
-                "paysRisque": {
-                    "type": "string"
-                },
-                "regleDeclencheeID": {
-                    "type": "string"
-                },
-                "scoreRisque": {
-                    "type": "number"
-                },
-                "statut": {
-                    "type": "string"
-                },
-                "transactionId": {
-                    "type": "string"
-                },
-                "type": {
-                    "description": "Type d'alerte (ex: \"Montant\", \"Pays à risque\", \"Surveillé\", etc.)",
-                    "type": "string"
-                }
-            }
+    "models.EntiteBlacklist": {
+      "description": "Entité sous surveillance (Blacklist, PEP, etc.)",
+      "properties": {
+        "dateAjout": {
+          "type": "string"
         },
-        "models.EntiteBlacklist": {
-            "description": "Entité sous surveillance (Blacklist, PEP, etc.)",
-            "type": "object",
-            "properties": {
-                "dateAjout": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "informationsSupplementaires": {
-                    "type": "string"
-                },
-                "nom": {
-                    "type": "string"
-                },
-                "numeroCompte": {
-                    "type": "string"
-                },
-                "typeEntite": {
-                    "type": "string"
-                }
-            }
+        "id": {
+          "type": "string"
         },
-        "models.RegleControle": {
-            "type": "object"
+        "informationsSupplementaires": {
+          "type": "string"
         },
-        "models.Transaction": {
-            "description": "Transaction financière entre deux entités",
-            "type": "object",
-            "properties": {
-                "adresse_paye": {
-                    "type": "string"
-                },
-                "adresse_payeur": {
-                    "type": "string"
-                },
-                "categorie_paye": {
-                    "type": "string"
-                },
-                "categorie_payeur": {
-                    "type": "string"
-                },
-                "date_operation": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "montant": {
-                    "type": "number"
-                },
-                "nom_paye": {
-                    "type": "string"
-                },
-                "nom_payeur": {
-                    "type": "string"
-                },
-                "numero_compte_paye": {
-                    "type": "string"
-                },
-                "numero_compte_payeur": {
-                    "type": "string"
-                },
-                "pays_paye": {
-                    "description": "Code pays ISO alpha-2 (ex: SN, ML, CI) - Compatible SPI",
-                    "type": "string"
-                },
-                "pays_payeur": {
-                    "description": "Code pays ISO alpha-2 (ex: SN, ML, CI) - Compatible SPI",
-                    "type": "string"
-                },
-                "portee": {
-                    "type": "string"
-                },
-                "raw_data": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "type_client_paye": {
-                    "type": "string"
-                },
-                "type_client_payeur": {
-                    "type": "string"
-                },
-                "type_compte_paye": {
-                    "type": "string"
-                },
-                "type_compte_payeur": {
-                    "type": "string"
-                },
-                "ville_paye": {
-                    "type": "string"
-                },
-                "ville_payeur": {
-                    "type": "string"
-                }
-            }
+        "nom": {
+          "type": "string"
+        },
+        "numeroCompte": {
+          "type": "string"
+        },
+        "typeEntite": {
+          "type": "string"
         }
+      },
+      "type": "object"
     },
-    "securityDefinitions": {
-        "BearerAuth": {
-            "description": "Type 'Bearer' suivi par un espace et un token JWT.",
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header",
-            "x-logo": "https://gsietechnology.com/logo.png"
+    "models.RegleControle": {
+      "type": "object"
+    },
+    "models.Transaction": {
+      "description": "Transaction financière entre deux entités",
+      "properties": {
+        "adresse_paye": {
+          "type": "string"
+        },
+        "adresse_payeur": {
+          "type": "string"
+        },
+        "categorie_paye": {
+          "type": "string"
+        },
+        "categorie_payeur": {
+          "type": "string"
+        },
+        "date_operation": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "montant": {
+          "type": "number"
+        },
+        "nom_paye": {
+          "type": "string"
+        },
+        "nom_payeur": {
+          "type": "string"
+        },
+        "numero_compte_paye": {
+          "type": "string"
+        },
+        "numero_compte_payeur": {
+          "type": "string"
+        },
+        "pays_paye": {
+          "description": "Code pays ISO alpha-2 (ex: SN, ML, CI) - Compatible SPI",
+          "type": "string"
+        },
+        "pays_payeur": {
+          "description": "Code pays ISO alpha-2 (ex: SN, ML, CI) - Compatible SPI",
+          "type": "string"
+        },
+        "portee": {
+          "type": "string"
+        },
+        "raw_data": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "type_client_paye": {
+          "type": "string"
+        },
+        "type_client_payeur": {
+          "type": "string"
+        },
+        "type_compte_paye": {
+          "type": "string"
+        },
+        "type_compte_payeur": {
+          "type": "string"
+        },
+        "ville_paye": {
+          "type": "string"
+        },
+        "ville_payeur": {
+          "type": "string"
         }
+      },
+      "type": "object"
     }
+  },
+  "host": "10.70.1.114:8080",
+  "info": {
+    "contact": {
+      "email": "modou.gueye@gsietechnology.com",
+      "name": "Modou GUEYE"
+    },
+    "description": "Backend pour le projet MDA de GSIE Technology, conçu pour la détection de fraudes LBC/FT.",
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    },
+    "termsOfService": "https://gsietechnology.com/terms",
+    "title": "API du Moteur de Détection d'Anomalies",
+    "version": "1.0"
+  },
+  "paths": {
+    "/accounts/{number}/rules": {
+      "get": {
+        "description": "Récupère toutes les règles actives associées au profil client d'un compte donné.",
+        "parameters": [
+          {
+            "description": "Numéro de compte",
+            "in": "path",
+            "name": "numeroCompte",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/models.RegleControle"
+              },
+              "type": "array"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Lister les règles actives d'un compte",
+        "tags": [
+          "Règles"
+        ]
+      }
+    },
+    "/anomalies": {
+      "get": {
+        "description": "Récupère la liste de toutes les alertes générées par le système.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/models.Alerte"
+              },
+              "type": "array"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Lister toutes les alertes",
+        "tags": [
+          "Anomalies"
+        ]
+      }
+    },
+    "/anomalies/{id}/status": {
+      "put": {
+        "consumes": [
+          "application/json"
+        ],
+        "description": "Permet à un analyste de changer le statut d'une alerte.",
+        "parameters": [
+          {
+            "description": "ID de l'alerte",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Nouveau statut de l'alerte",
+            "in": "body",
+            "name": "status",
+            "required": true,
+            "schema": {
+              "properties": {
+                "statut": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/models.Alerte"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Mettre à jour le statut d'une alerte",
+        "tags": [
+          "Anomalies"
+        ]
+      }
+    },
+    "/anomalies/analyze": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "description": "Soumet une transaction pour analyse par le MDA, en appliquant les règles à la fois pour le client source et le client destinataire.",
+        "parameters": [
+          {
+            "description": "Détails de la transaction à analyser",
+            "in": "body",
+            "name": "transaction",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/models.Transaction"
+            }
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Aucune anomalie détectée",
+            "schema": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            }
+          },
+          "201": {
+            "description": "Anomalie(s) détectée(s) et alerte(s) créée(s)",
+            "schema": {
+              "additionalProperties": true,
+              "type": "object"
+            }
+          },
+          "403": {
+            "description": "Transaction refusée (client interdit)",
+            "schema": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Analyser une transaction (bidirectionnel)",
+        "tags": [
+          "Moteur de Détection"
+        ]
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "description": "Authentifie un utilisateur avec email et mot de passe et renvoie un token JWT.",
+        "parameters": [
+          {
+            "description": "Identifiants de l'utilisateur",
+            "in": "body",
+            "name": "credentials",
+            "required": true,
+            "schema": {
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "password": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Renvoie un token JWT",
+            "schema": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            }
+          }
+        },
+        "summary": "Connecter un utilisateur",
+        "tags": [
+          "Authentification"
+        ]
+      }
+    },
+    "/entities": {
+      "get": {
+        "description": "Récupère toutes les entités de la liste de surveillance.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/models.EntiteBlacklist"
+              },
+              "type": "array"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Lister les entrées de la blacklist",
+        "tags": [
+          "Entités"
+        ]
+      },
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "description": "Ajoute une nouvelle entité à la liste de surveillance.",
+        "parameters": [
+          {
+            "description": "Détails de l'entité à ajouter",
+            "in": "body",
+            "name": "blacklistEntry",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/models.EntiteBlacklist"
+            }
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "schema": {
+              "$ref": "#/definitions/models.EntiteBlacklist"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Créer une entrée dans la blacklist",
+        "tags": [
+          "Entités"
+        ]
+      }
+    },
+    "/entities/{id}": {
+      "delete": {
+        "description": "Supprime une entité de la liste de surveillance par son ID.",
+        "parameters": [
+          {
+            "description": "ID de l'entité",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Supprimer une entrée de la blacklist",
+        "tags": [
+          "Entités"
+        ]
+      },
+      "put": {
+        "consumes": [
+          "application/json"
+        ],
+        "description": "Modifie une entité de la liste de surveillance.",
+        "parameters": [
+          {
+            "description": "ID de l'entité",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Nouvelles données de l'entité",
+            "in": "body",
+            "name": "blacklistEntry",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/models.EntiteBlacklist"
+            }
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/models.EntiteBlacklist"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Mettre à jour une entrée de la blacklist",
+        "tags": [
+          "Entités"
+        ]
+      }
+    },
+    "/rules": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "description": "Crée une nouvelle règle de contrôle.",
+        "parameters": [
+          {
+            "description": "Détails de la règle",
+            "in": "body",
+            "name": "regle",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/models.RegleControle"
+            }
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "schema": {
+              "$ref": "#/definitions/models.RegleControle"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Créer une règle de contrôle",
+        "tags": [
+          "Règles"
+        ]
+      }
+    },
+    "/rules/{id}": {
+      "delete": {
+        "description": "Supprime une règle de contrôle.",
+        "parameters": [
+          {
+            "description": "ID de la règle",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Supprimer une règle de contrôle",
+        "tags": [
+          "Règles"
+        ]
+      },
+      "put": {
+        "consumes": [
+          "application/json"
+        ],
+        "description": "Modifie une règle de contrôle.",
+        "parameters": [
+          {
+            "description": "ID de la règle",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Nouvelles données de la règle",
+            "in": "body",
+            "name": "regle",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/models.RegleControle"
+            }
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/models.RegleControle"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Mettre à jour une règle de contrôle",
+        "tags": [
+          "Règles"
+        ]
+      }
+    },
+    "/rules/{id}/profiles": {
+      "get": {
+        "description": "Récupère toutes les règles associées à un profil client.",
+        "parameters": [
+          {
+            "description": "ID du Profil Client",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/models.RegleControle"
+              },
+              "type": "array"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Lister les règles d'un profil",
+        "tags": [
+          "Règles"
+        ]
+      }
+    },
+    "/rules/{id}/status": {
+      "patch": {
+        "consumes": [
+          "application/json"
+        ],
+        "description": "Change le statut actif/inactif d'une règle de contrôle.",
+        "parameters": [
+          {
+            "description": "ID de la règle",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Nouveau statut",
+            "in": "body",
+            "name": "status",
+            "required": true,
+            "schema": {
+              "properties": {
+                "active": {
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            }
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/models.RegleControle"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Activer/Désactiver une règle de contrôle",
+        "tags": [
+          "Règles"
+        ]
+      }
+    }
+  },
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "securityDefinitions": {
+    "BearerAuth": {
+      "description": "Type 'Bearer' suivi par un espace et un token JWT.",
+      "in": "header",
+      "name": "Authorization",
+      "type": "apiKey",
+      "x-logo": "https://gsietechnology.com/logo.png"
+    }
+  },
+  "swagger": "2.0"
 }

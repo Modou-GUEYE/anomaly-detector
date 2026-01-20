@@ -1,0 +1,56 @@
+Bonjour Fatou,
+
+J'ai trouvé le problème! C'est une **erreur de migration GORM**.
+
+## 🔴 Le Problème
+
+Le code Go essaie de créer/modifier une contrainte UNIQUE `uni_profils_clients_nom_profil` qui n'existe pas correctement en base de données.
+
+## ✅ La Solution
+
+### Étape 1: Nettoyer la contrainte en base
+
+Exécute cette requête SQL:
+
+```sql
+-- Supprimer l'ancienne contrainte si elle existe (peut échouer, c'est ok)
+ALTER TABLE profils_clients DROP CONSTRAINT IF EXISTS uni_profils_clients_nom_profil;
+
+-- Vérifier les index existants
+SELECT indexname, indexdef 
+FROM pg_indexes 
+WHERE tablename = 'profils_clients';
+```
+
+### Étape 2: Ajouter l'index UNIQUE correctement
+
+```sql
+-- Ajouter ou récréer l'index UNIQUE avec le bon nom
+CREATE UNIQUE INDEX IF NOT EXISTS uni_profils_clients_nom_profil 
+ON profils_clients(LOWER(nom_profil));
+```
+
+### Étape 3: Vérifier
+
+```sql
+SELECT indexname, indexdef 
+FROM pg_indexes 
+WHERE tablename = 'profils_clients' 
+AND indexname LIKE '%nom_profil%';
+```
+
+### Étape 4: Redémarrer le backend
+
+Une fois l'index créé, redémarre le conteneur backend. AutoMigrate devrait maintenant s'exécuter sans erreur.
+
+## 📝 Résumé
+
+Avec ces changements:
+1. ✅ La contrainte UNIQUE sera correctement gérée
+2. ✅ AutoMigrate ne pleurera plus
+3. ✅ La connexion devrait fonctionner
+4. ✅ L'analyse d'anomalies continuera de marcher
+
+Partage-moi les résultats des SELECT pour confirmer.
+
+Merci!

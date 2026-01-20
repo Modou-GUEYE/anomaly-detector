@@ -136,7 +136,7 @@ func setupAuthRoutes(apiV1 *gin.RouterGroup, authHandler *handlers.AuthHandler, 
 				Email:          req.Email,
 				MotDePasseHash: string(hashedPassword),
 				Role:           req.Role,
-				Actif:          false, // created inactive; admin must activate
+				Actif:          false,
 				DateCreation:   time.Now(),
 			}
 
@@ -191,6 +191,9 @@ func setupEntitiesRoutes(apiV1 *gin.RouterGroup, entitiesHandler *handlers.Entit
 			if err != nil {
 				ctx.JSON(500, gin.H{"error": "Impossible de récupérer le statut"})
 				return
+			}
+			if typeEntite == "" {
+				typeEntite = "clean"
 			}
 			ctx.JSON(200, gin.H{"status": typeEntite})
 		})
@@ -679,6 +682,7 @@ func setupUserRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 				NomUtilisateur *string `json:"nomUtilisateur" binding:"omitempty"`
 				Email          *string `json:"email" binding:"omitempty,email"`
 				Password       *string `json:"password" binding:"omitempty,min=6"`
+				OldPassword    *string `json:"oldPassword" binding:"omitempty"`
 			}
 
 			if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -700,6 +704,26 @@ func setupUserRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 				updates["email"] = *req.Email
 			}
 			if req.Password != nil {
+				// Vérifier que l'ancien mot de passe est fourni
+				if req.OldPassword == nil || *req.OldPassword == "" {
+					ctx.JSON(400, gin.H{"error": "L'ancien mot de passe est requis pour changer le mot de passe"})
+					return
+				}
+
+				// Récupérer l'utilisateur actuel pour vérifier l'ancien mot de passe
+				user, err := store.GetUserByID(ctx, userID.(string))
+				if err != nil {
+					ctx.JSON(500, gin.H{"error": "Impossible de récupérer l'utilisateur"})
+					return
+				}
+
+				// Vérifier si l'ancien mot de passe est correct
+				err = bcrypt.CompareHashAndPassword([]byte(user.MotDePasseHash), []byte(*req.OldPassword))
+				if err != nil {
+					ctx.JSON(401, gin.H{"error": "L'ancien mot de passe est incorrect"})
+					return
+				}
+
 				hashed, err := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
 				if err != nil {
 					ctx.JSON(500, gin.H{"error": "Erreur lors du hachage du mot de passe"})
@@ -819,7 +843,23 @@ func setupUserRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 		// Supprimer un utilisateur
 		usersRoutes.DELETE("/:id", func(ctx *gin.Context) {
 			id := ctx.Param("id")
-			if err := store.DeleteUser(ctx, id); err != nil {
+			userID, exists := ctx.Get("userID")
+			if !exists {
+				ctx.JSON(500, gin.H{"error": "Utilisateur non identifié"})
+				return
+			}
+			if id == userID {
+				ctx.JSON(403, gin.H{"error": "Vous ne pouvez pas désactiver ou supprimer votre propre compte."})
+				return
+			}
+			// On modifie DeleteUser pour retourner une erreur spéciale si désactivation
+			err := store.DeleteUser(ctx, id)
+			if err != nil {
+				// Si l'erreur contient le mot clé "désactivé" on retourne 409
+				if err.Error() == "blocked:disabled" {
+					ctx.JSON(409, gin.H{"error": "Impossible de supprimer l'utilisateur : il est référencé par d'autres données (logs, audit, ...). Vous pouvez le désactiver à la place.", "blocked": true})
+					return
+				}
 				ctx.JSON(500, gin.H{"error": "Impossible de supprimer l'utilisateur", "details": err.Error()})
 				return
 			}

@@ -1,0 +1,46 @@
+Bonjour Fatou,
+
+Pour diagnostiquer le problème de connexion, peux-tu exécuter ces requêtes SQL:
+
+## 1. Vérifier si la recherche d'email est sensible à la casse
+
+```sql
+-- Test 1: Email exact (devrait retourner l'utilisateur)
+SELECT id, nom_utilisateur, email, role, actif 
+FROM utilisateurs 
+WHERE email = 'admin@gsie.sn';
+
+-- Test 2: Email en majuscules (devrait retourner RIEN si sensible à la casse)
+SELECT id, nom_utilisateur, email, role, actif 
+FROM utilisateurs 
+WHERE email = 'ADMIN@GSIE.SN';
+
+-- Test 3: Email avec LOWER (devrait retourner l'utilisateur)
+SELECT id, nom_utilisateur, email, role, actif 
+FROM utilisateurs 
+WHERE LOWER(email) = LOWER('ADMIN@GSIE.SN');
+```
+
+## 2. Vérifier le hash du mot de passe admin
+
+L'utilisateur admin a ce hash:
+```
+$2a$14$6z3mEMV3r8C1u1X8GTYwqet8GW5wMq7XL3fQu1yYinw8hd1.StBTO
+```
+
+Quel est le mot de passe utilisé pour se connecter?
+
+## 3. Vérifier les logs du backend
+
+Peux-tu récupérer les logs du conteneur backend au moment de la tentative de connexion:
+
+```bash
+docker logs <container_backend> --tail 50
+```
+
+Partage-moi:
+1. Les résultats des 3 requêtes SQL ci-dessus
+2. Le mot de passe exact utilisé pour se connecter
+3. Les logs du backend pendant la tentative de connexion
+
+Merci!

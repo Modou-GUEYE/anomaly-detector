@@ -52,7 +52,11 @@ func (h *AnomaliesHandler) HandleAnalyzeTransaction(ctx *gin.Context) {
 	if tx.NumeroComptePayeur != "" {
 		clientPayeur, err := h.store.GetCompteByCompte(ctx, tx.NumeroComptePayeur)
 		if err != nil || clientPayeur.ID == "" {
-			profilID, _ := h.store.GetProfilClientIDByCode(ctx, tx.TypeClientPayeur)
+			profilID, errProfil := h.store.GetProfilClientIDByCode(ctx, tx.TypeClientPayeur)
+			if errProfil != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Profil client introuvable pour le type: " + tx.TypeClientPayeur, "details": errProfil.Error()})
+				return
+			}
 			_, errCreate := h.store.CreateCompte(ctx, &models.Compte{
 				NomClient:      tx.NomPayeur,
 				NumeroCompte:   tx.NumeroComptePayeur,
@@ -76,7 +80,11 @@ func (h *AnomaliesHandler) HandleAnalyzeTransaction(ctx *gin.Context) {
 	if tx.NumeroComptePaye != "" {
 		clientPaye, err := h.store.GetCompteByCompte(ctx, tx.NumeroComptePaye)
 		if err != nil || clientPaye.ID == "" {
-			profilID, _ := h.store.GetProfilClientIDByCode(ctx, tx.TypeClientPaye)
+			profilID, errProfil := h.store.GetProfilClientIDByCode(ctx, tx.TypeClientPaye)
+			if errProfil != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Profil client introuvable pour le type: " + tx.TypeClientPaye, "details": errProfil.Error()})
+				return
+			}
 			_, errCreate := h.store.CreateCompte(ctx, &models.Compte{
 				NomClient:      tx.NomPaye,
 				NumeroCompte:   tx.NumeroComptePaye,
@@ -132,7 +140,7 @@ func (h *AnomaliesHandler) handleRefusedTransaction(ctx *gin.Context, tx *models
 		if strings.EqualFold(alerte.Action, "bloquer") {
 			alerte.Statut = "Traité"
 		}
-		alerte.TransactionID = createdTx.ID
+		alerte.TransactionID = &createdTx.ID
 		if alerte.DateGeneration.IsZero() {
 			alerte.DateGeneration = time.Now()
 		}
@@ -170,7 +178,7 @@ func (h *AnomaliesHandler) handleValidTransaction(ctx *gin.Context, tx *models.T
 
 	var savedAlertes []*models.Alerte
 	for _, alerte := range autresAlertes {
-		alerte.TransactionID = createdTx.ID
+		alerte.TransactionID = &createdTx.ID
 		if alerte.DateGeneration.IsZero() {
 			alerte.DateGeneration = time.Now()
 		}

@@ -106,7 +106,7 @@ definitions:
       ville_payeur:
         type: string
     type: object
-host: localhost:8080
+host: 10.70.1.114:8080
 info:
   contact:
     email: modou.gueye@gsietechnology.com
@@ -554,6 +554,7 @@ paths:
       - Règles
 schemes:
 - http
+- https
 securityDefinitions:
   BearerAuth:
     description: Type 'Bearer' suivi par un espace et un token JWT.
