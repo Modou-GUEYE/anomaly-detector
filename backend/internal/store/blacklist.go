@@ -51,6 +51,7 @@ func (s *Store) UpdateBlacklistEntry(ctx context.Context, id string, entry *mode
 	db := s.gormDB.WithContext(ctx)
 	if err := db.Model(&models.EntiteBlacklist{}).Where("id = ?", id).Updates(map[string]interface{}{
 		"nom":                          entry.Nom,
+		"numero_compte":                entry.NumeroCompte,
 		"type_entite":                  entry.TypeEntite,
 		"informations_supplementaires": entry.InformationsSupplementaires,
 	}).Error; err != nil {

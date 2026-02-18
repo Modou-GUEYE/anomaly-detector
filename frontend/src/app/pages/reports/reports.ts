@@ -5,6 +5,7 @@ import { Subject } from 'rxjs';
 import { takeUntil, finalize } from 'rxjs/operators';
 import { Chart, ChartConfiguration, ChartType, registerables } from 'chart.js';
 import { ReportsService, RuleViolationData, EfficiencyData } from '../../services/reports.service';
+import { MatIconModule } from '@angular/material/icon';
 
 
 @Component({
@@ -12,7 +13,7 @@ import { ReportsService, RuleViolationData, EfficiencyData } from '../../service
   standalone: true,
   templateUrl: './reports.html',
   styleUrls: ['./reports.scss'],
-  imports: [CommonModule, FormsModule]
+  imports: [CommonModule, FormsModule, MatIconModule]
 })
 export class ReportsComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('chartReglesViolees') chartReglesViolees!: ElementRef<HTMLCanvasElement>;

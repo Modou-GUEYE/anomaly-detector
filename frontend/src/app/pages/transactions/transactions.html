@@ -1,117 +1,156 @@
 <section class="transactions-page">
-  <h1>Transactions</h1>
-
-  <!-- Filtres -->
-  <div class="filters-section">
-    <div class="search-container">
-            <input type="search"
-              class="filter-search"
-              placeholder="Rechercher par numéro de compte ou nom..."
-              [(ngModel)]="filters.search"
-              (input)="onSearchChange()" />
-            <i class="material-icons search-icon">search</i>
+  <header class="page-header">
+    <div class="header-top">
+      <div class="title-section">
+        <h1>Transactions</h1>
+      </div>
+      <button class="btn-reset" (click)="resetFilters()" *ngIf="isFilterActive()">
+        <mat-icon>refresh</mat-icon>
+        Réinitialiser
+      </button>
     </div>
-    <div class="filters-row">
-      <select [(ngModel)]="filters.pays" (change)="onFilterChange()" class="filter-select">
-        <option value="">Par Pays</option>
-        <option *ngFor="let pays of getUniqueCountries()" [value]="pays">{{ pays }}</option>
-      </select>
-      <select [(ngModel)]="filters.portee" (change)="onFilterChange()" class="filter-select">
-        <option value="">Par Portée</option>
-        <option value="national">National</option>
-        <option value="international">International</option>
-      </select>
-      <select [(ngModel)]="filters.periode" (change)="onFilterChange()" class="filter-select">
-        <option value="">Par Période</option>
-        <option value="Aujourd'hui">Aujourd'hui</option>
-        <option value="7 derniers jours">7 derniers jours</option>
-        <option value="30 derniers jours">30 derniers jours</option>
-      </select>
-      <select [(ngModel)]="filters.typeClient" (change)="onFilterChange()" class="filter-select">
-        <option value="">Par Type</option>
-        <option *ngFor="let opt of typeClientOptions" [value]="opt.label">{{ opt.label }}</option>
-      </select>
-    </div>
-  </div>
 
-  <!-- Loading -->
-  <div *ngIf="loading" class="loading">Chargement des transactions...</div>
+    <div class="header-toolbar">
+      <div class="search-container">
+        <mat-icon>search</mat-icon>
+        <input type="text" placeholder="Compte, nom..." [(ngModel)]="filters.search" (input)="onSearchChange()">
+      </div>
 
-  <!-- Error -->
-  <div *ngIf="error && !loading" class="error">
-    {{ error }}
-    <button (click)="loadTransactions()" class="retry-btn">Réessayer</button>
-  </div>
-
-  <!-- Content -->
-  <div *ngIf="!loading && !error" class="transactions-content">
-    <div class="transactions-list">
-      <div *ngFor="let t of paginatedTransactions" class="transaction-card" (click)="toggleDetails(t)">
-        <div class="transaction-row">
-          <div class="transaction-icon">
-            <span class="material-icons">swap_horiz</span>
-          </div>
-          <div class="transaction-info">
-            <div class="transaction-sens">
-              <span class="payeur">{{ t.nom_payeur }}</span>
-              <span class="arrow-sens">
-                →
-              </span>
-              <span class="paye">{{ t.nom_paye }}</span>
-            </div>
-            <div class="transaction-date">
-              {{ t.date_operation | date:'dd/MM/yyyy' }}
-              <span class="transaction-time">{{ t.date_operation | date:'HH:mm' }}</span>
-            </div>
-          </div>
-          <div class="transaction-amount" [ngClass]="'amount-debit'">
-            {{ t.montant | number:'1.0-0' }} FCFA
-          </div>
-          <div class="transaction-status">
-            <span class="status-badge" [ngClass]="getTransactionStatusClass(t)">
-              {{ getTransactionStatus(t) === 'Succès' ? 'Succès' : 'Échec' }}
-            </span>
-          </div>
-          <div class="transaction-expand">
-            <button class="btn-expand">{{ isExpanded(t) ? '▼' : '▶' }}</button>
-          </div>
+      <div class="filter-group">
+        <div class="filter-select">
+          <mat-icon>calendar_today</mat-icon>
+          <select [(ngModel)]="filters.periode" (change)="onFilterChange()">
+            <option value="">Tous les périodes</option>
+            <option value="Aujourd'hui">Aujourd'hui</option>
+            <option value="7 derniers jours">7 derniers jours</option>
+            <option value="30 derniers jours">30 derniers jours</option>
+          </select>
         </div>
-        <div *ngIf="isExpanded(t)" class="transaction-details-modal">
-          <div class="detail-section">
-            <h4><span class="material-icons icon-title">info</span> Infos générales</h4>
-            <p><strong>ID:</strong> {{ t.id }}</p>
-            <p><strong>Date:</strong> {{ formatDate(t.date_operation) }}</p>
-            <p><strong>Montant:</strong> {{ formatMontant(t.montant) }} FCFA</p>
-            <p><strong>Portée:</strong> {{ t.portee }}</p>
-            <p><strong>Statut:</strong> {{ getTransactionStatus(t) }}</p>
-          </div>
-          <div class="detail-section">
-            <h4><span class="material-icons icon-title">account_circle</span> Émetteur</h4>
-            <p><strong>Nom:</strong> {{ t.nom_payeur }}</p>
-            <p><strong>Compte:</strong> {{ t.numero_compte_payeur }}</p>
-            <p><strong>Type client:</strong> {{ t.type_client_payeur }}</p>
-            <p><strong>Pays:</strong> {{ getCountryNameFromCode(t.pays_payeur) }}</p>
-            <p><strong>Ville:</strong> {{ t.ville_payeur }}</p>
-            <p><strong>Adresse:</strong> {{ t.adresse_payeur }}</p>
-          </div>
-          <div class="detail-section">
-            <h4><span class="material-icons icon-title">account_circle</span> Bénéficiaire</h4>
-            <p><strong>Nom:</strong> {{ t.nom_paye }}</p>
-            <p><strong>Compte:</strong> {{ t.numero_compte_paye }}</p>
-            <p><strong>Type client:</strong> {{ t.type_client_paye }}</p>
-            <p><strong>Pays:</strong> {{ getCountryNameFromCode(t.pays_paye) }}</p>
-            <p><strong>Ville:</strong> {{ t.ville_paye }}</p>
-            <p><strong>Adresse:</strong> {{ t.adresse_paye }}</p>
-          </div>
+
+        <div class="filter-select">
+          <mat-icon>public</mat-icon>
+          <select [(ngModel)]="filters.pays" (change)="onFilterChange()">
+            <option value="">Tous les pays</option>
+            <option *ngFor="let p of getUniqueCountries()" [value]="p">{{p}}</option>
+          </select>
+        </div>
+
+        <div class="filter-select">
+          <mat-icon>compare_arrows</mat-icon>
+          <select [(ngModel)]="filters.portee" (change)="onFilterChange()">
+            <option value="">Tous les portées</option>
+            <option value="national">National</option>
+            <option value="international">International</option>
+          </select>
+        </div>
+
+        <div class="filter-select">
+          <mat-icon>person</mat-icon>
+          <select [(ngModel)]="filters.typeClient" (change)="onFilterChange()">
+            <option value="">Tous les types</option>
+            <option *ngFor="let opt of typeClientOptions" [value]="opt.label">{{ opt.label }}</option>
+          </select>
         </div>
       </div>
-      <div *ngIf="paginatedTransactions.length === 0" class="empty">Aucune transaction trouvée</div>
     </div>
-    <!-- Pagination -->
-    <div class="pagination" *ngIf="totalPages > 1">
-      <button class="pagination-btn" (click)="previousPage()" [disabled]="currentPage === 1">← Précédent</button>
-      <span class="pagination-info">Page {{ currentPage }} / {{ totalPages }}</span>
-      <button class="pagination-btn" (click)="nextPage()" [disabled]="currentPage === totalPages">Suivant →</button>
-    </div>
+  </header>
+
+  <div class="transactions-list">
+    @for (t of paginatedTransactions; track t.id) {
+      <div class="t-card-compact" [class.expanded]="isExpanded(t)" (click)="toggleDetails(t)">
+        <div class="card-main">
+          <div class="status-indicator" [ngClass]="getTransactionStatusClass(t)"></div>
+          
+          <div class="time-block">
+            <span class="time">{{ t.date_operation | date:'HH:mm' }}</span>
+            <span class="date">{{ formatDateFRShort(t.date_operation) }}</span>
+          </div>
+
+          <div class="transfer-block">
+            <div class="entity">
+              <span class="name">{{ t.nom_payeur }}</span>
+              <span class="account">{{ t.numero_compte_payeur }}</span>
+            </div>
+            <mat-icon class="arrow">east</mat-icon>
+            <div class="entity">
+              <span class="name">{{ t.nom_paye }}</span>
+              <span class="account">{{ t.numero_compte_paye }}</span>
+            </div>
+          </div>
+
+          <div class="amount-block">
+            <span class="amount">{{ t.montant | number:'1.0-0' }}</span>
+            <span class="currency">FCFA</span>
+          </div>
+
+          <div class="badge-block">
+            <span class="status-pill" [ngClass]="getTransactionStatusClass(t)">
+              {{ getTransactionStatus(t) }}
+            </span>
+            <mat-icon class="chevron">{{ isExpanded(t) ? 'expand_less' : 'expand_more' }}</mat-icon>
+          </div>
+        </div>
+
+        <div class="card-details" *ngIf="isExpanded(t)" (click)="$event.stopPropagation()">
+           <div class="details-grid">
+              <div class="detail-col">
+                <h5><mat-icon>person_outline</mat-icon> Émetteur</h5>
+                <div class="det-item"><span>Nom complet</span><strong>{{t.nom_payeur}}</strong></div>
+                <div class="det-item"><span>N° Compte</span><strong class="mono">{{t.numero_compte_payeur}}</strong></div>
+                <div class="det-item"><span>Type Client</span><strong>{{getTypeClientLabel(t.type_client_payeur)}}</strong></div>
+                <div class="det-item"><span>Localisation</span><strong>{{t.ville_payeur}}, {{getCountryNameFromCode(t.pays_payeur)}}</strong></div>
+              </div>
+
+              <div class="detail-col">
+                <h5><mat-icon>account_balance_wallet</mat-icon> Bénéficiaire</h5>
+                <div class="det-item"><span>Nom complet</span><strong>{{t.nom_paye}}</strong></div>
+                <div class="det-item"><span>N° Compte</span><strong class="mono">{{t.numero_compte_paye}}</strong></div>
+                <div class="det-item"><span>Type Client</span><strong>{{getTypeClientLabel(t.type_client_paye)}}</strong></div>
+                <div class="det-item"><span>Localisation</span><strong>{{t.ville_paye || 'N/A'}}, {{getCountryNameFromCode(t.pays_paye)}}</strong></div>
+              </div>
+
+              <div class="detail-col">
+                <h5><mat-icon>receipt_long</mat-icon> Infos Système</h5>
+                <div class="det-item"><span>ID Unique</span><strong>#{{t.id}}</strong></div>
+                <div class="det-item"><span>Date précise</span><strong>{{ formatDateFR(t.date_operation) }}</strong></div>
+                <div class="det-item"><span>Portée flux</span><strong class="portee-label">{{t.portee}}</strong></div>
+                <div class="det-item"><span>Statut final</span><strong [ngClass]="getTransactionStatusClass(t)">{{getTransactionStatus(t)}}</strong></div>
+              </div>
+           </div>
+
+           <div class="detail-section" *ngIf="selectedAlertes.length">
+             <h5 class="alertes-title"><mat-icon>warning</mat-icon> Alertes associées ({{ selectedAlertes.length }})</h5>
+             <ul class="alertes-list">
+               <li *ngFor="let item of getGroupedAlertes()" [ngClass]="'level-' + item[1].niveauCriticite">
+                 <div class="alerte-header">
+                   <span class="alerte-code">{{ item[1].code }}</span>
+                   <span class="alerte-level">{{ item[1].niveauCriticite }}</span>
+                 </div>
+                 <div class="alerte-account">
+                   <mat-icon>account_balance</mat-icon>
+                   <span class="account-number">{{ item[1].numeroCompte }}</span>
+                 </div>
+                 <span class="alerte-message">{{ item[1].message }}</span>
+                 <div class="alerte-dates" *ngIf="item[1].dates.length">
+                   <span class="dates-label">Date{{ item[1].dates.length > 1 ? 's' : '' }} de génération:</span>
+                   <div class="dates-list">
+                     <span *ngFor="let date of item[1].dates; let i = index" class="date-item">
+                       <span class="occurrence-badge">{{ i + 1 }}</span>
+                       {{ formatDateFR(date) }}
+                     </span>
+                   </div>
+                 </div>
+               </li>
+             </ul>
+           </div>
+        </div>
+      </div>
+    }
   </div>
+
+  <footer class="pagination-footer">
+    <button (click)="previousPage()" [disabled]="currentPage === 1"><mat-icon>navigate_before</mat-icon></button>
+    <span class="page-info">{{ currentPage }} / {{ totalPages }}</span>
+    <button (click)="nextPage()" [disabled]="currentPage === totalPages"><mat-icon>navigate_next</mat-icon></button>
+  </footer>
 </section>

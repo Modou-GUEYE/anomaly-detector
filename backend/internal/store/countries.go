@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"gorm.io/gorm"
 
@@ -27,7 +26,7 @@ func (s *Store) GetAllPaysARisque(ctx context.Context) ([]models.PaysRisque, err
 func (s *Store) IsPaysARisque(ctx context.Context, nomPays string) (bool, error) {
 	var count int64
 	result := s.gormDB.WithContext(ctx).Model(&models.PaysRisque{}).
-		Where("UPPER(nom_pays) = ? AND active = ?", strings.ToUpper(nomPays), true).
+		Where("nom_pays ILIKE ? AND active = ?", nomPays, true).
 		Count(&count)
 
 	if result.Error != nil {
@@ -41,7 +40,7 @@ func (s *Store) IsPaysARisque(ctx context.Context, nomPays string) (bool, error)
 func (s *Store) IsPaysARisqueByCode(ctx context.Context, codePays string) (bool, error) {
 	var count int64
 	result := s.gormDB.WithContext(ctx).Model(&models.PaysRisque{}).
-		Where("UPPER(code) = ? AND active = ?", strings.ToUpper(codePays), true).
+		Where("code ILIKE ? AND active = ?", codePays, true).
 		Count(&count)
 
 	if result.Error != nil {
@@ -69,7 +68,7 @@ func (s *Store) AddPaysARisqueWithCode(ctx context.Context, pays *models.PaysRis
 
 	// Vérifier si le pays existe déjà
 	var existing models.PaysRisque
-	result := s.gormDB.WithContext(ctx).Where("UPPER(nom_pays) = ?", strings.ToUpper(pays.NomPays)).First(&existing)
+	result := s.gormDB.WithContext(ctx).Where("nom_pays ILIKE ?", pays.NomPays).First(&existing)
 
 	if result.Error == nil {
 		// Le pays existe déjà, on le réactive et met à jour le code
@@ -138,9 +137,9 @@ func (s *Store) LinkPaysRisqueToRegle(ctx context.Context) error {
 
 // DeletePaysARisque supprime (désactive) un pays de la liste des pays à risque
 func (s *Store) DeletePaysARisque(ctx context.Context, nomPays string, userID string) error {
-	// Trouver le pays
+	// Trouver le pays avec une comparaison insensible à la casse compatible avec les accents
 	var pays models.PaysRisque
-	result := s.gormDB.WithContext(ctx).Where("UPPER(nom_pays) = ?", strings.ToUpper(nomPays)).First(&pays)
+	result := s.gormDB.WithContext(ctx).Where("nom_pays ILIKE ?", nomPays).First(&pays)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -175,7 +174,7 @@ func (s *Store) UpdatePaysARisqueWithCode(ctx context.Context, ancienNom, nouvea
 
 	// Trouver le pays
 	var pays models.PaysRisque
-	result := s.gormDB.WithContext(ctx).Where("UPPER(nom_pays) = ?", strings.ToUpper(ancienNom)).First(&pays)
+	result := s.gormDB.WithContext(ctx).Where("nom_pays ILIKE ?", ancienNom).First(&pays)
 	if result.Error != nil {
 		return result.Error
 	}

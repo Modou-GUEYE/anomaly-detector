@@ -77,14 +77,14 @@ export class SigninComponent {
       email: this.email,
       password: this.password,
       role: this.role,
-      actif: false // comptes créés via l'inscription sont inactifs par défaut
+      actif: false 
     };
 
   this.usersService.signup(payload).subscribe({
       next: (res) => {
         this.loading = false;
         this.success = true;
-        this.message = "Compte créé avec succès. Un administrateur doit l'activer avant la première connexion.";
+        this.message = "Inscription réussie ! Consultez votre email pour vos identifiants. En attente d'activation administrative.";
         // clear form
         this.prenom = '';
         this.nom = '';

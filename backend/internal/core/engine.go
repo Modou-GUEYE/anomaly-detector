@@ -187,6 +187,59 @@ func makeAlerte(meta *models.AlertMeta, regleID string, tx *models.Transaction, 
 	}
 }
 
+// makeAlerteWithPeriode crée une alerte en adaptant le message selon la période
+func makeAlerteWithPeriode(meta *models.AlertMeta, regleID string, tx *models.Transaction, numeroCompte string, action string, score float64, paysRisque *string, periode string) *models.Alerte {
+	var reglePtr *string
+	if regleID != "" {
+		reglePtr = &regleID
+	}
+
+	// Adapter le message selon la période pour les règles de montant et fréquence
+	message := meta.Message
+	if (meta.Type == "Montant" || meta.Type == "montant" || meta.Type == "frequence" || meta.Type == "Frequence") && periode != "" {
+		// Remplacer la période dans le message existant
+		if meta.Type == "Montant" || meta.Type == "montant" {
+			switch periode {
+			case "24h":
+				message = "Cumul sur 24h dépassant le seuil autorisé."
+			case "7d":
+				message = "Cumul sur 7 jours dépassant le seuil autorisé."
+			case "30d":
+				message = "Cumul sur 30 jours dépassant le seuil autorisé."
+			}
+		} else if meta.Type == "frequence" || meta.Type == "Frequence" {
+			switch periode {
+			case "24h":
+				message = "Nombre de transactions sur 24h dépassant le seuil autorisé."
+			case "7d":
+				message = "Nombre de transactions sur 7 jours dépassant le seuil autorisé."
+			case "30d":
+				message = "Nombre de transactions sur 30 jours dépassant le seuil autorisé."
+			}
+		}
+	}
+
+	return &models.Alerte{
+		TransactionID:   nil,
+		Code:            meta.Code,
+		Type:            meta.Type,
+		Statut:          meta.Statut,
+		Message:         message,
+		NiveauCriticite: meta.NiveauCriticite,
+		ScoreRisque:     score,
+		DateGeneration:  tx.DateOperation,
+		Action:          action,
+		RegleDeclencheeID: func() *string {
+			if reglePtr != nil && *reglePtr != "" {
+				return reglePtr
+			}
+			return nil
+		}(),
+		NumeroCompte: numeroCompte,
+		PaysRisque:   paysRisque,
+	}
+}
+
 // applyRulesForAccount applique les règles métier pour un compte spécifique.
 func (re *RulesEngine) applyRulesForAccount(ctx context.Context, tx *models.Transaction, numeroCompte string) ([]*models.Alerte, error) {
 	var alertes []*models.Alerte
@@ -227,7 +280,7 @@ func (re *RulesEngine) applyRulesForAccount(ctx context.Context, tx *models.Tran
 				if action == "" {
 					action = actionFromCriticite(meta.NiveauCriticite)
 				}
-				alerte := makeAlerte(meta, regleID, tx, numeroCompte, action, calculerScoreRisque(&regle, tx), nil)
+				alerte := makeAlerteWithPeriode(meta, regleID, tx, numeroCompte, action, calculerScoreRisque(&regle, tx), nil, regle.PeriodeReference)
 				alertes = append(alertes, alerte)
 				// Si l'action est "bloquer", refuser la transaction
 				if action == "bloquer" {
@@ -265,7 +318,13 @@ func (re *RulesEngine) applyRulesForAccount(ctx context.Context, tx *models.Tran
 			if action == "" {
 				action = actionFromCriticite(meta.NiveauCriticite)
 			}
-			alerte := makeAlerte(meta, regleID, tx, numeroCompte, action, calculerScoreRisque(&regle, tx), nil)
+			var alerte *models.Alerte
+			// Pour les types "frequence", adapter le message selon la période
+			if regle.TypeRegle == "frequence" {
+				alerte = makeAlerteWithPeriode(meta, regleID, tx, numeroCompte, action, calculerScoreRisque(&regle, tx), nil, regle.PeriodeReference)
+			} else {
+				alerte = makeAlerte(meta, regleID, tx, numeroCompte, action, calculerScoreRisque(&regle, tx), nil)
+			}
 			alertes = append(alertes, alerte)
 			// Si l'action est "bloquer", refuser la transaction
 			if action == "bloquer" {

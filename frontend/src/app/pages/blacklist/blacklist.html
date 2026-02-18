@@ -1,175 +1,187 @@
-<section class="blacklist-page">
-  <h1>Blacklist - Entités sous Surveillance</h1>
-
-  <!-- Filtres -->
-  <div class="filters-section">
-    <div class="search-container">
-      <input type="search" 
-             class="filter-search"
-             placeholder="Rechercher par Nom ou Numéro de Compte..."
-             [(ngModel)]="filters.search" 
-             (ngModelChange)="applyFilters()" />
-      <i class="material-icons search-icon">search</i>
+<section class="blacklist-compact-view">
+  <header class="view-header">
+    <div class="header-main">
+      <h1>Blacklist</h1>
+      <span class="count-tag">{{ filteredEntities.length }} entités</span>
     </div>
-
-    <div class="filters-grid">
-      <select [(ngModel)]="filters.typeEntite" (change)="applyFilters()" class="filter-select">
-        <option value="">Types</option>
-        <option *ngFor="let type of typeOptions" [value]="type">{{ type }}</option>
-      </select>
-    </div>
-  </div>
-
-  <!-- Loading -->
-  <div *ngIf="loading" class="loading">Chargement des entités...</div>
-
-  <!-- Error -->
-  <div *ngIf="error && !loading" class="error">{{ error }}</div>
-
-  <!-- Content -->
-  <div *ngIf="!loading" class="blacklist-content">
-    <!-- Header -->
-    <div class="blacklist-header">
-      <div class="entities-count">
-        <span class="count-number">{{ padNumber(filteredEntities.length) }} Entités</span>
+    
+    <div class="header-actions">
+      <div class="filter-group">
+        <div class="search-box">
+          <mat-icon>search</mat-icon>
+          <input type="text" placeholder="Nom ou compte..." [(ngModel)]="filters.search" (ngModelChange)="applyFilters()">
+        </div>
+        
+        <div class="select-wrapper">
+          <select class="type-dropdown" [(ngModel)]="filters.typeEntite" (change)="applyFilters()">
+            <option value="">Tous les types</option>
+            <option *ngFor="let type of typeOptions" [value]="type">{{ type }}</option>
+          </select>
+          <mat-icon>expand_more</mat-icon>
+        </div>
       </div>
-      <button class="btn-add-entity" (click)="openAddModal()">
-        <i class="material-icons">add</i> Ajouter une entité
+
+      <button class="btn-add" (click)="openAddModal()">
+        <mat-icon>add</mat-icon>
+        <span class="lbl">Nouveau</span>
       </button>
     </div>
+  </header>
 
-    <!-- Table -->
-    <div class="blacklist-table-wrapper">
-      <table class="blacklist-table">
-        <thead>
+  <div class="data-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th class="col-indicator"></th>
+          <th class="col-name">ENTITÉ</th>
+          <th class="col-acc">COMPTE</th>
+          <th class="col-type hide-mobile">TYPE</th>
+          <th class="col-date hide-tablet">DATE D'AJOUT</th>
+          <th class="col-actions">ACTIONS</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngFor="let entity of paginatedEntities">
           <tr>
-            <th class="col-nom">Nom</th>
-            <th class="col-type">Type</th>
-            <th class="col-compte">Numéro de Compte</th>
-            <th class="col-date">Date d'Ajout</th>
-            <th class="col-actions">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <ng-container *ngFor="let entity of paginatedEntities; let i = index">
-            <!-- Main Row -->
-            <tr class="entity-row" [class.expanded]="entity.expanded">
-              <td class="col-nom">{{ entity.nom }}</td>
-              <td class="col-type">
-                <span class="type-badge" [class]="'type-' + entity.typeEntite.toLowerCase()">
-                  {{ entity.typeEntite }}
-                </span>
-              </td>
-              <td class="col-compte">{{ entity.numeroCompte }}</td>
-              <td class="col-date">{{ entity.dateAjout | date:'dd/MM/yyyy' }}</td>
-              <td class="col-actions">
-                <button class="btn-expand" (click)="toggleExpand(entity)">
-                  {{ entity.expanded ? '▼' : '▶' }}
+            <td class="col-indicator">
+              <span class="risk-indicator" [ngClass]="entity.typeEntite.toLowerCase()"></span>
+            </td>
+            <td class="col-name">
+              <div class="name-cell">
+                <span class="main-name">{{ entity.nom }}</span>
+              </div>
+            </td>
+            <td class="col-acc"><code>{{ entity.numeroCompte }}</code></td>
+            <td class="col-type hide-mobile">
+               <span class="type-pill">{{ entity.typeEntite }}</span>
+            </td>
+            <td class="col-date hide-tablet">{{ entity.dateAjout | date:'dd/MM/yy' }}</td>
+            <td class="col-actions">
+              <div class="action-group">
+                <button class="icon-btn details-btn" (click)="openDetailsModal(entity)" title="Details">
+                  <mat-icon>visibility</mat-icon>
                 </button>
-              </td>
-            </tr>
-
-            <!-- Expanded Row -->
-            <tr class="expanded-row" *ngIf="entity.expanded">
-              <td colspan="5">
-                <div class="expanded-content">
-                  <div class="expanded-header">
-                    <h4>Détails de l'entité</h4>
-                  </div>
-                  <div class="expanded-body">
-                    <div class="detail-column">
-                      <div class="detail-item">
-                        <span class="label">Nom:</span>
-                        <span class="value">{{ entity.nom }}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="label">Numéro de Compte:</span>
-                        <span class="value">{{ entity.numeroCompte }}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="label">Type:</span>
-                        <span class="value">{{ entity.typeEntite }}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="label">Date d'Ajout:</span>
-                        <span class="value">{{ entity.dateAjout | date:'dd/MM/yyyy HH:mm' }}</span>
-                      </div>
-                    </div>
-                    <div class="detail-column">
-                      <div class="detail-item" *ngIf="entity.informationsSupplementaires">
-                        <span class="label">Informations Supplémentaires:</span>
-                        <span class="value">{{ entity.informationsSupplementaires }}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="expanded-actions">
-                    <button class="btn-action edit" (click)="openEditModal(entity)">
-                      ✎ Modifier
-                    </button>
-                    <button class="btn-action delete" (click)="deleteEntity(entity.id)">
-                      🗑 Supprimer
-                    </button>
-                  </div>
-                </div>
-              </td>
-            </tr>
-          </ng-container>
-        </tbody>
-      </table>
-
-      <div *ngIf="paginatedEntities.length === 0" class="empty-state">
-        <p>Aucune entité trouvée avec ces critères.</p>
-      </div>
-    </div>
-
-    <!-- Pagination -->
-    <div *ngIf="totalPages > 1" class="pagination">
-      <button class="pagination-btn" (click)="prevPage()" [disabled]="currentPage === 1">← Précédent</button>
-      <span class="pagination-info">Page {{ currentPage }} / {{ totalPages }}</span>
-      <button class="pagination-btn" (click)="nextPage()" [disabled]="currentPage === totalPages">Suivant →</button>
-    </div>
+                <button class="icon-btn edit-btn" (click)="openEditModal(entity)" title="Modifier">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button class="icon-btn delete-btn" (click)="openDeleteModal(entity)" title="Supprimer">
+                  <mat-icon>delete_outline</mat-icon>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
   </div>
 
-  <!-- Modal -->
-  <div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
-    <div class="modal-content" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h3>{{ isEditMode ? 'Modifier l\'entité' : 'Ajouter une nouvelle entité' }}</h3>
-        <button class="btn-close" (click)="closeModal()">✕</button>
+  <footer class="view-footer">
+    <div class="pagination">
+      <button class="nav-btn" [disabled]="currentPage === 1" (click)="prevPage()">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <span class="page-info">Page <strong>{{ currentPage }}</strong> sur {{ totalPages }}</span>
+      <button class="nav-btn" [disabled]="currentPage === totalPages" (click)="nextPage()">
+        <mat-icon>chevron_right</mat-icon>
+      </button>
+    </div>
+  </footer>
+</section>
+
+<div *ngIf="showModal" class="modal-overlay" (click)="closeModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="title-with-icon">
+        <mat-icon class="header-icon">{{ isEditMode ? 'edit_note' : 'person_add' }}</mat-icon>
+        <h2>{{ isEditMode ? 'Modifier l\'entité' : 'Nouvelle entité' }}</h2>
       </div>
-
-      <form class="modal-form" (ngSubmit)="saveEntity()">
-        <div class="form-group">
-          <label>Nom *</label>
-          <input type="text" [(ngModel)]="formData.nom" name="nom" class="form-input" required>
+      <button class="close-x" (click)="closeModal()">&times;</button>
+    </div>
+    
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full-width">
+          <label>Nom complet <span class="required">*</span></label>
+          <input type="text" [(ngModel)]="formData.nom" placeholder="Ex: John Doe">
         </div>
-
         <div class="form-group">
-          <label>Numéro de Compte *</label>
-          <input type="text" [(ngModel)]="formData.numeroCompte" name="numeroCompte" class="form-input" required>
+          <label>Numéro de compte <span class="required">*</span></label>
+          <input type="text" [(ngModel)]="formData.numeroCompte" placeholder="Ex: 123456789">
         </div>
-
         <div class="form-group">
-          <label>Type d'Entité *</label>
-          <select [(ngModel)]="formData.typeEntite" name="typeEntite" class="form-input" required>
-            <option value="">-- Sélectionner un type --</option>
+          <label>Type d'entité <span class="required">*</span></label>
+          <select [(ngModel)]="formData.typeEntite">
+            <option value="">Sélectionner...</option>
             <option *ngFor="let type of typeOptions" [value]="type">{{ type }}</option>
           </select>
         </div>
-
-        <div class="form-group">
-          <label>Informations Supplémentaires</label>
-          <textarea [(ngModel)]="formData.informationsSupplementaires" 
-                    name="informationsSupplementaires" 
-                    class="form-textarea"
-                    placeholder="Ajouter des commentaires..."></textarea>
+        <div class="form-group full-width">
+          <label>Informations supplémentaires</label>
+          <textarea rows="3" [(ngModel)]="formData.informationsSupplementaires" placeholder="Notes ou détails importants..."></textarea>
         </div>
-
-        <div class="modal-footer">
-          <button type="button" class="btn-cancel" (click)="closeModal()">Annuler</button>
-          <button type="submit" class="btn-save">{{ isEditMode ? 'Mettre à jour' : 'Ajouter' }}</button>
-        </div>
-      </form>
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button class="btn-secondary" (click)="closeModal()">Annuler</button>
+      <button class="btn-save" (click)="saveEntity()">
+        <mat-icon>check</mat-icon> {{ isEditMode ? 'Mettre à jour' : 'Enregistrer' }}
+      </button>
     </div>
   </div>
-</section>
+</div>
+
+<div *ngIf="showDeleteModal" class="modal-overlay" (click)="closeDeleteModal()">
+  <div class="modal-content danger-modal" (click)="$event.stopPropagation()">
+    <div class="modal-body central">
+      <div class="danger-icon-box">
+        <mat-icon>delete_forever</mat-icon>
+      </div>
+      <h3>Confirmer la suppression</h3>
+      <p>Êtes-vous sûr de vouloir retirer <strong>{{ deletingEntity?.nom }}</strong> de la liste ? Cette action est irréversible.</p>
+    </div>
+    <div class="modal-footer central">
+      <button class="btn-secondary" (click)="closeDeleteModal()">Conserver</button>
+      <button class="btn-confirm-delete" (click)="confirmDelete()">Supprimer définitivement</button>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="showDetailsModal" class="modal-overlay" (click)="closeDetailsModal()">
+  <div class="modal-content details-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="title-with-icon">
+        <mat-icon class="header-icon">visibility</mat-icon>
+        <h2>Details de l'entite</h2>
+      </div>
+      <button class="close-x" (click)="closeDetailsModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="details-grid">
+        <div class="detail-item">
+          <span class="label">Nom</span>
+          <span class="value">{{ detailsEntity?.nom }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Type</span>
+          <span class="value">{{ detailsEntity?.typeEntite }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Compte</span>
+          <span class="value">{{ detailsEntity?.numeroCompte }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Date d'ajout</span>
+          <span class="value">{{ detailsEntity?.dateAjout | date:'dd/MM/yyyy' }}</span>
+        </div>
+        <div class="detail-item full">
+          <span class="label">Informations</span>
+          <span class="value">{{ detailsEntity?.informationsSupplementaires || 'Aucune' }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" (click)="closeDetailsModal()">Fermer</button>
+    </div>
+  </div>
+</div>

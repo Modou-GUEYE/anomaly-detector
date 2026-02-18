@@ -19,37 +19,20 @@ export class LoginComponent {
   password: string = '';
   message: string = '';
   success: boolean = false;
-  
-  // role defaults to 'admin' for easier first login
-  role: string = '';
-  roleOptions: Array<{ value: string; label: string }> = [];
   showPassword: boolean = false;
 
-  constructor(private authService: AuthService, private authState: AuthStateService, private router: Router, private config: ConfigService) {
-    // Construire les options de rôle à partir du ConfigService avec des fallback simples
-    let adminRole = 'admin';
-    let analystRole = 'analyst';
-    try { const r = this.config.getRoleName('admin'); if (r) adminRole = r; } catch (e) {}
-    try { const r = this.config.getRoleName('analyst'); if (r) analystRole = r; } catch (e) {}
-
-    this.roleOptions = [
-      { value: adminRole, label: 'Admin' },
-      { value: analystRole, label: 'Analyst' }
-    ];
-
-    // valeur par défaut
-    if (!this.role) this.role = adminRole;
-  }
+  constructor(private authService: AuthService, private authState: AuthStateService, private router: Router, private config: ConfigService) {}
 
   onSubmit() {
     // Handler du formulaire de connexion
     this.message = '';
     this.success = false;
-    if (this.email && this.password && this.role) {
+    if (this.email && this.password) {
       this.message = 'Connexion...';
       // Convertir l'email en minuscules pour être insensible à la casse
       const emailLowerCase = this.email.toLowerCase();
-      this.authService.login(emailLowerCase, this.password, this.role).subscribe((ok) => {
+      // Le rôle est déterminé automatiquement côté serveur
+      this.authService.login(emailLowerCase, this.password).subscribe((ok) => {
         if (ok) {
           this.success = true;
           try { this.authState.isAuthenticated.set(true); } catch (e) {}
@@ -60,7 +43,7 @@ export class LoginComponent {
         }
       });
     } else {
-      this.message = 'Veuillez remplir tous les champs et sélectionner un rôle';
+      this.message = 'Veuillez remplir tous les champs';
       this.success = false;
     }
   }

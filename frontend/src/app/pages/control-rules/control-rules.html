@@ -1,191 +1,174 @@
-<section class="control-rules-page">
-  <h1>Règles de Contrôle</h1>
-
-  <div class="rules-header">
-    <button class="btn-primary" (click)="addRule()" [title]="!isAdmin ? adminOnlyMessage : ''">
-      + Ajouter une règle
+<section class="control-rules-page dashboard-tracking">
+  <div class="header-container">
+    <div class="title-block">
+      <h1>Règles de Contrôle</h1>
+      <p class="subtitle">Configuration des règles de contrôle</p>
+    </div>
+    <button class="btn-primary" (click)="addRule()">
+      <mat-icon>add</mat-icon> Nouvelle règle
     </button>
   </div>
 
-  <div *ngIf="loading" class="loading">Chargement des règles...</div>
-  <div *ngIf="error" class="error">{{ error }}</div>
+  <div class="info-card-container">
+    <div class="info-header">
+      <mat-icon>info</mat-icon>
+      <h3>Types de règles disponibles</h3>
+    </div>
+    <div class="info-grid">
+      <div class="rule-info-item">
+        <div class="type-label">
+          <mat-icon class="icon-montant">monetization_on</mat-icon>
+          <strong>Montant</strong>
+        </div>
+        <p>Définit un seuil de montant. Les transactions dépassant ce seuil seront signalées comme anomalies selon la période référence.</p>
+      </div>
+
+      <div class="rule-info-item">
+        <div class="type-label">
+          <mat-icon class="icon-frequence">history_toggle_off</mat-icon>
+          <strong>Fréquence</strong>
+        </div>
+        <p>Détecte les comportements anormaux basés sur le nombre de transactions. Utile pour identifier les activités inhabituelles.</p>
+      </div>
+
+      <div class="rule-info-item">
+        <div class="type-label">
+          <mat-icon class="icon-pays">public</mat-icon>
+          <strong>Pays à Risque</strong>
+        </div>
+        <p>Surveille les transactions impliquant des pays à risque définis. Permet de bloquer ou surveiller les transactions sensibles.</p>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading-state">
+    <div class="spinner"></div>
+    <p>Chargement des politiques de sécurité...</p>
+  </div>
 
   <div *ngIf="!loading && rules.length > 0" class="rules-grid">
-    <div *ngFor="let rule of rules" class="rule-card">
-      <div class="rule-header">
-        <h3>{{ rule.nomRegle }}</h3>
-        <span class="rule-status" [class.active]="rule.active">{{ rule.active ? 'Actif' : 'Inactif' }}</span>
+    <div *ngFor="let rule of rules" class="rule-card" [class.inactive]="!rule.active">
+      <div class="rule-card-header">
+        <div class="type-icon" [ngClass]="rule.typeRegle">
+          <mat-icon>{{ getRuleIcon(rule.typeRegle) }}</mat-icon>
+        </div>
+        <span class="status-pill" [class.active]="rule.active">{{ rule.active ? 'Actif' : 'Inactif' }}</span>
       </div>
-      
-      <p class="rule-description">{{ rule.description }}</p>
-      
-      <div class="rule-details">
-        <div class="detail-item">
-          <span class="label">Type:</span>
-          <span class="value">{{ rule.typeRegle }}</span>
-        </div>
-        <div class="detail-item" *ngIf="rule.seuil && rule.seuil > 0">
-          <span class="label">Seuil:</span>
-          <span class="value">{{ rule.seuil | number }}</span>
-        </div>
-        <div class="detail-item">
-          <span class="label">Profil:</span>
-          <span class="value">{{ getProfilName(rule.profilClientId) }}</span>
+
+      <div class="rule-content">
+        <h3>{{ rule.nomRegle }}</h3>
+        <p class="description">{{ rule.description }}</p>
+
+        <div class="meta-tags">
+          <span class="tag" *ngIf="rule.seuil">
+            <mat-icon>payments</mat-icon> {{ rule.seuil | number }} {{ rule.typeRegle === 'frequence' ? 'Op.' : 'FCFA' }}
+          </span>
+          <span class="tag" *ngIf="rule.periodeReference">
+            <mat-icon>event_repeat</mat-icon> {{ getPeriodLabel(rule.periodeReference) }}
+          </span>
+          <span class="tag">
+            <mat-icon>person</mat-icon> {{ getProfilName(rule.profilClientId) }}
+          </span>
         </div>
       </div>
 
       <div class="rule-actions">
-        <button class="btn-toggle" (click)="toggleRuleStatus(rule)" [class.inactive]="!rule.active" [title]="!isAdmin ? adminOnlyMessage : ''" [disabled]="submitting">
-          {{ rule.active ? 'Désactiver' : 'Activer' }}
+        <button class="action-btn toggle" (click)="toggleRuleStatus(rule)" [class.active]="rule.active">
+          <mat-icon>{{ rule.active ? 'pause_circle' : 'play_circle' }}</mat-icon>
         </button>
-        <button class="btn-edit" (click)="editRule(rule)" [title]="!isAdmin ? adminOnlyMessage : ''" [disabled]="submitting">Éditer</button>
-        <button class="btn-delete" (click)="deleteRule(rule.id)" [title]="!isAdmin ? adminOnlyMessage : ''" [disabled]="submitting">Supprimer</button>
+        <div class="spacer"></div>
+        <button class="action-btn edit" (click)="editRule(rule)"><mat-icon>edit</mat-icon></button>
+        <button class="action-btn delete" (click)="deleteRule(rule.id)"><mat-icon>delete_outline</mat-icon></button>
       </div>
     </div>
   </div>
 
   <div *ngIf="!loading && rules.length === 0" class="empty-state">
-    <p>Aucune règle de contrôle trouvée.</p>
-    <button class="btn-primary" (click)="addRule()">Créer une règle</button>
+    <mat-icon>verified_user</mat-icon>
+    <h3>Aucune règle définie</h3>
+    <button class="btn-outline" (click)="addRule()">Créer une règle</button>
   </div>
 </section>
 
-<!-- Modal -->
 <div *ngIf="showModal" class="modal-overlay" (click)="closeModal()">
-  <div class="modal-content" (click)="$event.stopPropagation()">
+  <div class="modal-card wide" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h2>{{ isEditMode ? 'Éditer une règle' : 'Ajouter une nouvelle règle' }}</h2>
-      <button class="close-btn" (click)="closeModal()">✕</button>
+      <h2>{{ isEditMode ? 'Édition Règle' : 'Nouvelle Règle' }}</h2>
+      <button class="close-x" (click)="closeModal()">✕</button>
     </div>
-
     <div class="modal-body">
-      <div *ngIf="error" class="inline-error">{{ error }}</div>
-      <div class="form-group">
-        <label for="ruleName">Nom de la règle *</label>
-        <input 
-          id="ruleName"
-          type="text" 
-          [(ngModel)]="formData.nomRegle" 
-          placeholder="Ex: Montant Maximum"
-          class="form-input"
-        />
-      </div>
-
-      <div class="form-group">
-        <label for="ruleDescription">Description *</label>
-        <textarea 
-          id="ruleDescription"
-          [(ngModel)]="formData.description" 
-          placeholder="Décrivez la règle et ses conditions d'application..."
-          class="form-textarea"
-          rows="3"
-        ></textarea>
-      </div>
-
-      <div class="form-group">
-        <label for="ruleType">Type de règle *</label>
-        <select 
-          id="ruleType"
-          [(ngModel)]="formData.typeRegle" 
-          (change)="onRuleTypeChange()"
-          class="form-select"
-        >
-          <option value="">-- Sélectionnez un type --</option>
-          <option *ngFor="let type of ruleTypes" [value]="type">{{ type }}</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label for="ruleThreshold">
-          {{ formData.typeRegle === 'frequence' ? 'Seuil (nombre de transactions)' : 'Seuil (montant en FCFA)' }}
-        </label>
-        <input 
-          id="ruleThreshold"
-          type="number" 
-          [(ngModel)]="formData.seuil" 
-          [placeholder]="formData.typeRegle === 'frequence' ? 'Ex: 3 transactions' : 'Ex: 500000 FCFA'"
-          class="form-input"
-        />
-        <small class="form-hint" *ngIf="formData.typeRegle === 'frequence'">
-          Nombre maximum de transactions autorisées sur la période
-        </small>
-        <small class="form-hint" *ngIf="formData.typeRegle === 'montant'">
-          Montant cumulé maximum autorisé sur la période
-        </small>
-      </div>
-
-      <div class="form-group" *ngIf="formData.typeRegle === 'montant' || formData.typeRegle === 'frequence'">
-        <label for="rulePeriode">Période de Référence</label>
-        <select 
-          id="rulePeriode"
-          [(ngModel)]="formData.periodeReference" 
-          class="form-select"
-        >
-          <option value="24h">24 Heures</option>
-          <option value="7d">7 Jours</option>
-          <option value="30d">30 Jours</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label for="ruleProfil">Profil Client (optionnel)</label>
-        <select 
-          id="ruleProfil"
-          [(ngModel)]="formData.profilClientId" 
-          class="form-select"
-        >
-          <option value="">-- Aucun profil --</option>
-          <option *ngFor="let profil of profils" [value]="profil.id">{{ profil.label }}</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label for="ruleAction">Action à effectuer *</label>
-        <select 
-          id="ruleAction"
-          [(ngModel)]="formData.action" 
-          class="form-select"
-        >
-          <option *ngFor="let action of availableActions" [value]="action.value">{{ action.label }}</option>
-        </select>
-        <small class="form-help">
-          • <strong>Bloquer</strong>: Créer une alerte et refuser la transaction<br>
-          • <strong>Surveiller</strong>: Créer une alerte sans bloquer
-        </small>
-      </div>
-
-      <div class="form-group">
-        <label for="ruleStatus">Statut</label>
-        <select 
-          id="ruleStatus"
-          [(ngModel)]="formData.active" 
-          class="form-select"
-        >
-          <option [value]="true">Actif</option>
-          <option [value]="false">Inactif</option>
-        </select>
+      <div class="form-layout">
+        <div class="form-col">
+          <div class="form-group">
+            <label>Nom de la règle *</label>
+            <input type="text" [(ngModel)]="formData.nomRegle" placeholder="Ex: Fréquence">
+          </div>
+          <div class="form-group">
+            <label>Description *</label>
+            <textarea [(ngModel)]="formData.description" rows="5" placeholder="Ex: Description de la règle"></textarea>
+          </div>
+        </div>
+        <div class="form-col">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Type</label>
+              <select [(ngModel)]="formData.typeRegle" (change)="onRuleTypeChange()">
+                <option *ngFor="let t of ruleTypes" [value]="t">{{ t | titlecase }}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Valeur seuil</label>
+              <input type="number" [(ngModel)]="formData.seuil">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Profil Client</label>
+            <select [(ngModel)]="formData.profilClientId">
+              <option value="">Tous les clients</option>
+              <option *ngFor="let p of profils" [value]="p.id">{{ p.label }}</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Période</label>
+              <select [(ngModel)]="formData.periodeReference" [disabled]="formData.typeRegle === 'pays_risque'">
+                <option value="24h">24 Heures</option>
+                <option value="7d">7 Jours</option>
+                <option value="30d">30 Jours</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Action</label>
+              <select [(ngModel)]="formData.action">
+                <option value="bloquer">Bloquer</option>
+                <option value="surveiller">Surveiller</option>
+              </select>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-
     <div class="modal-footer">
-      <button class="btn-cancel" (click)="closeModal()" [disabled]="submitting">Annuler</button>
-      <button class="btn-submit" (click)="saveRule()" [disabled]="submitting">{{ submitting ? 'En cours...' : (isEditMode ? 'Mettre à jour' : 'Créer') }}</button>
+      <button class="btn-ghost" (click)="closeModal()">Annuler</button>
+      <button class="btn-submit" (click)="saveRule()" [disabled]="submitting">Enregistrer</button>
     </div>
   </div>
 </div>
 
-<!-- Modal Accès Refusé -->
-<div *ngIf="showAccessDeniedModal" class="modal-overlay" (click)="closeAccessDeniedModal()">
-  <div class="modal-content modal-access-denied" (click)="$event.stopPropagation()">
+<!-- Delete Confirmation Modal -->
+<div *ngIf="showDeleteConfirmModal" class="modal-overlay" (click)="closeDeleteConfirmModal()">
+  <div class="modal-card confirm" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h2>⛔ Accès Refusé</h2>
-      <button class="close-btn" (click)="closeAccessDeniedModal()">✕</button>
+      <h2>Confirmer la suppression</h2>
+      <button class="close-x" (click)="closeDeleteConfirmModal()">✕</button>
     </div>
     <div class="modal-body">
-      <p>{{ adminOnlyMessage }}</p>
+      <p>Êtes-vous sûr de vouloir supprimer la règle <strong>{{ deleteRuleName }}</strong> ?</p>
+      <p style="color: #94a3b8; font-size: 0.9rem; margin-top: 1rem;">Cette action est irréversible.</p>
     </div>
     <div class="modal-footer">
-      <button class="btn-cancel" (click)="closeAccessDeniedModal()">Fermer</button>
+      <button class="btn-ghost" (click)="closeDeleteConfirmModal()">Annuler</button>
+      <button class="btn-danger" (click)="confirmDeleteRule()">Supprimer</button>
     </div>
   </div>
 </div>

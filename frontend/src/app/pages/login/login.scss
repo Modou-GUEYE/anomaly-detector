@@ -151,9 +151,18 @@ $orange:  #ED6A01;   // ton chaud du dégradé
   box-shadow: 0 8px 20px rgba(0,0,0,0.18);
 }
 
-.feedback { text-align: center; margin-top: 8px; }
-.msg-success { color: #dff0d8; }
-.msg-error { color: #ffd6d6; }
+.feedback { text-align: center; margin-top: 12px; padding: 12px 14px; border-radius: 8px; font-weight: 600; }
+.msg-success { 
+  color: #10b981; 
+  background: rgba(16, 185, 129, 0.1); 
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+.msg-error { 
+  color: #dc2626; 
+  background: rgba(220, 38, 38, 0.15); 
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  font-weight: 700;
+}
 
 .signup { text-align: center; font-size: .85rem; margin-top: 10px; color: rgba(255,255,255,0.9); }
 /* Style spécifique pour le lien "Cliquez ici" dans la zone d'inscription */

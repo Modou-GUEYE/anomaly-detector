@@ -1,214 +1,180 @@
 <section class="create-user-page">
-  <h1>Gestion des utilisateurs</h1>
-  <div class="create-user-grid">
-    <!-- Liste des utilisateurs -->
-    <aside class="users-panel">
-      <div class="users-panel-header">
-        <h2>Utilisateurs</h2>
-        <button class="btn-add" (click)="openModal()">➕ Ajouter un utilisateur</button>
-      </div>
-      <div class="users-panel-body">
-          <div class="filters">
-            <input type="text" placeholder="Rechercher par nom ou email..." [(ngModel)]="filterText" class="filter-input" />
-            <select [(ngModel)]="filterRole" class="filter-select">
-              <option value="all">Tous les rôles</option>
-              <option *ngFor="let r of roles" [value]="r.value">{{ r.label }}</option>
-            </select>
-            <select [(ngModel)]="filterActif" class="filter-select">
-              <option value="all">Tous</option>
-              <option value="actif">Actifs</option>
-              <option value="inactif">Inactifs</option>
-            </select>
-          </div>
-        <div class="users-table-container">
-          <table class="users-table" *ngIf="users && users.length > 0">
-            <thead>
-              <tr>
-                <th>Nom</th>
-                <th>Email</th>
-                <th>Date création</th>
-                <th>Rôle</th>
-                <th>Actif</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-  <tr *ngFor="let u of filteredUsers">
-          <td data-label="Nom">{{ u.nomUtilisateur || u.nom_utilisateur || '-' }}</td>
-          <td data-label="Email">{{ u.email }}</td>
-          <td data-label="Date création">{{ u.dateCreation ? (u.dateCreation | date:'short') : '-' }}</td>
-          <td data-label="Rôle">{{ u.role }}</td>
-          <td class="active-cell" data-label="Actif">
-            <button
-              class="icon-btn toggle"
-              (click)="toggleActive(u)"
-              [disabled]="actionLoading[u.id]"
-              [title]="u.actif ? 'Désactiver' : 'Activer'"
-              aria-label="{{ u.actif ? 'Désactiver utilisateur' : 'Activer utilisateur' }}"
-            >
-              <ng-container *ngIf="!actionLoading[u.id]">
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                  <path *ngIf="u.actif" d="M12 2v10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                  <path *ngIf="u.actif" d="M17.657 6.343a8 8 0 11-11.314 11.314" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                  <path *ngIf="!u.actif" d="M12 2v10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                  <path *ngIf="!u.actif" d="M20 12a8 8 0 11-16 0 8 8 0 0116 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                </svg>
-              </ng-container>
-              <ng-container *ngIf="actionLoading[u.id]">
-                <svg class="icon-spinner" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                  <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity="0.25"/>
-                  <path d="M45 25a20 20 0 00-6.6-14.14" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
-                </svg>
-              </ng-container>
-            </button>
-            <span class="active-label">{{ u.actif ? 'Oui' : 'Non' }}</span>
-          </td>
-              <td data-label="Actions">
-                <!-- Delete icon button -->
-                <button
-                  class="icon-btn delete"
-                  (click)="deleteUserConfirm(u)"
-                  [disabled]="actionLoading[u.id]"
-                  title="Supprimer"
-                  aria-label="Supprimer utilisateur"
-                >
-                  <ng-container *ngIf="!actionLoading[u.id]">
-                    <!-- Filled trash icon for clearer visibility -->
-                    <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                      <path d="M9 3a1 1 0 00-1 1v1H4v2h16V5h-4V4a1 1 0 00-1-1H9z"></path>
-                      <path d="M7 9v10a2 2 0 002 2h6a2 2 0 002-2V9H7z"></path>
-                      <path d="M10 11v6" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
-                      <path d="M14 11v6" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
-                    </svg>
-                  </ng-container>
-                  <ng-container *ngIf="actionLoading[u.id]">
-                    <svg class="icon-spinner" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                      <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity="0.25"/>
-                      <path d="M45 25a20 20 0 00-6.6-14.14" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
-                    </svg>
-                  </ng-container>
-                </button>
-              </td>
-            </tr>
-            </tbody>
-          </table>
-        </div>
-        <div *ngIf="filteredUsers && filteredUsers.length === 0" class="empty-state">Aucun utilisateur trouvé.</div>
-      </div>
-    </aside>
+  <div class="header-section">
+    <h1>Gestion des utilisateurs</h1>
+    <button class="btn-add-user" (click)="openModal()">
+      <mat-icon>person_add</mat-icon>
+      <span>Nouveau</span>
+    </button>
+  </div>
 
-    <!-- Form modal -->
-    <div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
-      <div class="modal-content" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <h3>Créer un utilisateur</h3>
-          <button class="btn-close" (click)="closeModal()">✕</button>
-        </div>
+  <div class="filter-card">
+    <div class="search-wrapper">
+      <mat-icon>search</mat-icon>
+      <input type="text" placeholder="Rechercher..." [(ngModel)]="filterText">
+    </div>
+    <div class="filter-group">
+      <select [(ngModel)]="filterRole">
+        <option value="all">Tous les rôles</option>
+        @for (r of roles; track r.value) {
+          <option [value]="r.value">{{ r.label }}</option>
+        }
+      </select>
+      <select [(ngModel)]="filterActif">
+        <option value="all">Statuts</option>
+        <option value="actif">Actifs</option>
+        <option value="inactif">Inactifs</option>
+      </select>
+    </div>
+  </div>
 
-        <form class="modal-form form-card" (ngSubmit)="submit()">
-          <div *ngIf="error" class="form-error">{{ error }}</div>
-
-          <div class="form-grid">
-            <div class="form-row">
-              <label>Nom d'utilisateur</label>
-              <input type="text" [(ngModel)]="nomUtilisateur" name="nomUtilisateur" placeholder="Ex: Modou" />
-              <div class="field-hint" *ngIf="submitted && !nomUtilisateur">Le nom d'utilisateur est requis.</div>
-            </div>
-
-            <div class="form-row">
-              <label>Email</label>
-              <input type="email" [(ngModel)]="email" name="email" placeholder="exemple@domaine.com" />
-              <div class="field-hint" *ngIf="submitted && !email">L'email est requis.</div>
-            </div>
-
-            <div class="form-row password-row">
-              <label>Mot de passe</label>
-              <div class="password-input-wrap">
-                <input [type]="showPassword ? 'text' : 'password'" [(ngModel)]="password" name="password" placeholder="Mot de passe" />
-                <button type="button" class="pwd-toggle" (click)="toggleShowPassword()" [attr.aria-pressed]="showPassword" [attr.aria-label]="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'">
-                  <svg *ngIf="showPassword" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  <svg *ngIf="!showPassword" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
+  <div class="table-container">
+    <table class="user-table">
+      <thead>
+        <tr>
+          <th>UTILISATEUR</th>
+          <th class="desktop-only">EMAIL</th>
+          <th>RÔLE</th>
+          <th>STATUT</th>
+          <th class="col-actions">ACTIONS</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (u of filteredUsers; track (u.id || u._id)) {
+          <tr>
+            <td>
+              <div class="user-info-cell">
+                <span class="user-name">{{ u.nomUtilisateur || u.nom_utilisateur }}</span>
+                <span class="mobile-only email-sub">{{ u.email }}</span>
+              </div>
+            </td>
+            <td class="desktop-only">{{ u.email }}</td>
+            <td><span class="badge-role">{{ u.role }}</span></td>
+            <td>
+              <button class="status-pill" [class.active]="u.actif" (click)="toggleActive(u)" [disabled]="actionLoading[u.id || u._id]">
+                <mat-icon>{{ u.actif ? 'check_circle' : 'cancel' }}</mat-icon>
+                <span>{{ u.actif ? 'Actif' : 'Inactif' }}</span>
+              </button>
+            </td>
+            <td class="col-actions">
+              <div class="actions-wrapper">
+                <button class="btn-icon edit" (click)="editUser(u)" title="Modifier" [disabled]="actionLoading[u.id || u._id]"><mat-icon>edit</mat-icon></button>
+                <button class="btn-icon delete" (click)="deleteUserConfirm(u)" title="Supprimer" [disabled]="actionLoading[u.id || u._id]">
+                  <mat-icon>delete</mat-icon>
                 </button>
               </div>
-              <div class="password-meta">
-                <div class="strength" [ngClass]="passwordStrength()">
-                  <span class="bar"></span>
-                  <span class="bar"></span>
-                  <span class="bar"></span>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  @if (showModal) {
+    <div class="modal-backdrop" (click)="closeModal()">
+      <div class="modal-box creation-dialog" (click)="$event.stopPropagation()">
+        <div class="modal-head">
+          <div class="title-with-icon">
+            <div class="icon-bg"><mat-icon>{{ editingUser ? 'edit' : 'person_add' }}</mat-icon></div>
+            <div>
+              <h2>{{ editingUser ? 'Modifier l\'utilisateur' : 'Nouvel Utilisateur' }}</h2>
+              <p>{{ editingUser ? 'Modifiez les informations de l\'utilisateur' : 'Remplissez les informations pour créer le compte' }}</p>
+            </div>
+          </div>
+          <button class="btn-close-circle" (click)="closeModal()"><mat-icon>close</mat-icon></button>
+        </div>
+        
+        <form (ngSubmit)="submit()">
+          <div class="modal-body">
+            @if (error) { <div class="error-banner"><mat-icon>error_outline</mat-icon> {{ error }}</div> }
+            
+            <div class="form-grid">
+              <div class="form-field">
+                <label>Nom d'utilisateur</label>
+                <div class="input-wrapper">
+                  <mat-icon>person</mat-icon>
+                  <input type="text" name="nom" [(ngModel)]="nomUtilisateur" placeholder="Ex: Jean Dupont" required>
                 </div>
-                <div class="strength-label">{{ password ? (passwordStrength() === 'weak' ? 'Faible' : (passwordStrength() === 'medium' ? 'Moyen' : 'Fort')) : ' ' }}</div>
               </div>
-              <div class="field-hint" *ngIf="submitted && password.length < 6">Le mot de passe doit contenir au moins 6 caractères.</div>
-            </div>
-
-            <div class="form-row">
-              <label>Rôle</label>
-              <select [(ngModel)]="role" name="role">
-                <option *ngFor="let r of roles" [value]="r.value">{{ r.label }}</option>
-              </select>
-            </div>
-
-            <div class="form-row form-row-inline checkbox-row">
-              <div class="form-active-wrap">
-                <input type="checkbox" [(ngModel)]="actif" name="actif" aria-hidden="true" hidden />
-
-                <button
-                  type="button"
-                  class="icon-btn toggle form-toggle"
-                  (click)="actif = !actif"
-                  [attr.aria-pressed]="actif"
-                  [title]="actif ? 'Actif' : 'Inactif'"
-                  aria-label="Basculer actif"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <path *ngIf="actif" d="M5 12l4 4L20 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                    <path *ngIf="!actif" d="M12 2v10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                  </svg>
-                </button>
-
-                <span class="active-label">{{ actif ? 'Actif' : 'Inactif' }}</span>
+              <div class="form-field">
+                <label>Adresse Email</label>
+                <div class="input-wrapper">
+                  <mat-icon>alternate_email</mat-icon>
+                  <input type="email" name="email" [(ngModel)]="email" placeholder="email@domaine.com" required>
+                </div>
+              </div>
+              <div class="form-field">
+                <label>Mot de passe {{ editingUser ? '(optionnel)' : '' }}</label>
+                <div class="input-wrapper">
+                  <mat-icon>lock_open</mat-icon>
+                  <input type="password" name="pass" [(ngModel)]="password" placeholder="••••••••" [required]="!editingUser">
+                </div>
+              </div>
+              <div class="form-field">
+                <label>Rôle assigné</label>
+                <div class="input-wrapper">
+                  <mat-icon>admin_panel_settings</mat-icon>
+                  <select name="role" [(ngModel)]="role">
+                    @for (r of roles; track r.value) {
+                      <option [value]="r.value">{{ r.label }}</option>
+                    }
+                  </select>
+                </div>
               </div>
             </div>
           </div>
-
-          <div class="modal-footer">
-            <button type="button" class="btn-cancel" (click)="closeModal()">Annuler</button>
-            <button type="submit" class="btn-save" [disabled]="loading">{{ loading ? 'Création...' : 'Créer' }}</button>
+          <div class="modal-foot">
+            <button type="button" class="btn-ghost" (click)="closeModal()">Annuler</button>
+            <button type="submit" class="btn-submit-modal" [disabled]="loading">
+              @if(loading) { <span class="spinner"></span> }
+              {{ loading ? (editingUser ? 'Mise à jour...' : 'Création...') : (editingUser ? 'Enregistrer les modifications' : 'Créer le compte') }}
+            </button>
           </div>
         </form>
       </div>
     </div>
-    <!-- Delete confirmation modal -->
-    <div class="modal-overlay" *ngIf="showDeleteModal" (click)="closeDeleteModal()">
-      <div class="modal-content" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <h3>Confirmer la suppression</h3>
-          <button class="btn-close" (click)="closeDeleteModal()">✕</button>
+  }
+
+  @if (showDeleteModal) {
+    <div class="modal-backdrop" (click)="showDeleteModal = false">
+      <div class="modal-box delete-modal" (click)="$event.stopPropagation()">
+        <div class="delete-header">
+          <div class="delete-icon" [class.blocked]="deleteBlocked">
+            <mat-icon>{{ deleteBlocked ? 'lock' : 'delete' }}</mat-icon>
+          </div>
         </div>
-        <div class="modal-body">
-          <p>Voulez-vous vraiment supprimer l'utilisateur <strong>{{ userToDelete?.nomUtilisateur || userToDelete?.email }}</strong> ?</p>
-          <div *ngIf="deleteError" class="form-error" style="margin-top:8px;">{{ deleteError }}</div>
+        <div class="delete-body">
+          <h2>{{ deleteBlocked ? 'Action restreinte' : 'Confirmer la suppression' }}</h2>
+          <p class="delete-message">
+            @if (!deleteError) {
+              Êtes-vous sûr de vouloir supprimer l'utilisateur <strong>{{ userToDelete?.nomUtilisateur }}</strong> ?
+            }
+          </p>
+          @if (deleteError) {
+            <div class="delete-error-box">
+              <mat-icon>error_outline</mat-icon>
+              <span>{{ deleteError }}</span>
+            </div>
+          }
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn-cancel" (click)="closeDeleteModal()">Annuler</button>
-          <button type="button" class="btn-save" (click)="confirmDelete()" [disabled]="actionLoading[userToDelete?.id]">
-            <span *ngIf="!actionLoading[userToDelete?.id]">Supprimer</span>
-            <span *ngIf="actionLoading[userToDelete?.id]">Suppression...</span>
-          </button>
-          <button *ngIf="deleteBlocked" type="button" class="btn-danger" (click)="disableInstead()" [disabled]="actionLoading[userToDelete?.id]" aria-label="Désactiver l'utilisateur">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="btn-icon">
-              <path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 14h-2v-2h2v2zm0-4h-2V6h2v6z" fill="currentColor"/>
-            </svg>
-            <span>Désactiver</span>
-          </button>
+        <div class="delete-footer">
+          <button class="btn-cancel-delete" (click)="showDeleteModal = false">Retour</button>
+          @if (!deleteBlocked) {
+            <button class="btn-confirm-delete" (click)="confirmDelete()" [disabled]="actionLoading[userToDelete?.id || userToDelete?._id]">
+              @if (actionLoading[userToDelete?.id || userToDelete?._id]) {
+                <span class="spinner-small"></span>
+              }
+              Supprimer
+            </button>
+          } @else {
+            <button class="btn-disable-instead" (click)="disableInstead()" [disabled]="actionLoading[userToDelete?.id || userToDelete?._id]">
+              @if (actionLoading[userToDelete?.id || userToDelete?._id]) {
+                <span class="spinner-small"></span>
+              }
+              Désactiver à la place
+            </button>
+          }
         </div>
       </div>
     </div>
-  </div>
+  }
 </section>

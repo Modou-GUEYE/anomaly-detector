@@ -1,168 +1,172 @@
 <section class="anomalies-page">
-  <h1>Anomalies Détectées</h1>
-
-  <!-- Filtres -->
-  <div class="filters-section">
-    <input type="search" 
-           class="filter-search"
-           placeholder="Rechercher par Type ou Code..."
-           [(ngModel)]="filters.search" 
-           (ngModelChange)="applyFilters()" />
-
-    <div class="filters-grid">
-      <select [(ngModel)]="filters.type" (change)="applyFilters()" class="filter-select">
-        <option value="">Types</option>
-        <option value="Montant">Montant</option>
-        <option value="frequence">Fréquence</option>
-        <option value="Pays à risque">Pays à risque</option>
-        <option value="Blacklist">Blacklist</option>
-        <option value="Interdit">Interdit</option>
-        <option value="PEP">PEP</option>
-        <option value="Surveillés">Surveillés</option>
-      </select>
-
-      <select [(ngModel)]="filters.severite" (change)="applyFilters()" class="filter-select">
-        <option value="">Niveaux</option>
-        <option *ngFor="let s of severityOptions" [value]="s">{{ s }}</option>
-      </select>
-
-      <select [(ngModel)]="filters.statut" (change)="applyFilters()" class="filter-select">
-        <option value="">Statuts</option>
-        <option value="Traité">Traité</option>
-        <option value="En cours">En cours</option>
-      </select>
+  <header class="view-header">
+    <div class="header-main">
+      <h1>Anomalies</h1>
+      <span class="count-tag">{{ filteredAnomalies.length }} alertes</span>
     </div>
-  </div>
 
-  <!-- Loading -->
-  <div *ngIf="loading" class="loading">Chargement des alertes...</div>
+    <div class="header-actions">
+      <div class="filter-group">
+        <div class="search-box">
+          <mat-icon>search</mat-icon>
+          <input type="text" placeholder="Type ou code..." [(ngModel)]="filters.search" (ngModelChange)="applyFilters()">
+        </div>
 
-  <!-- Error -->
-  <div *ngIf="error && !loading" class="error">{{ error }}</div>
+        <div class="select-wrapper">
+          <select [(ngModel)]="filters.type" (change)="applyFilters()">
+            <option value="">Types</option>
+            <option value="Montant">Montant</option>
+            <option value="frequence">Fréquence</option>
+            <option value="Pays à risque">Pays à risque</option>
+            <option value="Blacklist">Blacklist</option>
+            <option value="Interdit">Interdit</option>
+            <option value="PEP">PEP</option>
+            <option value="Surveillés">Surveillés</option>
+          </select>
+          <mat-icon>expand_more</mat-icon>
+        </div>
 
-  <!-- Anomalies Content -->
-  <div *ngIf="!loading" class="anomalies-content">
-    <!-- Header with action button -->
-    <div class="anomalies-header">
-      <div class="anomalies-count">
-        <span class="count-number">{{ filteredAnomalies.length }} Anomalies détectées</span>
+        <div class="select-wrapper">
+          <select [(ngModel)]="filters.severite" (change)="applyFilters()">
+            <option value="">Niveaux</option>
+            <option *ngFor="let s of severityOptions" [value]="s">{{ s }}</option>
+          </select>
+          <mat-icon>expand_more</mat-icon>
+        </div>
+
+        <div class="select-wrapper">
+          <select [(ngModel)]="filters.statut" (change)="applyFilters()">
+            <option value="">Statuts</option>
+            <option value="Traité">Traité</option>
+            <option value="En cours">En cours</option>
+          </select>
+          <mat-icon>expand_more</mat-icon>
+        </div>
       </div>
     </div>
+  </header>
 
-    <!-- Anomalies Table -->
-    <div class="anomalies-table-wrapper">
-      <table class="anomalies-table">
-        <thead>
-          <tr>
-          <tr>
-            <th class="col-code">Code</th>
-            <th class="col-type">Type</th>
-            <th class="col-severite">Sévérité</th>
-            <th class="col-date">Date</th>
-            <th class="col-statut">Statut</th>
-            <th class="col-actions">Actions</th>
+  <div *ngIf="loading" class="loading-state">Chargement des alertes...</div>
+  <div *ngIf="error && !loading" class="error-state">{{ error }}</div>
+
+  <div *ngIf="!loading" class="data-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th class="col-code">CODE</th>
+          <th class="col-type">TYPE</th>
+          <th class="col-severite">SEVERITE</th>
+          <th class="col-date">DATE</th>
+          <th class="col-statut">STATUT</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngFor="let anomaly of paginatedAnomalies">
+          <tr class="row-clickable" (click)="openDetailsModal(anomaly)" title="Details">
+            <td class="col-code">{{ anomaly.code }}</td>
+            <td class="col-type">{{ anomaly.type }}</td>
+            <td class="col-severite">
+              <span class="severity-badge" [class]="'severite-' + anomaly.niveauCriticite.toLowerCase()">
+                {{ anomaly.niveauCriticite }}
+              </span>
+            </td>
+            <td class="col-date">{{ anomaly.dateGeneration | date:'dd/MM/yyyy' }}</td>
+            <td class="col-statut">
+              <span class="status-badge" [ngClass]="{ 'statut-traite': anomaly.statut === 'Traité', 'statut-en-cours': anomaly.statut === 'En cours' }">
+                {{ anomaly.statut }}
+              </span>
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          <ng-container *ngFor="let anomaly of paginatedAnomalies; let i = index">
-            <!-- Main Row -->
-            <tr class="anomaly-row" [class.expanded]="anomaly.expanded">
-              <td class="col-code">{{ anomaly.code }}</td>
-              <td class="col-type">{{ anomaly.type }}</td>
-              <td class="col-severite">
-                <span class="severity-badge" [class]="'severite-' + anomaly.niveauCriticite.toLowerCase()">
-                  {{ anomaly.niveauCriticite }}
-                </span>
-              </td>
-              <td class="col-date">{{ anomaly.dateGeneration | date:'dd/MM/yyyy' }}</td>
-              <td class="col-statut">
-                <span class="status-badge" [class]="'statut-' + anomaly.statut.toLowerCase().replace(' ', '-')">
-                  {{ anomaly.statut }}
-                </span>
-              </td>
-              <td class="col-actions">
-                <button class="btn-expand" (click)="anomaly.expanded = !anomaly.expanded" title="Afficher détails">
-                  {{ anomaly.expanded ? '▼' : '▶' }}
-                </button>
-              </td>
-            </tr>
-            <!-- Expanded Row -->
-            <tr class="expanded-row" *ngIf="anomaly.expanded">
-              <td colspan="6">
-                <div class="expanded-content">
-                  <div class="expanded-header">
-              <h4>Détails de l'alerte</h4>
-                  </div>
-                  <div class="expanded-body">
-                    <div class="detail-column">
-                      <div class="detail-item">
-                        <span class="label">Numéro de compte:</span>
-                        <span class="value">{{ anomaly.numeroCompte }}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="label">Message:</span>
-                        <span class="value">{{ anomaly.message }}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="label">Type:</span>
-                        <span class="value">{{ anomaly.type }}</span>
-                      </div>
-                    </div>
-                    <div class="detail-column">
-                      <div class="detail-item">
-                        <span class="label">Code:</span>
-                        <span class="value">{{ anomaly.code }}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="label">Score Risque:</span>
-                        <span class="value">{{ anomaly.scoreRisque }}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="label">Action:</span>
-                        <span class="value">{{ anomaly.action }}</span>
-                      </div>
-                      <div class="detail-item" *ngIf="anomaly.paysRisque">
-                        <span class="label">Pays à risque:</span>
-                        <span class="value">{{ anomaly.paysRisque }}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="label">ID Analyste:</span>
-                        <span class="value">{{ anomaly.analysteAssigneID || 'Aucun' }}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="expanded-actions">
-                    <div class="status-selector">
-                      <label>Changez le statut:</label>
-                      <select [(ngModel)]="selectedStatus[anomaly.id]" class="status-select">
-                        <option [value]="anomaly.statut">{{ anomaly.statut }}</option>
-                        <option value="Traité" *ngIf="anomaly.statut !== 'Traité'">Traité</option>
-                        <option value="En cours" *ngIf="anomaly.statut !== 'En cours'">En cours</option>
-                      </select>
-                      <button class="btn-update-status" 
-                              (click)="updateAnomalyStatus(anomaly)"
-                              [disabled]="!selectedStatus[anomaly.id] || selectedStatus[anomaly.id] === anomaly.statut">
-                        ✓ Mettre à jour
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </td>
-            </tr>
-          </ng-container>
-        </tbody>
-      </table>
-    </div>
+        </ng-container>
+      </tbody>
+    </table>
+  </div>
 
-    <div *ngIf="paginatedAnomalies.length === 0" class="empty-state">
-      <p>Aucune alerte trouvée avec ces critères.</p>
-    </div>
+  <div *ngIf="!loading && paginatedAnomalies.length === 0" class="empty-state">
+    <p>Aucune alerte trouvee avec ces criteres.</p>
+  </div>
 
-    <!-- Pagination -->
-    <div *ngIf="totalPages > 1" class="pagination">
-      <button class="pagination-btn" (click)="prevPage()" [disabled]="currentPage === 1">← Précédent</button>
-      <span class="pagination-info">Page {{ currentPage }} / {{ totalPages }}</span>
-      <button class="pagination-btn" (click)="nextPage()" [disabled]="currentPage === totalPages">Suivant →</button>
+  <footer class="view-footer" *ngIf="totalPages > 1">
+    <div class="pagination">
+      <button class="nav-btn" (click)="prevPage()" [disabled]="currentPage === 1">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <span class="page-info">Page <strong>{{ currentPage }}</strong> sur {{ totalPages }}</span>
+      <button class="nav-btn" (click)="nextPage()" [disabled]="currentPage === totalPages">
+        <mat-icon>chevron_right</mat-icon>
+      </button>
+    </div>
+  </footer>
+</section>
+
+<div *ngIf="showDetailsModal" class="modal-overlay" (click)="closeDetailsModal()">
+  <div class="modal-content details-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="title-with-icon">
+        <mat-icon class="header-icon">visibility</mat-icon>
+        <div>
+          <h2>Details de l'alerte</h2>
+          <p class="modal-subtitle">Informations completes et mise a jour du statut</p>
+        </div>
+      </div>
+      <button class="close-x" (click)="closeDetailsModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-meta">
+        <span class="meta-chip">Code: {{ detailsAnomaly?.code }}</span>
+        <span class="meta-chip">Type: {{ detailsAnomaly?.type }}</span>
+        <span class="meta-chip" [ngClass]="{ 'chip-success': detailsAnomaly?.statut === 'Traité', 'chip-warning': detailsAnomaly?.statut === 'En cours' }">
+          {{ detailsAnomaly?.statut }}
+        </span>
+      </div>
+      <div class="details-grid">
+        <div class="detail-item">
+          <span class="label">Compte</span>
+          <span class="value">{{ detailsAnomaly?.numeroCompte }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Type</span>
+          <span class="value">{{ detailsAnomaly?.type }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Code</span>
+          <span class="value">{{ detailsAnomaly?.code }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Score risque</span>
+          <span class="value">{{ detailsAnomaly?.scoreRisque }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Action</span>
+          <span class="value">{{ detailsAnomaly?.action }}</span>
+        </div>
+        <div class="detail-item" *ngIf="detailsAnomaly?.paysRisque">
+          <span class="label">Pays a risque</span>
+          <span class="value">{{ detailsAnomaly?.paysRisque }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Analyste</span>
+          <span class="value">{{ detailsAnomaly?.analysteAssigneID || 'Aucun' }}</span>
+        </div>
+        <div class="detail-item full">
+          <span class="label">Message</span>
+          <span class="value">{{ detailsAnomaly?.message }}</span>
+        </div>
+      </div>
+      <div class="details-actions">
+        <label>Changer le statut</label>
+        <select [(ngModel)]="selectedStatus[detailsAnomaly?.id || '']" class="status-select">
+          <option [value]="detailsAnomaly?.statut">{{ detailsAnomaly?.statut }}</option>
+          <option value="Traité" *ngIf="detailsAnomaly?.statut !== 'Traité'">Traité</option>
+          <option value="En cours" *ngIf="detailsAnomaly?.statut !== 'En cours'">En cours</option>
+        </select>
+        <button class="btn-update-status" (click)="detailsAnomaly && updateAnomalyStatus(detailsAnomaly)" [disabled]="!detailsAnomaly || !selectedStatus[detailsAnomaly.id] || selectedStatus[detailsAnomaly.id] === detailsAnomaly.statut">
+          Mettre a jour
+        </button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" (click)="closeDetailsModal()">Fermer</button>
     </div>
   </div>
-</section>
+</div>

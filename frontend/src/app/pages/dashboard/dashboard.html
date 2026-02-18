@@ -1,175 +1,175 @@
 <section class="tracking-page dashboard-tracking" *ngIf="!loading; else loadingTpl">
   <h1>Tableau de bord</h1>
+
   <div class="tracking-content">
     <div class="kpis-grid">
-      <div class="kpi-card">
-        <div class="kpi-icon"><img src="../../../assets/analytics.svg" alt="Transactions"/></div>
+      <div class="kpi-card kpi-transactions">
+        <div class="kpi-icon"><img src="assets/analytics.svg" alt="Transactions"/></div>
         <div class="kpi-content">
           <div class="kpi-value">{{ kpi.transactions | number:'1.0-0' }}</div>
           <div class="kpi-label">Transactions Analysées</div>
         </div>
       </div>
+
       <div class="kpi-card kpi-alert-detected">
-        <div class="kpi-icon"><img src="../../../assets/bell.svg" alt="Anomalies"/></div>
+        <div class="kpi-icon"><img src="assets/bell.svg" alt="Anomalies"/></div>
         <div class="kpi-content">
           <div class="kpi-value">{{ kpi.anomaliesDetectees | number:'1.0-0' }}</div>
           <div class="kpi-label">Anomalies Détectées</div>
         </div>
       </div>
+
       <div class="kpi-card kpi-alert-treated">
-        <div class="kpi-icon"><img src="../../../assets/shield-check.svg" alt="Traitée"/></div>
+        <div class="kpi-icon"><img src="assets/shield-check.svg" alt="Traitée"/></div>
         <div class="kpi-content">
           <div class="kpi-value">{{ kpi.anomaliesTraitees | number:'1.0-0' }}</div>
           <div class="kpi-label">Anomalies Traitées</div>
         </div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-icon"><img src="../../../assets/eye.svg" alt="Surveillés"/></div>
+
+      <div class="kpi-card kpi-monitored">
+        <div class="kpi-icon"><img src="assets/eye.svg" alt="Surveillés"/></div>
         <div class="kpi-content">
           <div class="kpi-value">{{ kpi.comptesSurveilles | number:'1.0-0' }}</div>
           <div class="kpi-label">Comptes Surveillés</div>
         </div>
       </div>
     </div>
-    <h2 class="section-title">Transactions récentes</h2>
-    <div class="events-controls">
 
-      <div class="controls-row">
-        <div class="search-container">
-          <input type="search" class="provider-search"
-                 placeholder="Rechercher par numéro de compte ou nom..."
-                 [(ngModel)]="filters.search"
-                 (ngModelChange)="applyFilters(); currentPage = 1"
-                 (keyup.enter)="applyFilters()" />
-          <i class="material-icons search-icon">search</i>
-        </div>
-        <div class="actions-group">
-        </div>
-      </div>
-
-      <div class="provider-filters provider-filters-grid">
-        <div class="filter-row">
-          <select [(ngModel)]="filters.pays" (change)="applyFilters()" class="filter-select">
-            <option value="">Par Pays</option>
-            <option *ngFor="let p of pays" [value]="p">{{ p }}</option>
-          </select>
-          <select [(ngModel)]="filters.portee" (change)="applyFilters()" class="filter-select">
-            <option value="">Par Portée</option>
-            <option value="national">National</option>
-            <option value="international">International</option>
-          </select>
-        </div>
-        <div class="filter-row">
-          <select [(ngModel)]="filters.periode" (change)="applyFilters(); currentPage = 1" class="filter-select">
-            <option value="">Par Période</option>
-            <option value="Aujourd'hui">Aujourd'hui</option>
-            <option value="7 derniers jours">7 derniers jours</option>
-            <option value="30 derniers jours">30 derniers jours</option>
-          </select>
-          <select [(ngModel)]="filters.typeClient" (change)="applyFilters()" class="filter-select">
-            <option value="">Par Type</option>
-            <option *ngFor="let opt of typeClientOptions" [value]="opt.label">{{ opt.label }}</option>
-          </select>
-        </div>
+    <div class="section-header-container">
+      <div class="section-title">
+        <h2>Transactions récentes</h2>
+        <button class="btn-see-all" (click)="seeAll()">
+          Voir tout
+          <span class="material-icons">arrow_forward</span>
+        </button>
       </div>
     </div>
-    <div class="transactions-list">
-      <div *ngFor="let t of paginatedTransactions" class="transaction-card" (click)="viewTransaction(t)">
-        <div class="transaction-row">
-          <div class="transaction-icon">
-            <span class="material-icons">swap_horiz</span>
-          </div>
-          <div class="transaction-info">
-            <div class="transaction-sens">
-              <span class="payeur">{{ t.nom_payeur }}</span>
-              <span class="arrow-sens" [ngClass]="{'arrow-vertical': isMobileScreen}">
-                {{ isMobileScreen ? '↓' : '→' }}
-              </span>
-              <span class="paye">{{ t.nom_paye }}</span>
+
+    <div class="transactions-list-container">
+      <div class="transactions-list">
+        @for (t of paginatedTransactions; track t.id) {
+          <div class="t-card-compact" [class.expanded]="isExpanded(t)" (click)="toggleDetails(t)">
+            <div class="card-main">
+              <div class="status-indicator" [ngClass]="getTransactionStatusClass(t)"></div>
+              
+              <div class="time-block">
+                <span class="time">{{ t.date_operation | date:'HH:mm' }}</span>
+                <span class="date">{{ formatDateFRShort(t.date_operation) }}</span>
+              </div>
+
+              <div class="transfer-block">
+                <div class="entity">
+                  <span class="name">{{ t.nom_payeur }}</span>
+                  <span class="account">{{ t.numero_compte_payeur }}</span>
+                </div>
+                <mat-icon class="arrow">east</mat-icon>
+                <div class="entity">
+                  <span class="name">{{ t.nom_paye }}</span>
+                  <span class="account">{{ t.numero_compte_paye }}</span>
+                </div>
+              </div>
+
+              <div class="amount-block">
+                <span class="amount">{{ t.montant | number:'1.0-0' }}</span>
+                <span class="currency">FCFA</span>
+              </div>
+
+              <div class="badge-block">
+                <span class="status-pill" [ngClass]="getTransactionStatusClass(t)">
+                  {{ getTransactionStatus(t) }}
+                </span>
+                <mat-icon class="chevron">{{ isExpanded(t) ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </div>
             </div>
-            <div class="transaction-date">
-              {{ t.date_operation | date:'dd/MM/yyyy' }}
-              <span class="transaction-time">{{ t.date_operation | date:'HH:mm' }}</span>
+
+            <div class="card-details" *ngIf="isExpanded(t)" (click)="$event.stopPropagation()">
+               <div class="details-grid">
+                  <div class="detail-col">
+                    <h5><mat-icon>person_outline</mat-icon> Émetteur</h5>
+                    <div class="det-item"><span>Nom complet</span><strong>{{t.nom_payeur}}</strong></div>
+                    <div class="det-item"><span>N° Compte</span><strong class="mono">{{t.numero_compte_payeur}}</strong></div>
+                    <div class="det-item"><span>Type Client</span><strong>{{getTypeClientLabel(t.type_client_payeur)}}</strong></div>
+                    <div class="det-item"><span>Localisation</span><strong>{{t.ville_payeur}}, {{getCountryNameFromCode(t.pays_payeur)}}</strong></div>
+                  </div>
+
+                  <div class="detail-col">
+                    <h5><mat-icon>account_balance_wallet</mat-icon> Bénéficiaire</h5>
+                    <div class="det-item"><span>Nom complet</span><strong>{{t.nom_paye}}</strong></div>
+                    <div class="det-item"><span>N° Compte</span><strong class="mono">{{t.numero_compte_paye}}</strong></div>
+                    <div class="det-item"><span>Type Client</span><strong>{{getTypeClientLabel(t.type_client_paye)}}</strong></div>
+                    <div class="det-item"><span>Localisation</span><strong>{{t.ville_paye || 'N/A'}}, {{getCountryNameFromCode(t.pays_paye)}}</strong></div>
+                  </div>
+
+                  <div class="detail-col">
+                    <h5><mat-icon>receipt_long</mat-icon> Infos Système</h5>
+                    <div class="det-item"><span>ID Unique</span><strong>#{{t.id}}</strong></div>
+                    <div class="det-item"><span>Date précise</span><strong>{{ formatDateFR(t.date_operation) }}</strong></div>
+                    <div class="det-item"><span>Portée flux</span><strong class="portee-label">{{t.portee}}</strong></div>
+                    <div class="det-item"><span>Statut final</span><strong [ngClass]="getTransactionStatusClass(t)">{{getTransactionStatus(t)}}</strong></div>
+                  </div>
+               </div>
+
+               <div class="detail-section" *ngIf="selectedAlertes.length">
+                 <h5 class="alertes-title"><mat-icon>warning</mat-icon> Alertes associées ({{ selectedAlertes.length }})</h5>
+                 <ul class="alertes-list">
+                   <li *ngFor="let item of getGroupedAlertes()" [ngClass]="'level-' + item[1].niveauCriticite">
+                     <div class="alerte-header">
+                       <span class="alerte-code">{{ item[1].code }}</span>
+                       <span class="alerte-level">{{ item[1].niveauCriticite }}</span>
+                     </div>
+                     <div class="alerte-account">
+                       <mat-icon>account_balance</mat-icon>
+                       <span class="account-number">{{ item[1].numeroCompte }}</span>
+                     </div>
+                     <span class="alerte-message">{{ item[1].message }}</span>
+                     <div class="alerte-dates" *ngIf="item[1].dates.length">
+                       <span class="dates-label">Date{{ item[1].dates.length > 1 ? 's' : '' }} de génération:</span>
+                       <div class="dates-list">
+                         <span *ngFor="let date of item[1].dates; let i = index" class="date-item">
+                           <span class="occurrence-badge">{{ i + 1 }}</span>
+                           {{ formatDateFR(date) }}
+                         </span>
+                       </div>
+                     </div>
+                   </li>
+                 </ul>
+               </div>
             </div>
           </div>
-          <div class="transaction-amount" [ngClass]="'amount-debit'">
-            {{ t.montant | number:'1.0-0' }} FCFA
+        } @empty {
+          <div class="empty-state">
+            <mat-icon>search_off</mat-icon>
+            <p>Aucune transaction pour aujourd'hui.</p>
           </div>
-          <div class="transaction-status">
-            <span class="status-badge" [ngClass]="getTransactionStatusClass(t)">
-              {{ getTransactionStatus(t) === 'Succès' ? 'Succès' : 'Échec' }}
-            </span>
-          </div>
-        </div>
+        }
       </div>
-      <div *ngIf="(paginatedTransactions.length || 0) === 0" class="empty">Aucune transaction trouvée pour ces filtres.</div>
-    </div>
-    <div class="pagination" *ngIf="totalPages > 1">
-      <button class="pagination-btn" (click)="prevPage()" [disabled]="currentPage === 1">← Précédent</button>
-      <span class="pagination-info">Page {{ currentPage }} / {{ totalPages }}</span>
-      <button class="pagination-btn" (click)="nextPage()" [disabled]="currentPage === totalPages">Suivant →</button>
+
+      <footer class="pagination-footer" *ngIf="totalPages > 1">
+        <button (click)="previousPage()" [disabled]="currentPage === 1"><mat-icon>navigate_before</mat-icon></button>
+        <span class="page-info">{{ currentPage }} / {{ totalPages }}</span>
+        <button (click)="nextPage()" [disabled]="currentPage === totalPages"><mat-icon>navigate_next</mat-icon></button>
+      </footer>
     </div>
   </div>
 </section>
 
 <ng-template #loadingTpl>
-  <div class="loading">Chargement du tableau de bord…</div>
+  <div class="loading-container">
+    <div class="spinner"></div>
+    <p>Chargement du tableau de bord…</p>
+  </div>
 </ng-template>
 
-<div class="error" *ngIf="error">{{ error }}</div>
-
-<!-- Modal détail transaction -->
-<div *ngIf="selectedTransaction" class="modal-overlay" (click)="closeTransactionDetail()">
+<div *ngIf="selectedTransaction" class="modal-overlay" (click)="selectedTransaction = null">
   <div class="modal-content dashboard-card" (click)="$event.stopPropagation()">
     <div class="modal-header">
-        <h3 id="transactionModalTitle">{{ selectedTransaction['action_effectuee'] || 'Détails de la transaction' }}</h3>
+        <h3>Expertise Transaction #{{ selectedTransaction.id }}</h3>
+        <button class="modal-close" (click)="selectedTransaction = null"><span class="material-icons">close</span></button>
     </div>
-
     <div class="modal-body">
-      <div class="detail-grid">
-        <div class="detail-section">
-          <h4><span class="material-icons icon-title">info</span> Infos générales</h4>
-          <p><strong>ID:</strong> {{ selectedTransaction.id }}</p>
-          <p><strong>Date:</strong> {{ selectedTransaction.date_operation | date:'dd/MM/yyyy HH:mm' }}</p>
-          <p><strong>Montant:</strong> {{ selectedTransaction.montant | number:'1.0-0' }} FCFA</p>
-          <p><strong>Portée:</strong> {{ getTransactionScope(selectedTransaction!) }}</p>
-          <p><strong>Statut:</strong> {{ getReadableStatus() }}</p>
-        </div>
-
-        <div class="detail-section">
-          <h4><span class="material-icons icon-title">account_circle</span> Émetteur</h4>
-          <p><strong>Nom:</strong> {{ selectedTransaction.nom_payeur }}</p>
-          <p><strong>Compte:</strong> {{ selectedTransaction.numero_compte_payeur }}</p>
-          <p><strong>Type client:</strong> {{ getTypeClientLabel(selectedTransaction.type_client_payeur || 'P') }}</p>
-          <p><strong>Pays:</strong> {{ getCountryNameFromCode(selectedTransaction.pays_payeur || '') }}</p>
-          <p><strong>Ville:</strong> {{ selectedTransaction.ville_payeur }}</p>
-          <p><strong>Adresse:</strong> {{ selectedTransaction.adresse_payeur }}</p>
-        </div>
-
-        <div class="detail-section">
-          <h4><span class="material-icons icon-title">account_circle</span> Bénéficiaire</h4>
-          <p><strong>Nom:</strong> {{ selectedTransaction.nom_paye }}</p>
-          <p><strong>Compte:</strong> {{ selectedTransaction.numero_compte_paye }}</p>
-          <p><strong>Type client:</strong> {{ getTypeClientLabel(selectedTransaction.type_client_paye || 'P') }}</p>
-          <p><strong>Pays:</strong> {{ getCountryNameFromCode(selectedTransaction.pays_paye || '') }}</p>
-          <p><strong>Ville:</strong> {{ selectedTransaction.ville_paye }}</p>
-          <p><strong>Adresse:</strong> {{ selectedTransaction.adresse_paye }}</p>
-        </div>
-      </div>
-
-      <div class="detail-section" *ngIf="selectedAlertes.length">
-        <h4 class="alertes-title"><span class="material-icons icon-title">warning</span> Alertes associées ({{ selectedAlertes.length }})</h4>
-        <ul class="alertes-list">
-          <li *ngFor="let a of selectedAlertes">
-            <strong>{{ a.type || 'Alerte' }}</strong>
-            <span>— {{ a.message || a.raison || 'Voir détails' }}</span>
-            <span class="alerte-meta">(niveau: {{ a.niveauCriticite || 'N/A' }}, action: {{ a.action || 'N/A' }})</span>
-          </li>
-        </ul>
-      </div>
-
       <div class="detail-section" *ngIf="selectedTransaction.raw_data">
-        <h4>Données brutes</h4>
+        <h4>Données brutes (JSON)</h4>
         <pre class="raw-json">{{ selectedTransaction.raw_data | json }}</pre>
       </div>
     </div>

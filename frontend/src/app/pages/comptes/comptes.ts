@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProfileService, Account, SuiviBlacklist } from '../../services/profile.service';
+import { MatIconModule } from '@angular/material/icon';
 import { Subject, forkJoin } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import * as countries from 'i18n-iso-countries';
@@ -24,7 +25,7 @@ interface AccountWithSuivi extends Account {
 @Component({
   selector: 'app-comptes',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MatIconModule],
   templateUrl: './comptes.html',
   styleUrls: ['./comptes.scss']
 })
@@ -51,6 +52,8 @@ export class ComptesComponent implements OnInit, OnDestroy {
 
   // Détails expandables
   expandedAccountId: string | null = null;
+  showDetailsModal = false;
+  detailsAccount: AccountWithSuivi | null = null;
 
   // Tri
   sortBy = 'numeroCompte';
@@ -276,6 +279,16 @@ export class ComptesComponent implements OnInit, OnDestroy {
     this.expandedAccountId = this.expandedAccountId === account.id ? null : account.id;
   }
 
+  openDetailsModal(account: AccountWithSuivi) {
+    this.detailsAccount = account;
+    this.showDetailsModal = true;
+  }
+
+  closeDetailsModal() {
+    this.showDetailsModal = false;
+    this.detailsAccount = null;
+  }
+
   onFilterChange() {
     this.applyFilters();
   }
@@ -338,5 +351,8 @@ export class ComptesComponent implements OnInit, OnDestroy {
 
   dismissError() {
     this.error = '';
+  }
+  printPage(): void {
+    window.print();
   }
 }

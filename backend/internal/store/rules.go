@@ -14,9 +14,6 @@ import (
 
 // CreateRegleControle insère une nouvelle règle de contrôle dans la base de données.
 func (s *Store) CreateRegleControle(ctx context.Context, regle *models.RegleControle, userID string) (*models.RegleControle, error) {
-	// --- GORM ---
-	// IMPORTANT: depuis la nouvelle architecture, on n'utilise plus la colonne liste_pays
-	// On sélectionne explicitement les colonnes à insérer pour éviter toute erreur
 	result := s.gormDB.WithContext(ctx).
 		Select("NomRegle", "Description", "TypeRegle", "Criticite", "Seuil", "PeriodeReference", "Active", "Action", "ProfilClientID").
 		Create(regle)
@@ -112,7 +109,11 @@ func (s *Store) DeleteRegleControle(ctx context.Context, id string, userID strin
 		return fmt.Errorf("erreur lors de la recherche de la règle: %w", err)
 	}
 
-	// Suppression autorisée pour la règle 'pays_risque' (nouvelle architecture: la liste est dans pays_risque)
+	// Suppression des pays associés à cette règle (pour éviter la violation de clé étrangère)
+	// Important: La règle de type 'pays_risque' stocke la liste des pays dans pays_risque avec RegleControleID = id
+	if err := s.gormDB.WithContext(ctx).Where("regle_controle_id = ?", id).Delete(&models.PaysRisque{}).Error; err != nil {
+		return fmt.Errorf("erreur lors de la suppression des pays associés: %w", err)
+	}
 
 	// Supprimer la règle (les alertes conservent leur regle_declenchee_id pour audit)
 	result := s.gormDB.WithContext(ctx).Delete(&regle)

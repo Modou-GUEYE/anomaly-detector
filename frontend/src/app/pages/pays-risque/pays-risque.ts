@@ -6,55 +6,57 @@ import { AuthService } from '../../services/auth.service';
 import { ConfigService } from '../../services/config.service';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { MatIconModule } from '@angular/material/icon';
+
 
 @Component({
   selector: 'app-pays-risque',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MatIconModule],
   templateUrl: './pays-risque.html',
   styleUrls: ['./pays-risque.scss']
 })
 export class PaysRisqueComponent implements OnInit, OnDestroy {
+  // --- Data ---
   pays: PaysRisque[] = [];
   filteredPays: PaysRisque[] = [];
   paginatedPays: PaysRisque[] = [];
 
+  // --- States ---
   loading = true;
+  submitting = false;
   error = '';
   success = '';
+  searchTerm = '';
 
-  // Modal d'accès refusé (comme dans control-rules)
+  // --- Modals & UI Controls ---
   showAccessDeniedModal = false;
   adminOnlyMessage = 'Cette action est réservée aux administrateurs';
+  showForm = false;
+  showEditForm = false;
+  showImportForm = false;
+  showDeleteConfirmModal = false;
+  deletingPays: PaysRisque | null = null;
 
-  // Pagination
+  // --- Pagination ---
   currentPage = 1;
   itemsPerPage = 10;
   totalPages = 0;
 
-  // Filtres
-  searchTerm = '';
-
-  // Formulaire d'ajout
+  // --- Forms Data ---
   newPaysName = '';
-  newPaysCode = ''; // Code ISO alpha-2
-  showForm = false;
-  submitting = false;
-
-  // Formulaire d'édition
+  newPaysCode = '';
   editingPays: PaysRisque | null = null;
   editedPaysName = '';
-  editedPaysCode = ''; // Code ISO alpha-2
-  showEditForm = false;
-
-  // Pays récemment ajouté / modifié pour mise en surbrillance
-  highlightPaysNom: string | null = null;
-
-  // Import
-  showImportForm = false;
+  editedPaysCode = '';
+  
+  // --- Import ---
   selectedFile: File | null = null;
   importMessage = '';
   importError = '';
+
+  // --- Animation Highlight ---
+  highlightPaysNom: string | null = null;
 
   private destroy$ = new Subject<void>();
 
@@ -64,267 +66,184 @@ export class PaysRisqueComponent implements OnInit, OnDestroy {
     private config: ConfigService
   ) {}
 
-  /**
-   * Vérifie si l'utilisateur connecté est un administrateur
-   */
   get isAdmin(): boolean {
     return this.authService.isAdmin();
   }
 
-  /**
-   * Affiche le modal d'accès refusé
-   */
-  showAccessDenied(): void {
-    this.showAccessDeniedModal = true;
-  }
-
-  /**
-   * Ferme le modal d'accès refusé
-   */
-  closeAccessDeniedModal(): void {
-    this.showAccessDeniedModal = false;
-  }
-
-  ngOnInit() {
+  ngOnInit(): void {
     if (typeof window === 'undefined') return;
-    // Construire le message d'accès refusé depuis la configuration runtime
+    
+    // Initialisation du message admin dynamique
     try {
       const adminRole = this.config.getRoleName('admin');
       if (adminRole) this.adminOnlyMessage = `Cette action est réservée au rôle « ${adminRole} »`;
-    } catch (e) {
-      // fallback conservé
-    }
+    } catch (e) { }
+
     this.loadPaysARisque();
   }
 
-  ngOnDestroy() {
+  ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
   }
 
-  /**
-   * Vérifie si l'utilisateur a les permissions admin
-   * Affiche un modal si ce n'est pas le cas
-   */
+  // --- Permissions Check ---
   private checkAdminPermission(): boolean {
-    if (!this.authService.isAdmin()) {
-      this.showAccessDenied();
+    if (!this.isAdmin) {
+      this.showAccessDeniedModal = true;
       return false;
     }
     return true;
   }
 
-  loadPaysARisque() {
-    this.loading = true;
-    this.error = '';
-    this.success = '';
+  closeAccessDeniedModal(): void {
+    this.showAccessDeniedModal = false;
+  }
 
+  // --- Core Logic ---
+  loadPaysARisque(): void {
+    this.loading = true;
     this.profileService.getAllPaysARisque()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (data: PaysRisque[]) => {
+        next: (data) => {
           this.pays = data || [];
           this.applyFilters();
           this.loading = false;
         },
         error: () => {
-          this.error = 'Erreur lors du chargement des pays à risque';
+          this.error = 'Erreur lors du chargement des pays';
           this.loading = false;
         }
       });
   }
 
-  applyFilters() {
-    let filtered = [...this.pays];
-
-    if (this.searchTerm) {
-      const term = this.searchTerm.toLowerCase();
-      filtered = filtered.filter(p =>
-        p.nomPays.toLowerCase().includes(term) ||
-        (p.code && p.code.toLowerCase().includes(term))
-      );
-    }
-
-    this.filteredPays = filtered;
+  applyFilters(): void {
+    const term = this.searchTerm.toLowerCase().trim();
+    this.filteredPays = this.pays.filter(p => 
+      p.nomPays.toLowerCase().includes(term) || 
+      (p.code && p.code.toLowerCase().includes(term))
+    );
     this.updatePagination();
   }
 
-  updatePagination() {
-    this.totalPages = Math.ceil(this.filteredPays.length / this.itemsPerPage);
-    const start = (this.currentPage - 1) * this.itemsPerPage;
-    const end = start + this.itemsPerPage;
-    this.paginatedPays = this.filteredPays.slice(start, end);
-  }
-
-  onSearch() {
+  onSearch(): void {
     this.currentPage = 1;
     this.applyFilters();
   }
 
-  goToPage(page: number) {
+  updatePagination(): void {
+    this.totalPages = Math.ceil(this.filteredPays.length / this.itemsPerPage);
+    const start = (this.currentPage - 1) * this.itemsPerPage;
+    this.paginatedPays = this.filteredPays.slice(start, start + this.itemsPerPage);
+  }
+
+  goToPage(page: number): void {
     if (page >= 1 && page <= this.totalPages) {
       this.currentPage = page;
       this.updatePagination();
     }
   }
 
-  toggleForm() {
-    // Vérifier les permissions avant d'afficher le formulaire
-    if (!this.checkAdminPermission()) {
-      return;
-    }
-    
+  // --- Create ---
+  toggleForm(): void {
+    if (!this.checkAdminPermission()) return;
     this.showForm = !this.showForm;
-    if (!this.showForm) {
-      this.newPaysName = '';
-      this.newPaysCode = '';
-    }
+    this.showEditForm = false;
+    this.showImportForm = false;
+    if (!this.showForm) this.resetForms();
   }
 
-  addPays() {
-    // Vérifier les permissions
-    if (!this.checkAdminPermission()) {
-      return;
-    }
-    
-    if (!this.newPaysName.trim()) {
-      this.error = 'Veuillez entrer un nom de pays';
-      return;
-    }
-
-    // Validation du code (OBLIGATOIRE)
-    if (!this.newPaysCode || !/^[A-Za-z]{2}$/.test(this.newPaysCode.trim())) {
-      this.error = 'Le code pays doit être ISO alpha-2 (2 lettres)';
+  addPays(): void {
+    if (!this.checkAdminPermission()) return;
+    if (!this.newPaysName.trim() || !this.newPaysCode.trim() || !/^[A-Za-z]{2}$/.test(this.newPaysCode.trim())) {
+      this.error = 'Format invalide (Nom requis et Code ISO à 2 lettres)';
       return;
     }
 
     this.submitting = true;
-    this.error = '';
+    const nom = this.newPaysName.trim();
+    const code = this.newPaysCode.trim().toUpperCase();
 
-    const nomAjoute = this.newPaysName.trim();
-    const codeAjoute = this.newPaysCode.trim().toUpperCase();
-    this.profileService.createPaysARisque(nomAjoute, codeAjoute)
+    this.profileService.createPaysARisque(nom, code)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: () => {
-          this.success = `Pays "${nomAjoute}" (${codeAjoute}) ajouté avec succès`;
-          this.newPaysName = '';
-          this.newPaysCode = '';
-          this.showForm = false;
-          this.submitting = false;
-          this.highlightPaysNom = nomAjoute;
-          this.loadPaysARisque();
-          setTimeout(() => { this.success = ''; this.highlightPaysNom = null; }, 3000);
-        },
-        error: () => {
-          this.error = 'Erreur lors de l\'ajout du pays';
-          this.submitting = false;
-        }
+        next: () => this.handleSuccess(nom, `Pays "${nom}" ajouté avec succès`),
+        error: () => this.handleError('Erreur lors de l\'ajout')
       });
   }
 
-  deletePays(pays: PaysRisque) {
-    // Vérifier les permissions
-    if (!this.checkAdminPermission()) {
-      return;
-    }
-    if (this.submitting) return; // Guard double clic
-    
-    if (!confirm(`Êtes-vous sûr de vouloir supprimer "${pays.nomPays}" ?`)) {
-      return;
-    }
-
-    this.submitting = true;
-    this.profileService.deletePaysARisque(pays.nomPays)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          this.success = `Pays "${pays.nomPays}" supprimé avec succès`;
-          this.loadPaysARisque();
-          this.submitting = false;
-          setTimeout(() => this.success = '', 3000);
-        },
-        error: () => {
-          this.error = 'Erreur lors de la suppression du pays';
-          this.submitting = false;
-        }
-      });
-  }
-
-  startEdit(pays: PaysRisque) {
-    // Vérifier les permissions
-    if (!this.checkAdminPermission()) {
-      return;
-    }
-    
+  // --- Update ---
+  startEdit(pays: PaysRisque): void {
+    if (!this.checkAdminPermission()) return;
     this.editingPays = pays;
     this.editedPaysName = pays.nomPays;
     this.editedPaysCode = pays.code || '';
     this.showEditForm = true;
+    this.showForm = false;
+    this.showImportForm = false;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  cancelEdit() {
-    this.editingPays = null;
-    this.editedPaysName = '';
-    this.editedPaysCode = '';
-    this.showEditForm = false;
-  }
-
-  savePaysEdit() {
-    // Vérifier les permissions
-    if (!this.checkAdminPermission()) {
-      return;
-    }
-    
-    if (!this.editedPaysName.trim()) {
-      this.error = 'Veuillez entrer un nom de pays';
-      return;
-    }
-
-    if (!this.editingPays) {
-      return;
-    }
-
-    // Validation du code (OBLIGATOIRE)
-    if (!this.editedPaysCode || !/^[A-Za-z]{2}$/.test(this.editedPaysCode.trim())) {
-      this.error = 'Le code pays doit être ISO alpha-2 (2 lettres)';
+  savePaysEdit(): void {
+    if (!this.checkAdminPermission() || !this.editingPays) return;
+    if (!this.editedPaysName.trim() || !/^[A-Za-z]{2}$/.test(this.editedPaysCode.trim())) {
+      this.error = 'Nom requis et Code ISO à 2 lettres';
       return;
     }
 
     this.submitting = true;
-    this.error = '';
-
     const nomAncien = this.editingPays.nomPays;
     const nomNouveau = this.editedPaysName.trim();
     const codeNouveau = this.editedPaysCode.trim().toUpperCase();
+
     this.profileService.updatePaysARisque(nomAncien, nomNouveau, codeNouveau)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
+        next: () => this.handleSuccess(nomNouveau, `Pays mis à jour avec succès`),
+        error: () => this.handleError('Erreur lors de la mise à jour')
+      });
+  }
+
+  // --- Delete ---
+  deletePays(pays: PaysRisque): void {
+    if (!this.checkAdminPermission()) return;
+    this.deletingPays = pays;
+    this.showDeleteConfirmModal = true;
+  }
+
+  confirmDelete(): void {
+    if (!this.deletingPays) return;
+
+    this.submitting = true;
+    this.profileService.deletePaysARisque(this.deletingPays.nomPays)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
         next: () => {
-          this.success = `Pays "${nomAncien}" mis à jour en "${nomNouveau}" (${codeNouveau})`;
-          this.editingPays = null;
-          this.editedPaysName = '';
-          this.editedPaysCode = '';
-          this.showEditForm = false;
-          this.submitting = false;
-          this.highlightPaysNom = nomNouveau;
+          this.success = 'Pays supprimé';
           this.loadPaysARisque();
-          setTimeout(() => { this.success = ''; this.highlightPaysNom = null; }, 3000);
+          this.submitting = false;
+          this.closeDeleteConfirmModal();
+          setTimeout(() => this.success = '', 3000);
         },
         error: () => {
-          this.error = 'Erreur lors de la mise à jour du pays';
-          this.submitting = false;
+          this.handleError('Erreur lors de la suppression');
+          this.closeDeleteConfirmModal();
         }
       });
   }
 
-  toggleImportForm() {
-    // Vérifier les permissions avant d'afficher le formulaire d'import
-    if (!this.checkAdminPermission()) {
-      return;
-    }
-    
+  closeDeleteConfirmModal(): void {
+    this.showDeleteConfirmModal = false;
+    this.deletingPays = null;
+  }
+
+  // --- Import Logic (Ta logique intégrée) ---
+  toggleImportForm(): void {
+    if (!this.checkAdminPermission()) return;
     this.showImportForm = !this.showImportForm;
+    this.showForm = false;
+    this.showEditForm = false;
     if (!this.showImportForm) {
       this.selectedFile = null;
       this.importMessage = '';
@@ -332,82 +251,78 @@ export class PaysRisqueComponent implements OnInit, OnDestroy {
     }
   }
 
-  onFileSelected(event: any) {
+  onFileSelected(event: any): void {
     this.selectedFile = event.target.files?.[0] || null;
-    if (this.selectedFile) {
-      this.importError = '';
-    }
+    this.importError = '';
   }
 
-  importPays() {
-    // Vérifier les permissions
-    if (!this.checkAdminPermission()) {
-      return;
-    }
-    
+  importPays(): void {
+    if (!this.checkAdminPermission()) return;
     if (!this.selectedFile) {
       this.importError = 'Veuillez sélectionner un fichier';
       return;
     }
-    if (this.submitting) return; // Guard double clic import
 
     const allowedTypes = [
-      'text/csv', 
-      'text/plain', 
-      'application/json', 
+      'text/csv', 'text/plain', 'application/json',
       'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     ];
-    
     const fileName = this.selectedFile.name.toLowerCase();
     const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
-    const isValidType = allowedTypes.includes(this.selectedFile.type) || isExcel;
-    
-    if (!isValidType) {
-      this.importError = 'Format de fichier non autorisé. Utilisez CSV, JSON ou Excel (.xlsx, .xls).';
+
+    if (!allowedTypes.includes(this.selectedFile.type) && !isExcel) {
+      this.importError = 'Format invalide (CSV, JSON, Excel)';
       return;
     }
 
     this.submitting = true;
-    this.importError = '';
-    this.importMessage = '';
-
-    // Envoyer tous les formats au backend (CSV, JSON, Excel)
     this.profileService.importPaysARisque(this.selectedFile)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (result: any) => {
-          this.handleImportResult(result);
-        },
-        error: (err: any) => {
-          this.importError = 'Erreur lors de l\'import: ' + (err.error?.error || err.message);
+        next: (res) => this.handleImportResult(res),
+        error: (err) => {
+          this.importError = 'Erreur d\'import : ' + (err.error?.error || 'Serveur injoignable');
           this.submitting = false;
         }
       });
   }
 
-  private handleImportResult(result: any) {
+  private handleImportResult(result: any): void {
     if (result.imported > 0) {
-      this.importMessage = `${result.imported}/${result.total} pays importés avec succès`;
-      if (result.errors && result.errors.length > 0) {
-        this.importMessage += `. ${result.errors.length} erreur(s).`;
-      }
+      this.success = `${result.imported} pays importés avec succès`;
       this.loadPaysARisque();
-      this.selectedFile = null;
       this.showImportForm = false;
       this.submitting = false;
-      setTimeout(() => this.importMessage = '', 5000);
+      setTimeout(() => this.success = '', 5000);
     } else {
-      this.importError = 'Aucun pays n\'a pu être importé';
+      this.importError = 'Aucun pays importé';
       this.submitting = false;
     }
   }
 
-  dismissError() {
-    this.error = '';
+  // --- Helpers ---
+  private handleSuccess(name: string, msg: string): void {
+    this.success = msg;
+    this.highlightPaysNom = name;
+    this.showForm = this.showEditForm = false;
+    this.submitting = false;
+    this.loadPaysARisque();
+    setTimeout(() => { this.success = ''; this.highlightPaysNom = null; }, 3000);
   }
 
-  dismissSuccess() {
-    this.success = '';
+  private handleError(msg: string): void {
+    this.error = msg;
+    this.submitting = false;
+  }
+
+  private resetForms(): void {
+    this.newPaysName = ''; this.newPaysCode = '';
+    this.error = ''; this.success = '';
+  }
+
+  cancelEdit(): void {
+    this.showEditForm = false;
+    this.editingPays = null;
   }
 }

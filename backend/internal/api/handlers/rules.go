@@ -69,7 +69,7 @@ func normalizeAndValidateRegle(r *models.RegleControle) error {
 	switch r.TypeRegle {
 	case "montant":
 		// Périodes autorisées pour montant
-		allowed := map[string]struct{}{"7d": {}, "30d": {}}
+		allowed := map[string]struct{}{"24h": {}, "7d": {}, "30d": {}}
 		if r.PeriodeReference == "" {
 			r.PeriodeReference = defaultMontantPeriode
 		} else {
@@ -86,7 +86,7 @@ func normalizeAndValidateRegle(r *models.RegleControle) error {
 		}
 	case "frequence":
 		// Périodes autorisées pour frequence
-		allowed := map[string]struct{}{"24h": {}, "7d": {}}
+		allowed := map[string]struct{}{"24h": {}, "7d": {}, "30d": {}}
 		if r.PeriodeReference == "" {
 			r.PeriodeReference = defaultFrequencePeriode
 		} else {

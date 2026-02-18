@@ -1,157 +1,137 @@
-<section class="reports-page">
-  <h1>Rapports LBC/FT</h1>
+<section class="reports-container">
+  <header class="dashboard-header">
+    <div class="title-section">
+      <h1>Rapports LBC/FT</h1>
+      <p class="subtitle">Analyse de la conformité et lutte contre la criminalité financière</p>
+    </div>
 
-  
-  <div *ngIf="loading" class="loading">Chargement des rapports...</div>
-
-  
-  <div *ngIf="error && !loading" class="error">{{ error }}</div>
-
-  
-  <div *ngIf="!loading" class="reports-content">
-
-    
-    <div class="reports-header">
-      <div class="period-selector">
-        <label>Période d'analyse :</label>
-        <input type="date" 
-               [(ngModel)]="filters.dateDebut" 
-               (ngModelChange)="onFiltersChange()"
-               class="filter-input">
-        <span>à</span>
-        <input type="date" 
-               [(ngModel)]="filters.dateFin" 
-               (ngModelChange)="onFiltersChange()"
-               class="filter-input">
+    <div class="actions-toolbar">
+      <div class="filter-card">
+        <div class="date-group">
+          <mat-icon>calendar_today</mat-icon>
+          <input type="date" [(ngModel)]="filters.dateDebut" (ngModelChange)="onFiltersChange()">
+          <span>→</span>
+          <input type="date" [(ngModel)]="filters.dateFin" (ngModelChange)="onFiltersChange()">
+        </div>
       </div>
-        <div class="export-actions">
-        <button class="btn-export" (click)="exportToPDF()" title="Exporter en PDF">
-          <img class="btn-icon" src="../../../assets/pdf.svg" alt="Exporter en PDF"/> Export PDF
+
+      <div class="button-group">
+        <button class="btn-outline" (click)="refreshData()" [disabled]="loadingStates.charts">
+          <mat-icon [class.spinning]="loadingStates.charts">refresh</mat-icon>
         </button>
-        <button class="btn-export" (click)="exportToExcel()" title="Exporter en Excel">
-          <img class="btn-icon" src="../../../assets/excel.svg" alt="Exporter en Excel"/> Export Excel
+        <button class="btn-primary" (click)="exportToExcel()">
+          <mat-icon>description</mat-icon> Excel
         </button>
-        <button class="btn-refresh" (click)="refreshData()" [disabled]="loadingStates.charts || loadingStates.performance" title="Actualiser">
-          <img class="btn-icon" src="../../../assets/refresh-alt.svg" alt="Actualiser"/> Actualiser
+        <button class="btn-danger" (click)="exportToPDF()">
+          <mat-icon>picture_as_pdf</mat-icon> PDF
         </button>
       </div>
     </div>
+  </header>
 
+  <div class="status-overlay" *ngIf="loading || error">
+    <div *ngIf="loading" class="loader">
+      <div class="spinner"></div>
+      <span>Synchronisation des données...</span>
+    </div>
+    <div *ngIf="error" class="error-banner">
+      <mat-icon>error_outline</mat-icon> {{ error }}
+    </div>
+  </div>
+
+  <div class="dashboard-content" *ngIf="!loading">
     
-    <div class="performance-section">
-      <h2 class="section-title">📊 Métriques de Performance et Conformité</h2>
-      
-      
-      <div class="kpis-grid">
-        <div class="kpi-card kpi-alert-generated">
-          <div class="kpi-icon"><img src="../../../assets/bell.svg" alt="Alertes Générées"/></div>
-          <div class="kpi-content" [class.loading]="loadingStates.performance">
-            <div class="kpi-value" *ngIf="!loadingStates.performance">{{ performanceData.anomaliesGenerees | number }}</div>
-            <div class="loading-spinner" *ngIf="loadingStates.performance"><img class="spinner" src="../../../assets/spinner.svg" alt="Chargement"/> </div>
-            <div class="kpi-label">Alertes Générées</div>
-          </div>
+    <div class="kpi-grid">
+      <div class="kpi-stat-card alerts">
+        <div class="kpi-header">
+          <div class="icon-circle"><mat-icon>notifications_active</mat-icon></div>
         </div>
-        
-        <div class="kpi-card kpi-alert-treated">
-          <div class="kpi-icon"><img src="../../../assets/shield-check.svg" alt="Alertes Traitées"/></div>
-          <div class="kpi-content" [class.loading]="loadingStates.performance">
-            <div class="kpi-value" *ngIf="!loadingStates.performance">{{ performanceData.anomaliesTraitees | number }}</div>
-            <div class="loading-spinner" *ngIf="loadingStates.performance"><img class="spinner" src="../../../assets/spinner.svg" alt="Chargement"/></div>
-            <div class="kpi-label">Alertes Traitées</div>
-          </div>
-        </div>
-        
-        <div class="kpi-card">
-          <div class="kpi-icon"><img src="../../../assets/analytics.svg" alt="Transactions Analysées"/></div>
-          <div class="kpi-content" [class.loading]="loadingStates.performance">
-            <div class="kpi-value" *ngIf="!loadingStates.performance">{{ performanceData.transactionsAnalysees | number }}</div>
-            <div class="loading-spinner" *ngIf="loadingStates.performance"><img class="spinner" src="../../../assets/spinner.svg" alt="Chargement"/></div>
-            <div class="kpi-label">Transactions Analysées</div>
-          </div>
-        </div>
-
-        <div class="kpi-card kpi-blocked">
-          <div class="kpi-icon"><img src="../../../assets/block.svg" alt="Transactions Bloquées"/></div>
-          <div class="kpi-content" [class.loading]="loadingStates.performance">
-            <div class="kpi-value" *ngIf="!loadingStates.performance">{{ regulatoryData.transactionsBloquees | number }}</div>
-            <div class="loading-spinner" *ngIf="loadingStates.performance"><img class="spinner" src="../../../assets/spinner.svg" alt="Chargement"/></div>
-            <div class="kpi-label">Transactions Bloquées</div>
-          </div>
-        </div>
-        
-        <div class="kpi-card">
-          <div class="kpi-icon"><img src="../../../assets/eye.svg" alt="Comptes Surveillés"/></div>
-          <div class="kpi-content" [class.loading]="loadingStates.performance">
-            <div class="kpi-value" *ngIf="!loadingStates.performance">{{ regulatoryData.comptesSurveilles | number }}</div>
-            <div class="loading-spinner" *ngIf="loadingStates.performance"><img class="spinner" src="../../../assets/spinner.svg" alt="Chargement"/></div>
-            <div class="kpi-label">Comptes Surveillés</div>
-          </div>
+        <div class="kpi-body">
+          <h3 *ngIf="!loadingStates.performance">{{ performanceData.anomaliesGenerees | number }}</h3>
+          <div class="skeleton-text" *ngIf="loadingStates.performance"></div>
+          <label>Alertes Générées</label>
         </div>
       </div>
-      
-      
-      <div class="charts-controls">
-        <div class="control-group">
-          <label>Période d'analyse :</label>
-          <div class="period-buttons">
-            <button class="period-btn" 
-                    [class.active]="currentFilters.period === 'month'"
-                    (click)="changePeriod('month')">
-              Mois
-            </button>
-            <button class="period-btn" 
-                    [class.active]="currentFilters.period === 'quarter'"
-                    (click)="changePeriod('quarter')">
-              Trimestre
-            </button>
-            <button class="period-btn" 
-                    [class.active]="currentFilters.period === 'year'"
-                    (click)="changePeriod('year')">
-              Année
-            </button>
+
+      <div class="kpi-stat-card success">
+        <div class="kpi-header">
+          <div class="icon-circle"><mat-icon>verified_user</mat-icon></div>
+        </div>
+        <div class="kpi-body">
+          <h3 *ngIf="!loadingStates.performance">{{ performanceData.anomaliesTraitees | number }}</h3>
+          <div class="skeleton-text" *ngIf="loadingStates.performance"></div>
+          <label>Alertes Traitées</label>
+        </div>
+      </div>
+
+      <div class="kpi-stat-card info">
+        <div class="kpi-header">
+          <div class="icon-circle"><mat-icon>receipt_long</mat-icon></div>
+        </div>
+        <div class="kpi-body">
+          <h3 *ngIf="!loadingStates.performance">{{ performanceData.transactionsAnalysees | number }}</h3>
+          <div class="skeleton-text" *ngIf="loadingStates.performance"></div>
+          <label>Transactions Analysées</label>
+        </div>
+      </div>
+
+      <div class="kpi-stat-card danger">
+        <div class="kpi-header">
+          <div class="icon-circle"><mat-icon>block</mat-icon></div>
+        </div>
+        <div class="kpi-body">
+          <h3 *ngIf="!loadingStates.performance">{{ regulatoryData.transactionsBloquees | number }}</h3>
+          <div class="skeleton-text" *ngIf="loadingStates.performance"></div>
+          <label>Transactions Bloquées</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-stats-area">
+      <div class="chart-section-header">
+        <div class="left">
+          <h2>Analyse Comparative</h2>
+          <div class="toggle-group">
+            <button [class.active]="currentFilters.period === 'month'" (click)="changePeriod('month')">Mois</button>
+            <button [class.active]="currentFilters.period === 'quarter'" (click)="changePeriod('quarter')">Trimestre</button>
+            <button [class.active]="currentFilters.period === 'year'" (click)="changePeriod('year')">Année</button>
           </div>
         </div>
-        
-        <div class="control-group">
-          <label>Focus sur les règles :</label>
-          <select class="rule-select" 
-                  [(ngModel)]="currentFilters.typeRule" 
-                  (ngModelChange)="changeRuleType($event)">
+        <div class="right">
+          <select [(ngModel)]="currentFilters.typeRule" (ngModelChange)="changeRuleType($event)">
             <option value="all">Toutes les règles</option>
-            <option value="Montant">Montant</option>
-            <option value="frequence">frequence</option>
-            <option value="Pays à risque">Pays à risque</option>
-            <option value="Blacklist">Blacklist</option>
-            <option value="PEP">PEP</option>
-            <option value="Interdit">Interdit</option>
-            <option value="Surveillés">Surveillés</option>
+            <option value="montant">Montant</option>
+            <option value="frequence">Fréquence</option>
+            <option value="pays">Pays à risque</option>
+            <option value="blacklist">Blacklist</option>
+            <option value="pep">PEP</option>
+            <option value="surveilles">Surveillés</option>
+            <option value="interdit">Interdits</option>
           </select>
         </div>
       </div>
 
-      
-      <div class="charts-container">
-        <div class="chart-card">
-          <h3>📊 Règles Violées</h3>
-          <div class="chart-wrapper" [class.loading]="loadingStates.charts">
-            <div class="loading-overlay" *ngIf="loadingStates.charts">
-              <div class="loading-spinner">⏳ Chargement des données...</div>
-            </div>
+      <div class="charts-layout">
+        <div class="chart-card-v2">
+          <div class="card-head">
+            <h3>Distribution des Violations</h3>
+            <mat-icon matTooltip="Répartition par type de règle">info_outline</mat-icon>
+          </div>
+          <div class="canvas-container">
             <canvas #chartReglesViolees></canvas>
           </div>
         </div>
-        
-        <div class="chart-card">
-          <h3>📈 Efficacité du Traitement</h3>
-          <div class="chart-wrapper" [class.loading]="loadingStates.charts">
-            <div class="loading-overlay" *ngIf="loadingStates.charts">
-              <div class="loading-spinner">⏳ Chargement des données...</div>
-            </div>
+
+        <div class="chart-card-v2">
+          <div class="card-head">
+            <h3>Courbe d'Efficacité</h3>
+            <mat-icon matTooltip="Ratio alertes vs résolutions">trending_up</mat-icon>
+          </div>
+          <div class="canvas-container">
             <canvas #chartEfficacite></canvas>
           </div>
         </div>
       </div>
     </div>
-
   </div>
 </section>

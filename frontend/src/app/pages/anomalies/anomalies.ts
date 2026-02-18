@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AlertService } from '../../services/alert.service';
+import { MatIconModule } from '@angular/material/icon';
 
 interface Anomaly {
   id: string;
@@ -25,7 +26,7 @@ interface Anomaly {
 @Component({
   selector: 'app-anomalies',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MatIconModule],
   templateUrl: './anomalies.html',
   styleUrls: ['./anomalies.scss']
 })
@@ -39,6 +40,8 @@ export class AnomaliesComponent implements OnInit {
   pageSize = 5;
   totalPages = 1;
   selectedStatus: { [key: string]: string } = {};
+  showDetailsModal = false;
+  detailsAnomaly: Anomaly | null = null;
 
   filters = {
     search: '',
@@ -153,6 +156,16 @@ export class AnomaliesComponent implements OnInit {
     }
   }
 
+  openDetailsModal(anomaly: Anomaly) {
+    this.detailsAnomaly = anomaly;
+    this.showDetailsModal = true;
+  }
+
+  closeDetailsModal() {
+    this.showDetailsModal = false;
+    this.detailsAnomaly = null;
+  }
+
   updateAnomalyStatus(anomaly: Anomaly) {
     const newStatus = this.selectedStatus[anomaly.id];
     if (!newStatus || newStatus === anomaly.statut) {
@@ -162,7 +175,7 @@ export class AnomaliesComponent implements OnInit {
     this.alertService.updateAnomalyStatus(anomaly.id, newStatus).subscribe({
       next: () => {
         anomaly.statut = newStatus as any;
-        anomaly.expanded = false;
+        this.closeDetailsModal();
         delete this.selectedStatus[anomaly.id];
       },
       error: (err) => {

@@ -1,216 +1,176 @@
 <section class="pays-risque-page">
-  <h1>Pays à Risque</h1>
+  <div class="page-header">
+    <div class="title-section">
+      <h1>Pays à Risque</h1>
+      <span class="badge-count" *ngIf="!loading">{{ filteredPays.length }} pays répertoriés</span>
+    </div>
 
-  <!-- Filtres -->
-  <div class="filters-section">
-    <div class="search-container">
-      <input type="search"
-             class="filter-search"
-             placeholder="Rechercher un pays..."
-             [(ngModel)]="searchTerm"
-             (ngModelChange)="onSearch()" />
-      <i class="material-icons search-icon">search</i>
+    <div class="action-bar">
+      <div class="search-box">
+        <mat-icon>search</mat-icon>
+        <input type="text" placeholder="Rechercher un pays..." [(ngModel)]="searchTerm" (ngModelChange)="onSearch()">
+      </div>
+      
+      <button class="btn-action primary" (click)="toggleForm()" [class.active]="showForm">
+        <mat-icon>{{ showForm ? 'close' : 'add' }}</mat-icon>
+        {{ showForm ? 'Annuler' : 'Ajouter' }}
+      </button>
+
+      <button class="btn-action secondary" (click)="toggleImportForm()" [class.active]="showImportForm">
+        <mat-icon>{{ showImportForm ? 'close' : 'file_upload' }}</mat-icon>
+        Importer
+      </button>
     </div>
   </div>
 
-  <!-- Loading -->
-  <div *ngIf="loading" class="loading">Chargement des pays...</div>
-
-  <!-- Error -->
-  <div *ngIf="error && !loading" class="error">{{ error }}</div>
-
-  <!-- Success -->
-  <div *ngIf="success && !loading" class="success">{{ success }}</div>
-
-  <!-- Content -->
-  <div *ngIf="!loading" class="pays-risque-content">
-    <!-- Header avec compteur et boutons -->
-    <div class="pays-risque-header">
-      <div class="pays-count">
-        <span class="count-number">{{ filteredPays.length }} Pays</span>
-      </div>
-      <div class="header-actions">
-        <button class="btn-add-pays" (click)="toggleForm()">
-          <img *ngIf="showForm" class="btn-icon" src="../../../assets/close.svg" alt="Annuler"/>
-          <img *ngIf="!showForm" class="btn-icon" src="../../../assets/plus.svg" alt="Ajouter"/>
-          {{ showForm ? 'Annuler' : 'Ajouter un pays' }}
-        </button>
-        <button class="btn-import-pays" (click)="toggleImportForm()">
-          <img *ngIf="showImportForm" class="btn-icon" src="../../../assets/close.svg" alt="Annuler"/>
-          <img *ngIf="!showImportForm" class="btn-icon" src="../../../assets/download.svg" alt="Importer"/>
-          {{ showImportForm ? 'Annuler' : 'Importer' }}
-        </button>
-      </div>
+  <div class="alert-container" *ngIf="success || error">
+    <div class="alert success" *ngIf="success">
+      <mat-icon>check_circle</mat-icon>
+      <span>{{ success }}</span>
+      <button class="close-alert" (click)="success = ''">&times;</button>
     </div>
-
-    <!-- Formulaire d'ajout -->
-    <div *ngIf="showForm" class="form-section add-form">
-      <h3>Ajouter un nouveau pays</h3>
-      <div class="form-group">
-        <div class="input-row">
-          <input
-            type="text"
-            placeholder="Nom du pays *"
-            [(ngModel)]="newPaysName"
-            (keyup.enter)="addPays()"
-            class="form-input form-input-name"
-          />
-          <input
-            type="text"
-            placeholder="Code ISO * (ex: SN)"
-            [(ngModel)]="newPaysCode"
-            maxlength="2"
-            (keyup.enter)="addPays()"
-            class="form-input form-input-code"
-            required
-          />
-        </div>
-        <button
-          class="btn-submit"
-          (click)="addPays()"
-          [disabled]="submitting || !newPaysName.trim() || !newPaysCode.trim()"
-        >
-          {{ submitting ? 'Ajout en cours...' : 'Ajouter' }}
-        </button>
-      </div>
+    <div class="alert error" *ngIf="error">
+      <mat-icon>error</mat-icon>
+      <span>{{ error }}</span>
+      <button class="close-alert" (click)="error = ''">&times;</button>
     </div>
+  </div>
 
-    <!-- Formulaire d'édition -->
-    <div *ngIf="showEditForm && editingPays" class="form-section edit-form">
-      <h3>Éditer le pays</h3>
-      <p class="info-text">Ancien: <strong>{{ editingPays.nomPays }}</strong> <span *ngIf="editingPays.code">({{ editingPays.code }})</span></p>
-      <div class="form-group">
-        <div class="input-row">
-          <input
-            type="text"
-            placeholder="Nouveau nom du pays *"
-            [(ngModel)]="editedPaysName"
-            (keyup.enter)="savePaysEdit()"
-            class="form-input form-input-name"
-          />
-          <input
-            type="text"
-            placeholder="Code ISO * (ex: SN)"
-            [(ngModel)]="editedPaysCode"
-            maxlength="2"
-            (keyup.enter)="savePaysEdit()"
-            class="form-input form-input-code"
-            required
-          />
-        </div>
-        <button
-          class="btn-submit"
-          (click)="savePaysEdit()"
-          [disabled]="submitting || !editedPaysName.trim() || !editedPaysCode.trim()"
-        >
-          {{ submitting ? 'Mise à jour...' : 'Mettre à jour' }}
-        </button>
-        <button
-          class="btn-cancel"
-          (click)="cancelEdit()"
-          [disabled]="submitting"
-        >
-          Annuler
-        </button>
+  <div class="form-card add-theme" *ngIf="showForm">
+    <div class="form-header"><h3>Enregistrer un nouveau pays</h3></div>
+    <div class="form-grid">
+      <div class="input-field">
+        <label>Nom du pays</label>
+        <input type="text" [(ngModel)]="newPaysName" placeholder="Ex: Sénégal">
       </div>
-      <p class="info-text-small">* Champs obligatoires</p>
-    </div>
-
-    <!-- Formulaire d'import -->
-    <div *ngIf="showImportForm" class="form-section import-form">
-      <h3>Importer des pays</h3>
-      <p class="info-text">
-        Formats acceptés: CSV, JSON ou Excel (.xlsx, .xls).
-      </p>
-      <div class="form-group">
-        <input
-          type="file"
-          accept=".csv,.json,.txt,.xlsx,.xls"
-          (change)="onFileSelected($event)"
-          class="form-input"
-        />
-        <button
-          class="btn-submit"
-          (click)="importPays()"
-          [disabled]="submitting || !selectedFile"
-        >
-          {{ submitting ? 'Import en cours...' : 'Importer' }}
-        </button>
+      <div class="input-field">
+        <label>Code ISO</label>
+        <input type="text" maxlength="2" [(ngModel)]="newPaysCode" placeholder="Ex: SN">
       </div>
-      <div *ngIf="importMessage" class="message-box success-box">
-        {{ importMessage }}
-      </div>
-      <div *ngIf="importError" class="message-box error-box">
-        {{ importError }}
-      </div>
-    </div>
-
-    <!-- Tableau des pays -->
-    <div class="pays-risque-table-wrapper">
-      <div *ngIf="paginatedPays.length === 0" class="empty-state">
-        <p>Aucun pays trouvé</p>
-      </div>
-
-      <table *ngIf="paginatedPays.length > 0" class="pays-risque-table">
-        <thead>
-          <tr>
-            <th class="col-pays">Pays</th>
-            <th class="col-code">Code ISO *</th>
-            <th class="col-actions">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let p of paginatedPays" class="pays-row" [class.highlight]="p.nomPays === highlightPaysNom">
-            <td class="col-pays">{{ p.nomPays }}</td>
-            <td class="col-code">
-              <span class="code-badge">{{ p.code }}</span>
-            </td>
-            <td class="col-actions">
-              <div class="action-buttons">
-                <i class="material-icons icon-edit" (click)="startEdit(p)" title="Éditer">create</i><i class="material-icons icon-delete" (click)="deletePays(p)" title="Supprimer">delete</i>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-
-      <!-- Pagination -->
-      <div *ngIf="totalPages > 1" class="pagination">
-        <button
-          class="btn-pagination"
-          (click)="goToPage(currentPage - 1)"
-          [disabled]="currentPage === 1"
-        >
-          ← Précédent
-        </button>
-        <span class="page-info">
-          Page {{ currentPage }} / {{ totalPages }}
-        </span>
-        <button
-          class="btn-pagination"
-          (click)="goToPage(currentPage + 1)"
-          [disabled]="currentPage === totalPages"
-        >
-          Suivant →
+      <div class="form-actions">
+        <button class="btn-submit save" (click)="addPays()" [disabled]="submitting">
+          <span *ngIf="!submitting">Confirmer l'ajout</span>
+          <span *ngIf="submitting" class="loader-inline"></span>
         </button>
       </div>
     </div>
   </div>
 
-  <!-- Modal Accès Refusé -->
-  <div *ngIf="showAccessDeniedModal" class="modal-overlay" (click)="closeAccessDeniedModal()">
-    <div class="modal-content modal-access-denied" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h2>⛔ Accès Refusé</h2>
-        <button class="close-btn" (click)="closeAccessDeniedModal()">✕</button>
+  <div class="form-card edit-theme" *ngIf="showEditForm">
+    <div class="form-header"><h3>Modifier les informations</h3></div>
+    <div class="form-grid">
+      <div class="input-field">
+        <label>Nom du pays</label>
+        <input type="text" [(ngModel)]="editedPaysName">
       </div>
-      <div class="modal-body">
-        <p>{{ adminOnlyMessage }}</p>
+      <div class="input-field">
+        <label>Code ISO</label>
+        <input type="text" maxlength="2" [(ngModel)]="editedPaysCode">
       </div>
-      <div class="modal-footer">
-        <button class="btn-cancel" (click)="closeAccessDeniedModal()">Fermer</button>
+      <div class="form-actions">
+        <button class="btn-submit save" (click)="savePaysEdit()" [disabled]="submitting">
+          <span *ngIf="!submitting">Enregistrer les modifications</span>
+          <span *ngIf="submitting" class="loader-inline"></span>
+        </button>
+        <button class="btn-submit cancel" (click)="cancelEdit()">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-card import-theme" *ngIf="showImportForm">
+    <div class="form-header">
+      <h3>Importation groupée</h3>
+      <p class="subtitle">Formats acceptés : CSV, Excel ou JSON</p>
+    </div>
+    <div class="form-grid">
+      <div class="input-field">
+        <label>Fichier source</label>
+        <input type="file" (change)="onFileSelected($event)" accept=".csv,.json,.xlsx,.xls">
+      </div>
+      <div class="form-actions">
+        <button class="btn-submit save" (click)="importPays()" [disabled]="submitting || !selectedFile">
+          <span>Démarrer l'import</span>
+        </button>
+        <button class="btn-submit cancel" (click)="toggleImportForm()">Annuler</button>
+      </div>
+    </div>
+    <div class="import-error-box" *ngIf="importError">
+      <mat-icon>warning</mat-icon> {{ importError }}
+    </div>
+  </div>
+
+  <div class="table-container">
+    <div *ngIf="loading" class="table-loader">
+      <div class="loader-bar"></div>
+      <p>Chargement des données...</p>
+    </div>
+
+    <table *ngIf="!loading && paginatedPays.length > 0">
+      <thead>
+        <tr>
+          <th>Désignation du Pays</th>
+          <th>Code ISO</th>
+          <th class="text-right-header">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let p of paginatedPays" [class.new-row-highlight]="p.nomPays === highlightPaysNom">
+          <td class="name-cell">
+            <div class="country-avatar">{{ p.nomPays[0] }}</div>
+            <span class="country-name">{{ p.nomPays }}</span>
+          </td>
+          <td><span class="iso-badge">{{ p.code || '--' }}</span></td>
+          <td class="text-right-cell">
+            <div class="actions-group">
+              <button class="btn-icon edit" (click)="startEdit(p)"><mat-icon>edit</mat-icon></button>
+              <button class="btn-icon delete" (click)="deletePays(p)"><mat-icon>delete_outline</mat-icon></button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="table-footer" *ngIf="!loading && totalPages > 1">
+      <div class="pagination-info">
+        Affichage de page <strong>{{ currentPage }}</strong> sur <strong>{{ totalPages }}</strong>
+      </div>
+      <div class="pagination-nav">
+        <button class="btn-nav" [disabled]="currentPage === 1" (click)="goToPage(currentPage - 1)">
+          <mat-icon>chevron_left</mat-icon> Précédent
+        </button>
+        
+        <div class="page-numbers">
+          <span class="current-page">{{ currentPage }}</span>
+        </div>
+
+        <button class="btn-nav" [disabled]="currentPage === totalPages" (click)="goToPage(currentPage + 1)">
+          Suivant <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" *ngIf="showAccessDeniedModal">
+    <div class="modal-card">
+      <mat-icon class="modal-icon">lock</mat-icon>
+      <h2>Accès limité</h2>
+      <p>{{ adminOnlyMessage }}</p>
+      <button class="btn-submit save" (click)="closeAccessDeniedModal()">Fermer</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" *ngIf="showDeleteConfirmModal">
+    <div class="modal-card delete-confirm">
+      <mat-icon class="modal-icon warning">warning</mat-icon>
+      <h2>Confirmer la suppression</h2>
+      <p *ngIf="deletingPays">Êtes-vous sûr de vouloir supprimer définitivement <strong>"{{ deletingPays.nomPays }}"</strong> ?</p>
+      <p class="warning-text">Cette action est irréversible.</p>
+      <div class="modal-actions">
+        <button class="btn-submit cancel" (click)="closeDeleteConfirmModal()" [disabled]="submitting">Annuler</button>
+        <button class="btn-submit danger" (click)="confirmDelete()" [disabled]="submitting">
+          {{ submitting ? 'Suppression...' : 'Supprimer' }}
+        </button>
       </div>
     </div>
   </div>
 </section>
-

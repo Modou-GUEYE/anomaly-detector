@@ -1,34 +1,66 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+
+// --- IMPORTS MATERIAL ---
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatButtonModule } from '@angular/material/button';
+import { MatTableModule } from '@angular/material/table';
+
+// --- SERVICES ET UTILS ---
 import { TransactionService, Transaction } from '../../services/transaction.service';
 import { DashboardService } from '../../services/dashboard.service';
 import { getCountryNameFromCode, getAllCountriesFR } from '../../utils/country';
 
+// Interface pour les alertes groupées
+interface GroupedAlert {
+  code: string;
+  message: string;
+  niveauCriticite: string;
+  type: string;
+  numeroCompte: string;
+  dates: string[];
+}
+
 // Fonction utilitaire pour normaliser les chaînes (sans accents, minuscule)
 function normalizeStr(str: string): string {
+  if (!str) return '';
   return str.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
 }
 
 @Component({
   selector: 'app-transactions',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  // Ajout des modules Material dans imports pour fixer les erreurs NG8001
+  imports: [
+    CommonModule, 
+    FormsModule, 
+    MatIconModule, 
+    MatProgressSpinnerModule, 
+    MatButtonModule,
+    MatTableModule
+  ],
   templateUrl: './transactions.html',
   styleUrls: ['./transactions.scss']
 })
-export class TransactionsComponent implements OnInit {
+export class TransactionsComponent implements OnInit, OnDestroy {
   transactions: Transaction[] = [];
   filteredTransactions: Transaction[] = [];
   paginatedTransactions: Transaction[] = [];
+  
   loading = true;
   error = '';
   expandedRowId: string | null = null;
   alertes: any[] = [];
-  isMobileScreen = false;
+  selectedAlertes: any[] = [];
+  groupedAlertes: Map<string, GroupedAlert> = new Map(); // Alertes groupées par code
+  
+  // Pagination
   currentPage = 1;
-  pageSize = 5;
+  pageSize = 10; 
   totalPages = 0;
+
   filters = {
     search: '',
     pays: '',
@@ -36,6 +68,7 @@ export class TransactionsComponent implements OnInit {
     periode: '',
     typeClient: ''
   };
+
   typeClientOptions = [
     { code: 'P', label: 'Particulier' },
     { code: 'M', label: 'Entreprise' },
@@ -43,33 +76,47 @@ export class TransactionsComponent implements OnInit {
     { code: 'B', label: 'Business' },
   ];
 
-  constructor(private transactionService: TransactionService, private dashboardService: DashboardService) {}
+  constructor(
+    private transactionService: TransactionService, 
+    private dashboardService: DashboardService
+  ) {}
 
   ngOnInit() {
-    if (typeof window === 'undefined') {
-      return;
+    if (typeof window !== 'undefined') {
+      this.loadTransactions();
     }
-    this.checkScreenSize();
-    window.addEventListener('resize', this.checkScreenSize.bind(this));
-    this.loadTransactions();
   }
 
-  checkScreenSize() {
-    this.isMobileScreen = window.innerWidth <= 768;
+  ngOnDestroy() {
+    // Nettoyage si nécessaire
   }
 
   loadTransactions() {
     this.loading = true;
     this.error = '';
-    this.dashboardService.getDashboardSummary().subscribe({
-      next: (data: any) => {
-        this.transactions = data.recent_transactions || [];
-        this.alertes = data.recent_anomalies || [];
-        this.applyFilters();
-        this.loading = false;
+    
+    this.transactionService.getRecentTransactions().subscribe({
+      next: (data: Transaction[]) => {
+        this.transactions = data || [];
+        
+        // Charger aussi les alertes du dashboard pour pouvoir les afficher
+        this.dashboardService.getDashboardSummary().subscribe({
+          next: (dashData: any) => {
+            this.alertes = dashData.recent_anomalies || [];
+            this.applyFilters();
+            this.loading = false;
+          },
+          error: (err) => {
+            console.error('Erreur chargement alertes:', err);
+            this.alertes = [];
+            this.applyFilters();
+            this.loading = false;
+          }
+        });
       },
       error: (err) => {
-        this.error = 'Erreur lors du chargement des transactions';
+        console.error(err);
+        this.error = 'Impossible de charger les flux financiers. Veuillez réessayer.';
         this.loading = false;
       }
     });
@@ -77,82 +124,81 @@ export class TransactionsComponent implements OnInit {
 
   applyFilters() {
     const txt = (this.filters.search || '').toLowerCase();
+    
     this.filteredTransactions = this.transactions.filter(t => {
-      const okTxt =
-        !txt ||
+      // 1. Recherche textuelle
+      const okTxt = !txt || 
         `${t.nom_payeur} ${t.nom_paye} ${t.numero_compte_payeur} ${t.numero_compte_paye}`
-          .toLowerCase()
-          .includes(txt);
+          .toLowerCase().includes(txt);
 
+      // 2. Filtre Pays
       let okPays = true;
       if (this.filters.pays) {
         const nomPaysPayeur = this.getCountryNameFromCode(t.pays_payeur);
         const nomPaysPaye = this.getCountryNameFromCode(t.pays_paye);
         const normalizedPaysFilter = normalizeStr(this.filters.pays);
-        okPays = 
-          normalizeStr(nomPaysPayeur) === normalizedPaysFilter || 
-          normalizeStr(nomPaysPaye) === normalizedPaysFilter;
+        okPays = normalizeStr(nomPaysPayeur) === normalizedPaysFilter || 
+                 normalizeStr(nomPaysPaye) === normalizedPaysFilter;
       }
 
-      // Portée
+      // 3. Portée (National vs International)
       let okPortee = true;
       if (this.filters.portee) {
-        const hasPayeur = !!t.pays_payeur;
-        const hasPaye = !!t.pays_paye;
-        const isNational = hasPayeur && hasPaye && t.pays_payeur === t.pays_paye;
-        const isInternational = hasPayeur && hasPaye && t.pays_payeur !== t.pays_paye;
+        const isInternational = t.pays_payeur !== t.pays_paye;
         const wanted = this.filters.portee.toLowerCase();
-        okPortee = (wanted === 'national' && isNational) || (wanted === 'international' && isInternational);
+        okPortee = (wanted === 'national' && !isInternational) || 
+                   (wanted === 'international' && isInternational);
       }
 
-      // Type client (par label lisible)
+      // 4. Type Client
       let okTypeClient = true;
       if (this.filters.typeClient) {
         const payeurLabel = this.getTypeClientLabel(t.type_client_payeur);
         const payeLabel = this.getTypeClientLabel(t.type_client_paye);
-        okTypeClient = payeurLabel === this.filters.typeClient || payeLabel === this.filters.typeClient;
+        okTypeClient = payeurLabel === this.filters.typeClient || 
+                       payeLabel === this.filters.typeClient;
       }
 
-      // Période
+      // 5. Période
       const okPeriode = this.isInSelectedPeriode(t.date_operation);
 
       return okTxt && okPays && okPortee && okTypeClient && okPeriode;
     });
+
+    // Trier du plus récent au plus ancien
+    this.filteredTransactions.sort((a, b) => {
+      const dateA = new Date(a.date_operation).getTime();
+      const dateB = new Date(b.date_operation).getTime();
+      return dateB - dateA; // Descendant (plus récent d'abord)
+    });
+
     this.updatePagination();
   }
 
-  getTypeClientLabel(code: string): string {
-    const map: { [key: string]: string } = {
-      P: 'Particulier',
-      M: 'Entreprise',
-      C: 'Commerçant',
-      B: 'Business',
-    };
-    return map[code] || 'Particulier';
-  }
-
+  // --- LOGIQUE DE PÉRIODE ---
   private isInSelectedPeriode(dateOp: string | Date): boolean {
     if (!this.filters.periode) return true;
     const d = new Date(dateOp);
-    if (!d) return false;
     const now = new Date();
-    const dMidnight = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const diff = Math.floor((nowMidnight.getTime() - dMidnight.getTime()) / (1000 * 60 * 60 * 24));
-    if (this.filters.periode === "Aujourd'hui") return diff === 0;
-    if (this.filters.periode === '7 derniers jours') return diff >= 0 && diff <= 7;
-    if (this.filters.periode === '30 derniers jours') return diff >= 0 && diff <= 30;
-    return true;
+    const dMidnight = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const diffDays = Math.floor((nowMidnight - dMidnight) / (1000 * 60 * 60 * 24));
+
+    switch (this.filters.periode) {
+      case "Aujourd'hui": return diffDays === 0;
+      case "7 derniers jours": return diffDays >= 0 && diffDays <= 7;
+      case "30 derniers jours": return diffDays >= 0 && diffDays <= 30;
+      default: return true;
+    }
   }
 
+  // --- PAGINATION ---
   updatePagination() {
     this.totalPages = Math.ceil(this.filteredTransactions.length / this.pageSize);
-    if (this.currentPage > this.totalPages && this.totalPages > 0) {
-      this.currentPage = this.totalPages;
-    }
+    if (this.currentPage > this.totalPages) this.currentPage = Math.max(1, this.totalPages);
+    
     const start = (this.currentPage - 1) * this.pageSize;
-    const end = start + this.pageSize;
-    this.paginatedTransactions = this.filteredTransactions.slice(start, end);
+    this.paginatedTransactions = this.filteredTransactions.slice(start, start + this.pageSize);
   }
 
   nextPage() {
@@ -169,119 +215,39 @@ export class TransactionsComponent implements OnInit {
     }
   }
 
-  onSearchChange() {
-    this.applyFilters();
-  }
+  // --- ACTIONS UI ---
+  onSearchChange() { this.currentPage = 1; this.applyFilters(); }
+  onFilterChange() { this.currentPage = 1; this.applyFilters(); }
 
-  onFilterChange() {
-    this.applyFilters();
-  }
-
-  onSortChange() {
-    this.applyFilters();
-  }
-
-
-  toggleRowExpand(transactionId: string) {
-    this.expandedRowId = this.expandedRowId === transactionId ? null : transactionId;
-  }
-
-  formatMontant(montant: number): string {
-    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format(montant);
-  }
-
-  formatDate(date: string): string {
-    return new Date(date).toLocaleDateString('fr-FR', { 
-      day: '2-digit', 
-      month: '2-digit', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
-
-  isHighRisk(transaction: Transaction): boolean {
-    return transaction.montant > 500000 || 
-           (transaction.pays_payeur && transaction.pays_paye && transaction.pays_payeur !== transaction.pays_paye) ||
-           transaction.portee === 'International';
-  }
-
-  // Calcule un niveau de risque lisible pour l'UI
-  // Retourne l'une de: 'Faible' | 'Moyen' | 'Eleve' (sans accent pour matcher les classes CSS: risk-faible/moyen/eleve)
-  getRiskLevel(tx: Transaction): 'Faible' | 'Moyen' | 'Eleve' {
-    let score = 0;
-
-    // Montant
-    if (tx.montant >= 1_000_000) score += 3;
-    else if (tx.montant >= 500_000) score += 2;
-    else if (tx.montant >= 200_000) score += 1;
-
-    // Portée / pays
-    if (tx.portee === 'International') score += 2;
-    if (tx.pays_payeur && tx.pays_paye && tx.pays_payeur !== tx.pays_paye) score += 1;
-
-    // Catégories (si présentes)
-    const catPayeur = (tx.categorie_payeur || '').toLowerCase();
-    const catPaye = (tx.categorie_paye || '').toLowerCase();
-    if (/(pep|interdit|blacklist)/.test(catPayeur) || /(pep|interdit|blacklist)/.test(catPaye)) {
-      score += 3;
-    } else if (/(surveille|surveillé|surveillee|surveillée)/.test(catPayeur) || /(surveille|surveillé|surveillee|surveillée)/.test(catPaye)) {
-      score += 1;
-    }
-
-    if (score >= 4) return 'Eleve';
-    if (score >= 2) return 'Moyen';
-    return 'Faible';
-  }
-
-  // Convertir un code pays ISO alpha-2 en nom
-  getCountryNameFromCode(code: string): string {
-    return getCountryNameFromCode(code);
-  }
-
-  getUniqueCountries(): string[] {
-    // Retourner tous les pays disponibles (comme dans Comptes)
-    return getAllCountriesFR();
-  }
-
-  getUniqueTypeClients(): { code: string; label: string }[] {
-    return [
-      { code: 'P', label: 'Particulier' },
-      { code: 'M', label: 'Entreprise' },
-      { code: 'C', label: 'Commerçant' },
-      { code: 'B', label: 'Business' }
-    ];
-  }
-
-  getTransactionStats() {
-    // Calcul en une seule passe
-    let totalAmount = 0;
-    let highRisk = 0;
-    let international = 0;
-    let highAmount = 0;
-    for (const t of this.filteredTransactions) {
-      totalAmount += t.montant;
-      if (this.isHighRisk(t)) highRisk++;
-      if (t.pays_payeur !== t.pays_paye) international++;
-      if (t.montant > 500000) highAmount++;
-    }
-    const total = this.filteredTransactions.length;
-    return {
-      total,
-      highRisk,
-      international,
-      highAmount,
-      totalAmount,
-      averageAmount: total > 0 ? totalAmount / total : 0
+  resetFilters() {
+    this.filters = {
+      search: '',
+      pays: '',
+      portee: '',
+      periode: '',
+      typeClient: ''
     };
+    this.currentPage = 1;
+    this.applyFilters();
   }
 
-  // Détails de transaction - Expansion/Collapse
+  isFilterActive(): boolean {
+    return this.filters.search !== '' || 
+           this.filters.pays !== '' || 
+           this.filters.portee !== '' || 
+           this.filters.periode !== '' || 
+           this.filters.typeClient !== '';
+  }
+
   toggleDetails(transaction: Transaction) {
     if (this.expandedRowId === transaction.id) {
       this.expandedRowId = null;
+      this.selectedAlertes = [];
+      this.groupedAlertes.clear();
     } else {
       this.expandedRowId = transaction.id;
+      this.selectedAlertes = this.alertes.filter(a => a.transactionId === transaction.id);
+      this.groupAlertes();
     }
   }
 
@@ -289,39 +255,109 @@ export class TransactionsComponent implements OnInit {
     return this.expandedRowId === transaction.id;
   }
 
-  // Retourne le statut de la transaction (Succès/Échec) selon la logique dashboard
-  getTransactionStatus(tx: Transaction): 'Succès' | 'Échec' {
-    if (!tx.id || !this.alertes || this.alertes.length === 0) {
-      return 'Succès';
+  // Grouper les alertes par code avec leurs dates de génération
+  groupAlertes() {
+    this.groupedAlertes.clear();
+    
+    for (const alerte of this.selectedAlertes) {
+      const code = alerte.code || 'INCONNU';
+      const numeroCompte = alerte.numeroCompte || 'N/A';
+      const key = `${code}-${numeroCompte}`; // Clé unique: code + compte
+      
+      if (!this.groupedAlertes.has(key)) {
+        this.groupedAlertes.set(key, {
+          code: alerte.code,
+          message: alerte.message,
+          niveauCriticite: alerte.niveauCriticite,
+          type: alerte.type,
+          numeroCompte: numeroCompte,
+          dates: [] as string[]
+        });
+      }
+      
+      const grouped = this.groupedAlertes.get(key);
+      if (grouped && alerte.dateGeneration) {
+        (grouped.dates as string[]).push(alerte.dateGeneration);
+      }
     }
-    // Chercher les alertes liées à cette transaction
-    const alertesTransaction = this.alertes.filter((alerte: any) => 
-      alerte.transactionId === tx.id
-    );
-    if (alertesTransaction.length === 0) {
-      return 'Succès';
-    }
-    // Vérifier s'il y a des alertes de blocage
-    const alertesBlocage = alertesTransaction.filter((alerte: any) => 
-      alerte.action && alerte.action.toLowerCase() === 'bloquer'
-    );
-    if (alertesBlocage.length > 0) {
-      return 'Échec';
-    }
-    // Seul "Interdit" est un échec
-    const alertesInterdites = alertesTransaction.filter((alerte: any) => 
-      alerte.type === 'Interdit'
-    );
-    if (alertesInterdites.length > 0) {
-      return 'Échec';
-    }
-    // Blacklist, PEP, Surveillés = transaction validée sous surveillance
-    return 'Succès';
   }
 
-  // Retourne la classe CSS du badge statut (comme dashboard)
+  // Retourner les clés du Map (pour *ngFor)
+  getGroupedAlertes(): Array<[string, GroupedAlert]> {
+    return Array.from(this.groupedAlertes.entries());
+  }
+
+  // Formater une date en français
+  formatDateFR(dateStr: string | Date): string {
+    if (!dateStr) return '';
+    
+    const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+    if (isNaN(date.getTime())) return '';
+
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    };
+
+    return new Intl.DateTimeFormat('fr-FR', options).format(date);
+  }
+
+  // Formater une date en français sans l'heure (juste jour mois année)
+  formatDateFRShort(dateStr: string | Date): string {
+    if (!dateStr) return '';
+    
+    const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+    if (isNaN(date.getTime())) return '';
+
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour12: false
+    };
+
+    return new Intl.DateTimeFormat('fr-FR', options).format(date);
+  }
+
+  // --- HELPERS DE DONNÉES ---
+  getTypeClientLabel(code: string): string {
+    const found = this.typeClientOptions.find(opt => opt.code === code);
+    return found ? found.label : 'Particulier';
+  }
+
+  getCountryNameFromCode(code: string): string {
+    return getCountryNameFromCode(code);
+  }
+
+  getUniqueCountries(): string[] {
+    return getAllCountriesFR();
+  }
+
+  getTransactionStatus(tx: Transaction): 'Succès' | 'Échec' {
+    if (!this.alertes) return 'Succès';
+    const alertesTransaction = this.alertes.filter(a => a.transactionId === tx.id);
+    
+    const isBlocked = alertesTransaction.some(a => 
+      (a.action && a.action.toLowerCase() === 'bloquer') || a.type === 'Interdit'
+    );
+    
+    return isBlocked ? 'Échec' : 'Succès';
+  }
+
   getTransactionStatusClass(tx: Transaction): string {
-    const status = this.getTransactionStatus(tx);
-    return status === 'Succès' ? 'success' : 'failed';
+    return this.getTransactionStatus(tx) === 'Succès' ? 'success' : 'failed';
+  }
+
+  formatMontant(montant: number): string {
+    return new Intl.NumberFormat('fr-FR', { 
+      style: 'currency', 
+      currency: 'XOF',
+      maximumFractionDigits: 0 
+    }).format(montant);
   }
 }

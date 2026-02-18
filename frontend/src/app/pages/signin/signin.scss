@@ -57,10 +57,7 @@
 		white-space: nowrap !important;
 	}
 }
-/* Reuse login panel styles; import the main login stylesheet and apply small overrides */
-@import '../login/_variables.scss';
-@import '../login/login.scss';
-
+/* Reuse login panel styles; the main login stylesheet is now imported via @use above */
 /* Ensure the signin page keeps the login visual but tweak specifics for the mockup */
 .login-panel__title { color: #ffffff; }
 .login-panel__subtitle { color: rgba(255,255,255,0.95); }

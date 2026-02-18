@@ -1,20 +1,4 @@
-# Ignore backend dev env and generated key
-backend/.env
-backend/dev_jwt_private.pem
-
-# Node / Angular
-frontend/node_modules
-frontend/dist
-
-# Go build artifacts
-**/bin/
-
-# Editor configs
-.vscode/
-.idea/
-.DS_Store
-
-# IDE
+# IDE / Editor
 .idea/
 .vscode/
 *.swp
@@ -34,23 +18,33 @@ yarn-error.log*
 # Dependencies
 node_modules/
 vendor/
+frontend/node_modules/
 
 # Build outputs
 dist/
 build/
+frontend/dist/
+frontend/.angular/
+**/bin/
+backend/api
+backend/cmd/*/main
 *.exe
 *.dll
 *.so
 *.dylib
 
-# Test coverage
+# Test / coverage
 coverage/
 *.out
 
-# Environment variables
+# Environment & secrets
 .env
 .env.local
 .env.*.local
+backend/.env
+backend/anomaly.env
+backend/env.txt
+backend/dev_jwt_private.pem
 
 # Temporary files
 tmp/
@@ -65,11 +59,3 @@ temp/
 *.db
 *.sqlite
 *.sqlite3
-
-# Compiled Go binaries
-backend/api
-backend/cmd/*/main
-
-# Angular
-frontend/.angular/
-frontend/dist/

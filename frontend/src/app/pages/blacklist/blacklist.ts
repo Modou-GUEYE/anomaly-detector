@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BlacklistService, EntiteBlacklist } from '../../services/blacklist.service';
+import { MatIconModule } from '@angular/material/icon';
 
 interface Filter {
   search: string;
@@ -11,7 +12,7 @@ interface Filter {
 @Component({
   selector: 'app-blacklist',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule,MatIconModule],
   templateUrl: './blacklist.html',
   styleUrls: ['./blacklist.scss']
 })
@@ -36,6 +37,10 @@ export class BlacklistComponent implements OnInit {
   showModal = false;
   isEditMode = false;
   editingEntity: EntiteBlacklist | null = null;
+  showDeleteModal = false;
+  deletingEntity: EntiteBlacklist | null = null;
+  showDetailsModal = false;
+  detailsEntity: EntiteBlacklist | null = null;
   formData: EntiteBlacklist = {
     nom: '',
     numeroCompte: '',
@@ -133,14 +138,44 @@ export class BlacklistComponent implements OnInit {
     this.editingEntity = null;
   }
 
+  openDeleteModal(entity: EntiteBlacklist) {
+    this.deletingEntity = entity;
+    this.showDeleteModal = true;
+  }
+
+  closeDeleteModal() {
+    this.showDeleteModal = false;
+    this.deletingEntity = null;
+  }
+
+  openDetailsModal(entity: EntiteBlacklist) {
+    this.detailsEntity = entity;
+    this.showDetailsModal = true;
+  }
+
+  closeDetailsModal() {
+    this.showDetailsModal = false;
+    this.detailsEntity = null;
+  }
+
+  private getEntityId(entity?: EntiteBlacklist | null): string | null {
+    const anyEntity = entity as any;
+    return anyEntity?.id || anyEntity?._id || null;
+  }
+
   saveEntity() {
     if (!this.formData.nom || !this.formData.numeroCompte || !this.formData.typeEntite) {
       alert('Veuillez remplir tous les champs obligatoires');
       return;
     }
 
-    if (this.isEditMode && this.editingEntity?.id) {
-      this.blacklistService.updateEntity(this.editingEntity.id, this.formData).subscribe({
+    if (this.isEditMode) {
+      const id = this.getEntityId(this.editingEntity);
+      if (!id) {
+        alert('Identifiant introuvable pour cette entite');
+        return;
+      }
+      this.blacklistService.updateEntity(id, this.formData).subscribe({
         next: () => {
           this.loadEntities();
           this.closeModal();
@@ -162,25 +197,33 @@ export class BlacklistComponent implements OnInit {
     }
   }
 
-  deleteEntity(id?: string) {
+  confirmDelete() {
+    const id = this.getEntityId(this.deletingEntity);
     if (!id) return;
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette entité ?')) return;
 
     this.blacklistService.deleteEntity(id).subscribe({
       next: () => {
         this.loadEntities();
+        this.closeDeleteModal();
       },
-      error: (err) => {
+      error: () => {
         alert('Erreur lors de la suppression');
       }
     });
   }
 
-  toggleExpand(entity: any) {
-    entity.expanded = !entity.expanded;
-  }
 
   padNumber(num: number): string {
     return num.toString().padStart(2, '0');
   }
+
+  getEntityIcon(type: string): string {
+    switch (type.toLowerCase()) {
+      case 'blacklist': return 'block';
+      case 'pep': return 'person_search';
+      case 'interdit': return 'gavel';
+      default: return 'person';
+    }
+  }
+  
 }

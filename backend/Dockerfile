@@ -1,29 +1,26 @@
-# Single-stage Dockerfile for anomaly-detector backend
-FROM golang:1.24-alpine
+FROM golang:1.24-alpine AS builder
 
-# Install dependencies
-RUN apk add --no-cache git build-base ca-certificates
+WORKDIR /src
 
-# Create a non-root user
-RUN addgroup -S anomaly && adduser -S anomaly -G anomaly
+COPY go.mod go.sum ./
+RUN go mod download
 
-# Set working directory
-WORKDIR /app
-
-# Copy source code
 COPY . .
 
-# Build the API binary
 ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-RUN go mod tidy && \
-    go build -o /usr/local/bin/anomaly-api ./cmd/api && \
-    chown anomaly:anomaly /usr/local/bin/anomaly-api
+RUN go build -trimpath -ldflags="-s -w" -o /out/anomaly-api ./cmd/api
 
-# Switch to non-root user
+FROM alpine:3.20
+
+RUN apk add --no-cache ca-certificates && \
+    addgroup -S anomaly && adduser -S anomaly -G anomaly
+
+WORKDIR /app
+
+COPY --from=builder /out/anomaly-api /usr/local/bin/anomaly-api
+
 USER anomaly
 
-# Expose port
 EXPOSE 8080
 
-# Run the application
 ENTRYPOINT ["/usr/local/bin/anomaly-api"]

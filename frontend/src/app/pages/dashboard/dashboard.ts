@@ -1,5 +1,16 @@
 import { Component, OnInit, HostListener } from '@angular/core';
 import { getCountryNameFromCode as countryNameFromCode, getAllCountriesFR } from '../../utils/country';
+
+// Interface pour les alertes groupées
+interface GroupedAlert {
+  code: string;
+  message: string;
+  niveauCriticite: string;
+  type: string;
+  numeroCompte: string;
+  dates: string[];
+}
+
 // Fonction utilitaire pour normaliser les chaînes (sans accents, minuscule)
 function normalizeStr(str: string): string {
   return str.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
@@ -8,8 +19,10 @@ import { DashboardService } from '../../services/dashboard.service';
 import { TransactionService } from '../../services/transaction.service';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { MatIconModule } from '@angular/material/icon';
 import { HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
+import { MatTableModule } from '@angular/material/table';
 
 interface Transaction {
   id?: string;
@@ -42,7 +55,7 @@ interface Transaction {
   standalone: true,
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.scss'],
-  imports: [CommonModule, FormsModule]
+  imports: [CommonModule, FormsModule, MatTableModule, HttpClientModule, MatIconModule]
 })
 export class DashboardComponent implements OnInit {
   error = '';
@@ -55,6 +68,8 @@ export class DashboardComponent implements OnInit {
   alertes: any[] = []; // Alertes pour déterminer le statut des transactions
   selectedTransaction: Transaction | null = null;
   selectedAlertes: any[] = [];
+  groupedAlertes: Map<string, GroupedAlert> = new Map(); // Alertes groupées par code
+  expandedRowId: string | null | undefined = null;
   // pour restauration du focus après fermeture du modal
   private _lastFocusedElement: Element | null = null;
 
@@ -108,6 +123,91 @@ export class DashboardComponent implements OnInit {
         if (el) { el.focus(); }
       }, 0);
     }
+  }
+
+  toggleDetails(transaction: Transaction) {
+    if (this.expandedRowId === transaction.id) {
+      this.expandedRowId = null;
+      this.selectedAlertes = [];
+      this.groupedAlertes.clear();
+    } else {
+      this.expandedRowId = transaction.id;
+      this.selectedAlertes = this.alertes.filter(a => a.transactionId === transaction.id);
+      this.groupAlertes();
+    }
+  }
+
+  isExpanded(transaction: Transaction): boolean {
+    return this.expandedRowId === transaction.id;
+  }
+
+  // Grouper les alertes par code avec leurs dates de génération
+  groupAlertes() {
+    this.groupedAlertes.clear();
+    
+    for (const alerte of this.selectedAlertes) {
+      const code = alerte.code || 'INCONNU';
+      const numeroCompte = alerte.numeroCompte || 'N/A';
+      const key = `${code}-${numeroCompte}`; // Clé unique: code + compte
+      
+      if (!this.groupedAlertes.has(key)) {
+        this.groupedAlertes.set(key, {
+          code: alerte.code,
+          message: alerte.message,
+          niveauCriticite: alerte.niveauCriticite,
+          type: alerte.type,
+          numeroCompte: numeroCompte,
+          dates: [] as string[]
+        });
+      }
+      
+      const grouped = this.groupedAlertes.get(key);
+      if (grouped && alerte.dateGeneration) {
+        (grouped.dates as string[]).push(alerte.dateGeneration);
+      }
+    }
+  }
+
+  // Retourner les clés du Map (pour *ngFor)
+  getGroupedAlertes(): Array<[string, GroupedAlert]> {
+    return Array.from(this.groupedAlertes.entries());
+  }
+
+  // Formater une date en français
+  formatDateFR(dateStr: string | Date): string {
+    if (!dateStr) return '';
+    
+    const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+    if (isNaN(date.getTime())) return '';
+
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    };
+
+    return new Intl.DateTimeFormat('fr-FR', options).format(date);
+  }
+
+  // Formater une date en français sans l'heure (juste jour mois année)
+  formatDateFRShort(dateStr: string | Date): string {
+    if (!dateStr) return '';
+    
+    const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+    if (isNaN(date.getTime())) return '';
+
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour12: false
+    };
+
+    return new Intl.DateTimeFormat('fr-FR', options).format(date);
   }
 
   // Fermer la modal de détail
@@ -171,6 +271,11 @@ export class DashboardComponent implements OnInit {
     private transactionService: TransactionService,
     private router: Router
   ) {}
+
+  // Ouvrir la page Transactions (utilisé par le template)
+  seeAll() {
+    this.router.navigate(['/transactions']);
+  }
 
   ngOnInit(): void {
     // N'exécuter côté client uniquement
@@ -325,7 +430,8 @@ export class DashboardComponent implements OnInit {
   // Classe CSS pour le statut de transaction
   getTransactionStatusClass(transaction: Transaction): string {
     const status = this.getTransactionStatus(transaction);
-    return status === 'Succès' ? 'status-success' : 'status-failure';
+    // Utiliser mêmes classes que la page Transactions (success | failed)
+    return status === 'Succès' ? 'success' : 'failed';
   }
 
   // Retourne l'URL d'une icône selon la catégorie ou le type de transaction
@@ -391,6 +497,14 @@ export class DashboardComponent implements OnInit {
 
       return okTxt && okPays && okPortee && okTypeClient && okPeriode;
     });
+
+    // Trier du plus récent au plus ancien
+    this.filteredTransactions.sort((a, b) => {
+      const dateA = new Date(a.date_operation).getTime();
+      const dateB = new Date(b.date_operation).getTime();
+      return dateB - dateA; // Descendant (plus récent d'abord)
+    });
+
     this.updatePagination();
   }
 
@@ -478,7 +592,7 @@ export class DashboardComponent implements OnInit {
     }
   }
 
-  prevPage() {
+  previousPage() {
     if (this.currentPage > 1) {
       this.currentPage--;
       this.updatePagination();

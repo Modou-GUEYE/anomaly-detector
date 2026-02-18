@@ -4,13 +4,14 @@ import { FormsModule } from '@angular/forms';
 import { ControlRulesService, ControlRule, ProfilClient } from '../../services/control-rules.service';
 import { AuthService } from '../../services/auth.service';
 import { ConfigService } from '../../services/config.service';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'app-control-rules',
   standalone: true,
   templateUrl: './control-rules.html',
   styleUrls: ['./control-rules.scss'],
-  imports: [CommonModule, FormsModule]
+  imports: [CommonModule, FormsModule, MatIconModule]
 })
 export class ControlRulesComponent implements OnInit {
   loading = true;
@@ -18,16 +19,20 @@ export class ControlRulesComponent implements OnInit {
   isAdmin = false;
   adminOnlyMessage = 'Cette action est réservée aux administrateurs';
   showAccessDeniedModal = false;
-  submitting = false; // éviter doubles soumissions
+  submitting = false;
   
   rules: ControlRule[] = [];
 
-  // Modal
+  // Modal State
   showModal = false;
   isEditMode = false;
   currentRuleId: string | null = null;
   
-  // Formulaire
+  // Delete Confirmation
+  showDeleteConfirmModal = false;
+  deleteRuleId: string | null = null;
+  deleteRuleName: string = '';
+  
   formData = {
     nomRegle: '',
     description: '',
@@ -35,289 +40,139 @@ export class ControlRulesComponent implements OnInit {
     active: true,
     seuil: 0,
     profilClientId: '',
-    periodeReference: '7d', // Valeur par défaut
-    action: 'surveiller' // Valeur par défaut
+    periodeReference: '7d',
+    action: 'surveiller'
   };
 
-  // Actions disponibles
   availableActions = [
     { value: 'bloquer', label: 'Bloquer' },
     { value: 'surveiller', label: 'Surveiller' }
   ];
 
-  // Types de règles : utiliser les types backend directement
-  predefinedRuleTypes: string[] = [
-    'montant',
-    'frequence',
-    'pays_risque'
-  ];
-  
-  ruleTypes: string[] = [];  // Fusion des types prédéfinis et existants
-
-  // Profils clients - chargés dynamiquement de l'API
+  predefinedRuleTypes: string[] = ['montant', 'frequence', 'pays_risque'];
+  ruleTypes: string[] = [];
   profils: Array<{ id: string; label: string }> = [];
 
-  constructor(private controlRulesService: ControlRulesService, private authService: AuthService, private config: ConfigService) {}
+  constructor(
+    private controlRulesService: ControlRulesService, 
+    private authService: AuthService, 
+    private config: ConfigService
+  ) {}
 
   ngOnInit(): void {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    
-    // Vérifier si l'utilisateur est admin
+    if (typeof window === 'undefined') return;
     this.isAdmin = this.authService.isAdmin();
-    // Construire le message d'accès refusé en fonction du nom de rôle runtime
-    try {
-      const adminRole = this.config.getRoleName('admin');
-      if (adminRole) {
-        this.adminOnlyMessage = `Cette action est réservée au rôle « ${adminRole} »`;
-      }
-    } catch (e) {
-      // garder le fallback défini ci-dessus
-    }
-    
     this.loadProfilsClient();
     this.loadRules();
   }
 
-  /**
-   * Charge les profils clients depuis l'API
-   */
   loadProfilsClient(): void {
     this.controlRulesService.getProfilsClient().subscribe({
       next: (data: ProfilClient[]) => {
-        // Transforme les profils du backend en format utilisable
-        this.profils = data.map(profil => ({
-          id: profil.id,
-          label: profil.nomProfil
-        }));
+        this.profils = data.map(p => ({ id: p.id, label: p.nomProfil }));
       },
-      error: () => {
-        // En cas d'erreur, laisser la liste vide (pas de console en prod)
-        this.profils = [];
-      }
+      error: () => this.profils = []
     });
-  }
-
-  /**
-   * Utilise uniquement les types prédéfinis
-   */
-  extractRuleTypes(): void {
-    this.ruleTypes = [...this.predefinedRuleTypes].sort();
-  }
-
-  // Appelée quand le type de règle change dans le formulaire
-  onRuleTypeChange(): void {
-    // Si on change vers montant, initialiser periodeReference à 7d
-    if (this.formData.typeRegle === 'montant' && !this.formData.periodeReference) {
-      this.formData.periodeReference = '7d';
-    } 
-    // Si on change vers frequence, initialiser periodeReference à 24h
-    else if (this.formData.typeRegle === 'frequence' && !this.formData.periodeReference) {
-      this.formData.periodeReference = '24h';
-    } 
-    // Pour pays_risque et autres, vider periodeReference
-    else if (this.formData.typeRegle !== 'montant' && this.formData.typeRegle !== 'frequence') {
-      this.formData.periodeReference = '';
-    }
   }
 
   loadRules(): void {
     this.loading = true;
-    this.error = '';
-    
     this.controlRulesService.getRules().subscribe({
       next: (data: any) => {
-        // Assure que data est un tableau
         this.rules = Array.isArray(data) ? data : (data.rules || []);
-        // Enlever les doublons par ID
-        this.rules = this.rules.filter((rule, index, self) =>
-          index === self.findIndex((r) => r.id === rule.id)
-        );
-        // Extraire les types de règles uniques
-        this.extractRuleTypes();
+        this.ruleTypes = [...this.predefinedRuleTypes].sort();
         this.loading = false;
       },
-      error: (err) => {
-        this.error = 'Impossible de charger les règles de contrôle';
+      error: () => {
+        this.error = 'Impossible de charger les règles';
         this.loading = false;
       }
     });
   }
 
-  openAddRuleModal(): void {
-    if (!this.isAdmin) {
-      this.showAccessDenied();
-      return;
+  getRuleIcon(type: string): string {
+    switch (type) {
+      case 'montant': return 'monetization_on';
+      case 'frequence': return 'history_toggle_off';
+      case 'pays_risque': return 'public';
+      default: return 'gavel';
     }
-    this.isEditMode = false;
-    this.currentRuleId = null;
-    this.resetForm();
-    this.showModal = true;
   }
 
-  openEditRuleModal(rule: ControlRule): void {
-    this.isEditMode = true;
-    this.currentRuleId = rule.id;
-    this.formData = {
-      nomRegle: rule.nomRegle,
-      description: rule.description,
-      typeRegle: rule.typeRegle,
-      active: rule.active,
-      seuil: rule.seuil || 0,
-      profilClientId: rule.profilClientId || '',
-      // periodeReference seulement pour montant et frequence
-      periodeReference: (rule.typeRegle === 'montant' || rule.typeRegle === 'frequence') ? (rule.periodeReference || '7d') : '',
-      action: (rule as any).action || 'surveiller' // Action paramétrable
-    };
-    this.showModal = true;
-  }
-
-  closeModal(): void {
-    this.showModal = false;
-    this.resetForm();
-  }
-
-  resetForm(): void {
-    this.formData = {
-      nomRegle: '',
-      description: '',
-      typeRegle: '',
-      active: true,
-      seuil: 0,
-      profilClientId: '',
-      periodeReference: '', // Sera défini selon le type
-      action: 'surveiller' // Valeur par défaut
-    };
+  onRuleTypeChange(): void {
+    if (this.formData.typeRegle === 'montant') this.formData.periodeReference = '7d';
+    else if (this.formData.typeRegle === 'frequence') this.formData.periodeReference = '24h';
+    else this.formData.periodeReference = '';
   }
 
   saveRule(): void {
     if (this.submitting) return;
-    if (!this.formData.nomRegle?.trim() || !this.formData.description?.trim() || !this.formData.typeRegle) {
-      this.error = 'Veuillez remplir tous les champs obligatoires (nom, description, type).';
-      return;
-    }
-
-    const payload: any = {
-      nomRegle: this.formData.nomRegle.trim(),
-      description: this.formData.description.trim(),
-      typeRegle: this.formData.typeRegle,
-      active: this.formData.active,
-      seuil: this.formData.seuil > 0 ? this.formData.seuil : undefined,
-      profilClientId: this.formData.profilClientId || undefined,
-      action: this.formData.action // Action paramétrable
-    };
-
-    // periodeReference est valide pour montant et frequence
-    if (this.formData.typeRegle === 'montant' || this.formData.typeRegle === 'frequence') {
-      if (!this.formData.periodeReference) {
-        // Sécurise une valeur par défaut
-        payload.periodeReference = this.formData.typeRegle === 'montant' ? '7d' : '24h';
-      } else {
-        payload.periodeReference = this.formData.periodeReference;
-      }
-    } else {
-      // Pour les autres types (pays_risque), ne pas envoyer periodeReference
-      payload.periodeReference = undefined;
-    }
-
     this.submitting = true;
-    if (this.isEditMode && this.currentRuleId) {
-      // Mode édition
-      this.controlRulesService.updateRule(this.currentRuleId, payload).subscribe({
-        next: () => {
-          this.loadRules();
-          this.closeModal();
-          this.submitting = false;
-        },
-        error: () => {
-          this.error = 'Erreur lors de la mise à jour de la règle';
-          this.submitting = false;
-        }
-      });
-    } else {
-      // Mode création
-      this.controlRulesService.createRule(payload).subscribe({
-        next: () => {
-          this.loadRules();
-          this.closeModal();
-          this.submitting = false;
-        },
-        error: () => {
-          this.error = 'Erreur lors de la création de la règle';
-          this.submitting = false;
-        }
-      });
-    }
-  }
+    const payload = { ...this.formData };
 
-  deleteRule(id: string): void {
-    if (!this.isAdmin) {
-      this.showAccessDenied();
-      return;
-    }
-    if (this.submitting) return;
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette règle ? Cette action est irréversible.')) {
-      return;
-    }
+    const obs = this.isEditMode && this.currentRuleId 
+      ? this.controlRulesService.updateRule(this.currentRuleId, payload)
+      : this.controlRulesService.createRule(payload);
 
-    this.submitting = true;
-    this.controlRulesService.deleteRule(id).subscribe({
+    obs.subscribe({
       next: () => {
         this.loadRules();
+        this.closeModal();
         this.submitting = false;
       },
       error: () => {
-        this.error = 'Erreur lors de la suppression de la règle';
+        this.error = 'Erreur lors de l\'enregistrement';
         this.submitting = false;
       }
     });
   }
 
   toggleRuleStatus(rule: ControlRule): void {
-    if (!this.isAdmin) {
-      this.showAccessDenied();
-      return;
-    }
-    if (this.submitting) return;
-    const newActive = !rule.active;
-    
+    if (!this.isAdmin) return this.showAccessDenied();
     this.submitting = true;
-    this.controlRulesService.toggleRuleStatus(rule.id, newActive ? 'Actif' : 'Inactif').subscribe({
-      next: () => {
-        rule.active = newActive;
-        this.submitting = false;
-      },
-      error: () => {
-        this.error = 'Erreur lors de la modification du statut';
-        this.submitting = false;
-      }
+    const nextState = !rule.active;
+    this.controlRulesService.toggleRuleStatus(rule.id, nextState ? 'Actif' : 'Inactif').subscribe({
+      next: () => { rule.active = nextState; this.submitting = false; },
+      error: () => this.submitting = false
     });
   }
 
-  editRule(rule: ControlRule): void {
-    if (!this.isAdmin) {
-      this.showAccessDenied();
-      return;
-    }
-    this.openEditRuleModal(rule);
+  openEditRuleModal(rule: ControlRule): void {
+    this.isEditMode = true;
+    this.currentRuleId = rule.id;
+    this.formData = { ...rule } as any;
+    this.showModal = true;
   }
 
   addRule(): void {
-    this.openAddRuleModal();
+    if (!this.isAdmin) return this.showAccessDenied();
+    this.isEditMode = false;
+    this.resetForm();
+    this.showModal = true;
   }
 
-  getProfilName(profilId?: string): string {
-    if (!profilId) return '-';
-    const profil = this.profils.find(p => p.id === profilId);
-    return profil ? profil.label : '-';
+  deleteRule(id: string): void {
+    if (!this.isAdmin) return this.showAccessDenied();
+    const rule = this.rules.find(r => r.id === id);
+    this.deleteRuleId = id;
+    this.deleteRuleName = rule?.nomRegle || '';
+    this.showDeleteConfirmModal = true;
   }
 
-  showAccessDenied(): void {
-    this.showAccessDeniedModal = true;
+  confirmDeleteRule(): void {
+    if (!this.deleteRuleId) return;
+    this.controlRulesService.deleteRule(this.deleteRuleId).subscribe({
+      next: () => { this.loadRules(); this.closeDeleteConfirmModal(); },
+      error: () => this.submitting = false
+    });
   }
 
-  closeAccessDeniedModal(): void {
-    this.showAccessDeniedModal = false;
-  }
+  resetForm() { this.formData = { nomRegle: '', description: '', typeRegle: 'frequence', active: true, seuil: 0, profilClientId: '', periodeReference: '7d', action: 'surveiller' }; }
+  closeModal() { this.showModal = false; this.error = ''; }
+  closeDeleteConfirmModal() { this.showDeleteConfirmModal = false; }
+  showAccessDenied() { this.showAccessDeniedModal = true; }
+  closeAccessDeniedModal() { this.showAccessDeniedModal = false; }
+  getProfilName(id?: string) { return this.profils.find(p => p.id === id)?.label || 'Tous'; }
+  getPeriodLabel(p?: string) { return p === '24h' ? '24h' : p === '7d' ? '7 jours' : p === '30d' ? '30 jours' : p; }
+  editRule(rule: ControlRule) { this.openEditRuleModal(rule); }
 }

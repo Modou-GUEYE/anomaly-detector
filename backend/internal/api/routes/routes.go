@@ -11,6 +11,7 @@ import (
 	"anomaly-detector/internal/api/handlers"
 	"anomaly-detector/internal/api/middleware"
 	"anomaly-detector/internal/auth"
+	"anomaly-detector/internal/email"
 	"anomaly-detector/internal/models"
 	"anomaly-detector/internal/store"
 
@@ -152,6 +153,13 @@ func setupAuthRoutes(apiV1 *gin.RouterGroup, authHandler *handlers.AuthHandler, 
 				return
 			}
 
+			// Envoyer l'email de bienvenue
+			emailService := email.NewService()
+			if err := emailService.SendSignupEmail(createdUser.Email, createdUser.NomUtilisateur, req.Password, createdUser.Role); err != nil {
+				// Log the error but continue - email failure shouldn't block signup
+				log.Printf("Email signup failed for user %s: %v", createdUser.Email, err)
+			}
+
 			resp := gin.H{
 				"id":             createdUser.ID,
 				"nomUtilisateur": createdUser.NomUtilisateur,
@@ -161,7 +169,7 @@ func setupAuthRoutes(apiV1 *gin.RouterGroup, authHandler *handlers.AuthHandler, 
 				"dateCreation":   createdUser.DateCreation,
 			}
 
-			ctx.JSON(201, gin.H{"message": "Utilisateur créé (inactif). Un administrateur doit l'activer.", "user": resp})
+			ctx.JSON(201, gin.H{"message": "Inscription réussie ! Consultez votre email pour vos identifiants. En attente d'activation administrative.", "user": resp})
 		})
 	}
 }
@@ -784,7 +792,7 @@ func setupUserRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 				Email:          req.Email,
 				MotDePasseHash: string(hashedPassword),
 				Role:           req.Role,
-				Actif:          req.Actif,
+				Actif:          false,
 				DateCreation:   time.Now(),
 			}
 
@@ -801,6 +809,13 @@ func setupUserRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 				return
 			}
 
+			// Envoyer l'email de bienvenue avec identifiants
+			emailService := email.NewService()
+			if err := emailService.SendSignupEmail(createdUser.Email, createdUser.NomUtilisateur, req.Password, createdUser.Role); err != nil {
+				// Ne pas bloquer la création si l'email échoue
+				log.Printf("Email signup failed for admin-created user %s: %v", createdUser.Email, err)
+			}
+
 			// Retourner l'utilisateur sans le mot de passe
 			response := gin.H{
 				"id":             createdUser.ID,
@@ -811,7 +826,7 @@ func setupUserRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 				"dateCreation":   createdUser.DateCreation,
 			}
 
-			ctx.JSON(201, gin.H{"message": "Utilisateur créé avec succès", "user": response})
+			ctx.JSON(201, gin.H{"message": "Utilisateur créé avec succès (compte en attente d'activation)", "user": response})
 		})
 
 		// Lister tous les utilisateurs (admin uniquement)
@@ -832,11 +847,41 @@ func setupUserRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 				ctx.JSON(400, gin.H{"error": "Données invalides", "details": err.Error()})
 				return
 			}
+
+			// Get user before update to check if activation
+			userBefore, err := store.GetUserByID(ctx, id)
+			if err != nil {
+				ctx.JSON(404, gin.H{"error": "Utilisateur non trouvé"})
+				return
+			}
+
 			updated, err := store.UpdateUser(ctx, id, req)
 			if err != nil {
 				ctx.JSON(500, gin.H{"error": "Impossible de mettre à jour l'utilisateur", "details": err.Error()})
 				return
 			}
+
+			// Check if user was just activated
+			if actifVal, ok := req["actif"]; ok {
+				actifRequested := false
+				switch val := actifVal.(type) {
+				case bool:
+					actifRequested = val
+				case string:
+					actifRequested = strings.ToLower(val) == "true"
+				case float64:
+					actifRequested = val != 0
+				}
+
+				if actifRequested && !userBefore.Actif {
+					// User was activated - send activation email
+					emailService := email.NewService()
+					if err := emailService.SendAccountActivatedEmail(updated.Email, updated.NomUtilisateur); err != nil {
+						log.Printf("Email activation failed for user %s: %v", updated.Email, err)
+					}
+				}
+			}
+
 			ctx.JSON(200, updated)
 		})
 
