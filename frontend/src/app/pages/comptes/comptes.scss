@@ -26,15 +26,70 @@ $bg-light: #f8fafc;
 
 /* FILTRES */
 .filter-group {
-  display: flex; gap: 0.5rem; flex-wrap: wrap; background: $bg-light; padding: 6px; border-radius: 12px; border: 1px solid #e2e8f0;
-  .search-box {
-    display: flex; align-items: center; background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0 10px; flex: 2; min-width: 200px;
-    input { border: none; padding: 10px; width: 100%; outline: none; font-size: 0.9rem; }
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  background: white;
+  padding: 1.25rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+
+  .filter-control {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 180px;
+    flex: 1;
+
+    label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: $gray;
+    }
   }
+
+  .search-control {
+    flex: 1.6;
+    min-width: 240px;
+  }
+
+  .search-box {
+    display: flex;
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0 10px;
+
+    mat-icon {
+      font-size: 18px;
+      color: $gray;
+    }
+
+    input {
+      border: none;
+      padding: 10px;
+      width: 100%;
+      outline: none;
+      font-size: 0.9rem;
+      background: transparent;
+    }
+  }
+
   .select-wrapper {
-    position: relative; flex: 1; min-width: 120px;
-    select { width: 100%; appearance: none; background: white; border: 1px solid #e2e8f0; padding: 10px 30px 10px 12px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; }
-    mat-icon { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); pointer-events: none; color: $gray; }
+    position: relative;
+
+    select {
+      width: 100%;
+      appearance: none;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      outline: none;
+    }
   }
 }
 
@@ -53,6 +108,46 @@ $bg-light: #f8fafc;
   padding: 16px; border-bottom: 1px solid $border; display: flex; flex-direction: column; gap: 8px;
   .card-header { display: flex; justify-content: space-between; .acc-num { font-weight: 700; color: $primary; } .dot-danger { width: 10px; height: 10px; background: $danger; border-radius: 50%; } }
   .card-body { display: flex; justify-content: space-between; align-items: center; .client-name { font-weight: 700; display: block; } .client-city { font-size: 0.8rem; color: $gray; } }
+}
+
+.pagination-footer {
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fbfdff;
+  border-top: 1px solid $border;
+
+  .page-stats {
+    font-size: 0.8rem;
+    color: $gray;
+    font-weight: 600;
+  }
+
+  .page-nav {
+    display: flex;
+    gap: 8px;
+
+    button {
+      background: white;
+      border: 1px solid $border;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      &:hover:not(:disabled) {
+        background: $primary;
+        color: white;
+        border-color: $primary;
+      }
+    }
+  }
 }
 
 /* MODAL DESIGN */

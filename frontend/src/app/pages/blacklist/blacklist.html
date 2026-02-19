@@ -6,25 +6,32 @@
     </div>
     
     <div class="header-actions">
-      <div class="filter-group">
-        <div class="search-box">
-          <mat-icon>search</mat-icon>
-          <input type="text" placeholder="Nom ou compte..." [(ngModel)]="filters.search" (ngModelChange)="applyFilters()">
+      <div class="toolbar-card">
+        <div class="filters-side">
+          <div class="filter-control search-control">
+            <label>Recherche</label>
+            <div class="search-wrapper">
+              <mat-icon>search</mat-icon>
+              <input type="text" placeholder="Nom ou compte..." [(ngModel)]="filters.search" (ngModelChange)="applyFilters()">
+            </div>
+          </div>
+
+          <div class="filter-control">
+            <label>Type d'entité</label>
+            <select class="type-dropdown" [(ngModel)]="filters.typeEntite" (change)="applyFilters()">
+              <option value="">Tous les types</option>
+              <option *ngFor="let type of typeOptions" [value]="type">{{ type }}</option>
+            </select>
+          </div>
         </div>
-        
-        <div class="select-wrapper">
-          <select class="type-dropdown" [(ngModel)]="filters.typeEntite" (change)="applyFilters()">
-            <option value="">Tous les types</option>
-            <option *ngFor="let type of typeOptions" [value]="type">{{ type }}</option>
-          </select>
-          <mat-icon>expand_more</mat-icon>
+
+        <div class="actions-side">
+          <button class="btn-add" (click)="openAddModal()">
+            <mat-icon>add</mat-icon>
+            <span class="lbl">Nouveau</span>
+          </button>
         </div>
       </div>
-
-      <button class="btn-add" (click)="openAddModal()">
-        <mat-icon>add</mat-icon>
-        <span class="lbl">Nouveau</span>
-      </button>
     </div>
   </header>
 
@@ -73,19 +80,15 @@
         </ng-container>
       </tbody>
     </table>
-  </div>
 
-  <footer class="view-footer">
-    <div class="pagination">
-      <button class="nav-btn" [disabled]="currentPage === 1" (click)="prevPage()">
-        <mat-icon>chevron_left</mat-icon>
-      </button>
-      <span class="page-info">Page <strong>{{ currentPage }}</strong> sur {{ totalPages }}</span>
-      <button class="nav-btn" [disabled]="currentPage === totalPages" (click)="nextPage()">
-        <mat-icon>chevron_right</mat-icon>
-      </button>
-    </div>
-  </footer>
+    <footer class="pagination-footer">
+      <div class="page-stats">Page {{ currentPage }} sur {{ totalPages }}</div>
+      <div class="page-nav">
+        <button [disabled]="currentPage === 1" (click)="prevPage()">Précédent</button>
+        <button [disabled]="currentPage === totalPages" (click)="nextPage()">Suivant</button>
+      </div>
+    </footer>
+  </div>
 </section>
 
 <div *ngIf="showModal" class="modal-overlay" (click)="closeModal()">

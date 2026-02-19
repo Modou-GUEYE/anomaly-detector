@@ -20,7 +20,7 @@
 
         <button type="submit" class="login-btn" [disabled]="!loginForm.form.valid">Se Connecter</button>
 
-        <div *ngIf="message" [ngClass]="success ? 'msg-success' : 'msg-error'" class="feedback">{{ message }}</div>
+        <div *ngIf="message" [ngClass]="isLoadingMessage ? 'msg-info' : (success ? 'msg-success' : 'msg-error')" class="feedback">{{ message }}</div>
 
   <div class="signup">Nouvel utilisateur ? <a routerLink="/signin">Cliquez ici</a> pour créer un compte.</div>
       </form>

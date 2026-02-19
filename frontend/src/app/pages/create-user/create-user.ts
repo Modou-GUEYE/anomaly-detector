@@ -43,6 +43,20 @@ export class CreateUserComponent implements OnInit {
   filterRole: string = 'all';
   filterActif: string = 'all';
 
+  formErrors: { [key: string]: string } = {
+    nomUtilisateur: '',
+    email: '',
+    password: '',
+    role: ''
+  };
+
+  touchedFields: { [key: string]: boolean } = {
+    nomUtilisateur: false,
+    email: false,
+    password: false,
+    role: false
+  };
+
   constructor(
     private usersService: UsersService,
     private config: ConfigService,
@@ -91,14 +105,8 @@ export class CreateUserComponent implements OnInit {
   }
 
   submit() {
-    if (!this.nomUtilisateur || !this.email) {
-      this.error = 'Veuillez remplir nom d\'utilisateur et email.';
-      return;
-    }
-    
-    // En création, le password est obligatoire
-    if (!this.editingUser && !this.password) {
-      this.error = 'Le mot de passe est requis pour une nouvelle création.';
+    this.error = '';
+    if (!this.validateForm(true)) {
       return;
     }
 
@@ -252,6 +260,7 @@ export class CreateUserComponent implements OnInit {
     this.role = user.role || '';
     this.actif = user.actif !== undefined ? user.actif : true;
     this.error = '';
+    this.resetValidation();
     this.showModal = true;
   }
 
@@ -264,7 +273,102 @@ export class CreateUserComponent implements OnInit {
     this.nomUtilisateur = '';
     this.email = '';
     this.password = '';
+    this.role = this.roles?.[1]?.value || this.role;
     this.actif = true;
     this.error = '';
+    this.resetValidation();
+  }
+
+  markFieldTouched(field: string): void {
+    this.touchedFields[field] = true;
+    this.validateField(field);
+  }
+
+  onFieldChange(field: string): void {
+    if (this.touchedFields[field]) {
+      this.validateField(field);
+    }
+  }
+
+  shouldShowFieldError(field: string): boolean {
+    return !!this.formErrors[field] && !!this.touchedFields[field];
+  }
+
+  private validateForm(markTouched = false): boolean {
+    if (markTouched) {
+      Object.keys(this.touchedFields).forEach((key) => {
+        this.touchedFields[key] = true;
+      });
+    }
+
+    this.validateField('nomUtilisateur');
+    this.validateField('email');
+    this.validateField('password');
+    this.validateField('role');
+
+    return !Object.values(this.formErrors).some((value) => !!value);
+  }
+
+  private validateField(field: string): void {
+    switch (field) {
+      case 'nomUtilisateur':
+        if (!this.nomUtilisateur.trim()) {
+          this.formErrors['nomUtilisateur'] = 'Le nom d\'utilisateur est obligatoire.';
+        } else if (this.nomUtilisateur.trim().length < 3) {
+          this.formErrors['nomUtilisateur'] = 'Le nom d\'utilisateur doit contenir au moins 3 caractères.';
+        } else {
+          this.formErrors['nomUtilisateur'] = '';
+        }
+        break;
+
+      case 'email': {
+        const emailValue = this.email.trim();
+        if (!emailValue) {
+          this.formErrors['email'] = 'L\'adresse email est obligatoire.';
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
+          this.formErrors['email'] = 'Le format de l\'email est invalide.';
+        } else {
+          this.formErrors['email'] = '';
+        }
+        break;
+      }
+
+      case 'password':
+        if (!this.editingUser && !this.password) {
+          this.formErrors['password'] = 'Le mot de passe est obligatoire.';
+        } else if (this.password && this.password.length < 6) {
+          this.formErrors['password'] = 'Le mot de passe doit contenir au moins 6 caractères.';
+        } else {
+          this.formErrors['password'] = '';
+        }
+        break;
+
+      case 'role':
+        if (!this.role) {
+          this.formErrors['role'] = 'Le rôle est obligatoire.';
+        } else {
+          this.formErrors['role'] = '';
+        }
+        break;
+
+      default:
+        break;
+    }
+  }
+
+  private resetValidation(): void {
+    this.formErrors = {
+      nomUtilisateur: '',
+      email: '',
+      password: '',
+      role: ''
+    };
+
+    this.touchedFields = {
+      nomUtilisateur: false,
+      email: false,
+      password: false,
+      role: false
+    };
   }
 }

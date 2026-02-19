@@ -360,7 +360,7 @@ $border-color: #e2e8f0;
   min-height: 100vh;
   
   h1 {
-    color: $primary; font-size: 1.8rem; font-weight: 800;
+    color: #0f172a; font-size: 1.5rem; font-weight: 800;
     padding: 24px 20px 12px; margin: 0;
     @media (max-width: 768px) { font-size: 1.5rem; padding: 16px 16px 8px; }
   }
@@ -466,15 +466,42 @@ $border-color: #e2e8f0;
 
 // --- PAGINATION FOOTER ---
 .pagination-footer {
-  padding: 2rem 0;
+  padding: 1rem;
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  gap: 1rem;
-  .page-info { font-size: 0.8rem; font-weight: 700; color: $text-dark; }
-  button { 
-    background: #fff; border: 1px solid $border-color; padding: 5px; border-radius: 6px;
-    &:disabled { opacity: 0.3; }
+  background: #fbfdff;
+  border-top: 1px solid $border-color;
+
+  .page-stats {
+    font-size: 0.8rem;
+    color: $text-light;
+    font-weight: 600;
+  }
+
+  .page-nav {
+    display: flex;
+    gap: 8px;
+
+    button {
+      background: white;
+      border: 1px solid $border-color;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      &:hover:not(:disabled) {
+        background: $primary;
+        color: white;
+        border-color: $primary;
+      }
+    }
   }
 }
 

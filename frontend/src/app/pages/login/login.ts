@@ -19,6 +19,7 @@ export class LoginComponent {
   password: string = '';
   message: string = '';
   success: boolean = false;
+  isLoadingMessage: boolean = false;
   showPassword: boolean = false;
 
   constructor(private authService: AuthService, private authState: AuthStateService, private router: Router, private config: ConfigService) {}
@@ -27,17 +28,21 @@ export class LoginComponent {
     // Handler du formulaire de connexion
     this.message = '';
     this.success = false;
+    this.isLoadingMessage = false;
     if (this.email && this.password) {
+      this.isLoadingMessage = true;
       this.message = 'Connexion...';
       // Convertir l'email en minuscules pour être insensible à la casse
       const emailLowerCase = this.email.toLowerCase();
       // Le rôle est déterminé automatiquement côté serveur
       this.authService.login(emailLowerCase, this.password).subscribe((ok) => {
         if (ok) {
+          this.isLoadingMessage = false;
           this.success = true;
           try { this.authState.isAuthenticated.set(true); } catch (e) {}
           this.router.navigate(['/dashboard']);
         } else {
+          this.isLoadingMessage = false;
           this.success = false;
           this.message = 'Identifiants invalides';
         }
@@ -45,6 +50,7 @@ export class LoginComponent {
     } else {
       this.message = 'Veuillez remplir tous les champs';
       this.success = false;
+      this.isLoadingMessage = false;
     }
   }
 

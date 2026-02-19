@@ -12,7 +12,7 @@ $bg: #f8fafc;
   padding: 2.5rem; background: $bg; min-height: 100vh;
   .header-container {
     display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;
-    h1 { font-size: 2rem; font-weight: 800; color: $dark; margin: 0; }
+    h1 { font-size: 1.5rem; font-weight: 800; color: #0f172a; margin: 0; }
     .subtitle { color: $light-text; margin: 0.5rem 0 0; }
   }
 }
@@ -126,6 +126,19 @@ $bg: #f8fafc;
     width: 100%; padding: 0.75rem; border: 1.5px solid $border; border-radius: 10px;
     font-family: inherit; font-size: 0.95rem;
     &:focus { outline: none; border-color: $primary; box-shadow: 0 0 0 3px rgba($primary, 0.1); }
+  }
+
+  .input-invalid {
+    border-color: #dc2626 !important;
+    box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.12);
+  }
+
+  .field-error {
+    display: block;
+    margin-top: 0.4rem;
+    font-size: 0.78rem;
+    color: #dc2626;
+    font-weight: 600;
   }
 }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }

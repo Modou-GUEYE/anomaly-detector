@@ -43,11 +43,11 @@ $border-color: #e2e8f0;
       gap: 1rem;
 
       h1 {
-        font-size: 1.75rem;
+        font-size: 1.5rem;
         font-weight: 800;
-        color: $text-dark;
+        color: #0f172a;
         margin: 0;
-        letter-spacing: -0.6px;
+        letter-spacing: 0;
       }
 
       .badge {
@@ -93,111 +93,70 @@ $border-color: #e2e8f0;
   }
 }
 
-.header-toolbar {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+.toolbar-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.25rem;
+  border: 1px solid $border-color;
 
-  @media (min-width: 1024px) {
-    flex-direction: row;
-    align-items: stretch;
-    gap: 1rem;
-  }
-
-  .search-container {
+  .filters-side {
     display: flex;
-    align-items: center;
-    background: #fff;
-    border: 1.5px solid $border-color;
-    padding: 0 14px;
-    border-radius: 10px;
-    transition: all 0.2s ease;
-    flex: 1;
-    min-width: 200px;
+    gap: 1.25rem;
+    flex-wrap: wrap;
 
-    &:focus-within {
-      border-color: $primary;
-      box-shadow: 0 0 0 3px rgba($primary, 0.1);
-    }
+    .filter-control {
+      flex: 1;
+      min-width: 180px;
 
-    mat-icon {
-      color: #94a3b8;
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
-      flex-shrink: 0;
-    }
-
-    input {
-      border: none;
-      padding: 12px 10px;
-      outline: none;
-      font-size: 0.9rem;
-      width: 100%;
-      background: transparent;
-      color: $text-dark;
-      min-width: 0;
-
-      &::placeholder {
-        color: #cbd5e1;
-      }
-    }
-  }
-
-  .filter-group {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1rem;
-
-    @media (min-width: 768px) {
-      grid-template-columns: repeat(2, 1fr);
-    }
-
-    @media (min-width: 1024px) {
-      grid-template-columns: repeat(4, 1fr);
-    }
-
-    .filter-select {
-      display: flex;
-      align-items: center;
-      background: #fff;
-      border: 1.5px solid $border-color;
-      padding: 0 12px;
-      border-radius: 10px;
-      transition: all 0.2s ease;
-      overflow: hidden;
-
-      &:hover {
-        border-color: #cbd5e1;
-      }
-
-      &:focus-within {
-        border-color: $primary;
-        box-shadow: 0 0 0 3px rgba($primary, 0.1);
-      }
-
-      mat-icon {
-        color: $primary;
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-        flex-shrink: 0;
+      label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: $text-light;
+        margin-bottom: 6px;
       }
 
       select {
-        border: none;
-        background: transparent;
-        padding: 12px 8px;
-        font-size: 0.85rem;
-        font-weight: 500;
+        background: #f8fafc;
+        border: 1px solid $border-color;
+        padding: 10px 12px;
+        border-radius: 8px;
         width: 100%;
         outline: none;
         cursor: pointer;
-        color: $text-dark;
-        min-width: 0;
+        font-size: 0.85rem;
+      }
+    }
 
-        &::-ms-expand {
-          display: none;
+    .search-control {
+      min-width: 260px;
+      flex: 1.4;
+    }
+
+    .search-wrapper {
+      position: relative;
+
+      mat-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: $text-light;
+        font-size: 20px;
+      }
+
+      input {
+        width: 100%;
+        padding: 10px 12px 10px 40px;
+        border-radius: 8px;
+        border: 1px solid $border-color;
+        background: #f8fafc;
+        outline: none;
+        transition: all 0.2s;
+
+        &:focus {
+          border-color: $primary;
+          box-shadow: 0 0 0 3px rgba($primary, 0.1);
         }
       }
     }
@@ -552,14 +511,41 @@ $border-color: #e2e8f0;
 
 // --- PAGINATION ---
 .pagination-footer {
-  padding: 2rem 0;
+  padding: 1rem;
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  gap: 1rem;
-  .page-info { font-size: 0.8rem; font-weight: 700; color: $text-dark; }
-  button { 
-    background: #fff; border: 1px solid $border-color; padding: 5px; border-radius: 6px;
-    &:disabled { opacity: 0.3; }
+  background: #fbfdff;
+  border-top: 1px solid $border-color;
+
+  .page-stats {
+    font-size: 0.8rem;
+    color: $text-light;
+    font-weight: 600;
+  }
+
+  .page-nav {
+    display: flex;
+    gap: 8px;
+
+    button {
+      background: white;
+      border: 1px solid $border-color;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      &:hover:not(:disabled) {
+        background: $primary;
+        color: white;
+        border-color: $primary;
+      }
+    }
   }
 }

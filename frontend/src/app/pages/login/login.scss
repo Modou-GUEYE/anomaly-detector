@@ -152,6 +152,11 @@ $orange:  #ED6A01;   // ton chaud du dégradé
 }
 
 .feedback { text-align: center; margin-top: 12px; padding: 12px 14px; border-radius: 8px; font-weight: 600; }
+.msg-info {
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.12);
+  border: 1px solid rgba(37, 99, 235, 0.24);
+}
 .msg-success { 
   color: #10b981; 
   background: rgba(16, 185, 129, 0.1); 

@@ -10,34 +10,43 @@
 
     <div class="header-actions">
       <div class="filter-group">
-        <div class="search-box">
-          <mat-icon>search</mat-icon>
-          <input type="text" placeholder="Rechercher..." [(ngModel)]="searchTerm" (input)="applyFilters()">
+        <div class="filter-control search-control">
+          <label>Recherche</label>
+          <div class="search-box">
+            <mat-icon>search</mat-icon>
+            <input type="text" placeholder="Rechercher..." [(ngModel)]="searchTerm" (input)="applyFilters()">
+          </div>
         </div>
 
-        <div class="select-wrapper">
-          <select [(ngModel)]="filterPays" (change)="applyFilters()">
-            <option value="">Tous les pays</option>
-            <option *ngFor="let pays of getUniqueCountries()" [value]="pays">{{ pays }}</option>
-          </select>
-          <mat-icon>expand_more</mat-icon>
+        <div class="filter-control">
+          <label>Pays</label>
+          <div class="select-wrapper">
+            <select [(ngModel)]="filterPays" (change)="applyFilters()">
+              <option value="">Tous les pays</option>
+              <option *ngFor="let pays of getUniqueCountries()" [value]="pays">{{ pays }}</option>
+            </select>
+          </div>
         </div>
 
-        <div class="select-wrapper hide-mobile">
-          <select [(ngModel)]="filterType" (change)="applyFilters()">
-            <option value="">Tous les types</option>
-            <option *ngFor="let type of getTypeClientOptions()" [value]="type.code">{{ type.label }}</option>
-          </select>
-          <mat-icon>expand_more</mat-icon>
+        <div class="filter-control hide-mobile">
+          <label>Type client</label>
+          <div class="select-wrapper">
+            <select [(ngModel)]="filterType" (change)="applyFilters()">
+              <option value="">Tous les types</option>
+              <option *ngFor="let type of getTypeClientOptions()" [value]="type.code">{{ type.label }}</option>
+            </select>
+          </div>
         </div>
 
-        <div class="select-wrapper">
-          <select [(ngModel)]="filterSurveilles" (change)="applyFilters()">
-            <option value="">Statut</option>
-            <option value="true">Surveillés</option>
-            <option value="false">Non surveillés</option>
-          </select>
-          <mat-icon>expand_more</mat-icon>
+        <div class="filter-control">
+          <label>Statut</label>
+          <div class="select-wrapper">
+            <select [(ngModel)]="filterSurveilles" (change)="applyFilters()">
+              <option value="">Tous les statuts</option>
+              <option value="true">Surveillés</option>
+              <option value="false">Non surveillés</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
@@ -87,11 +96,11 @@
     </div>
   </div>
 
-  <footer class="view-footer" *ngIf="totalPages > 1">
-    <div class="pagination">
-      <button class="nav-btn" (click)="prevPage()" [disabled]="currentPage === 1"><mat-icon>arrow_back</mat-icon></button>
-      <span class="page-info"><strong>{{ currentPage }}</strong> / {{ totalPages }}</span>
-      <button class="nav-btn" (click)="nextPage()" [disabled]="currentPage === totalPages"><mat-icon>arrow_forward</mat-icon></button>
+  <footer class="pagination-footer" *ngIf="totalPages > 1">
+    <div class="page-stats">Page {{ currentPage }} sur {{ totalPages }}</div>
+    <div class="page-nav">
+      <button (click)="prevPage()" [disabled]="currentPage === 1">Précédent</button>
+      <button (click)="nextPage()" [disabled]="currentPage === totalPages">Suivant</button>
     </div>
   </footer>
 </section>

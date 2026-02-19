@@ -6,41 +6,46 @@
     </div>
 
     <div class="header-actions">
-      <div class="filter-group">
-        <div class="search-box">
-          <mat-icon>search</mat-icon>
-          <input type="text" placeholder="Type ou code..." [(ngModel)]="filters.search" (ngModelChange)="applyFilters()">
-        </div>
+      <div class="toolbar-card">
+        <div class="filters-side">
+          <div class="filter-control search-control">
+            <label>Recherche</label>
+            <div class="search-wrapper">
+              <mat-icon>search</mat-icon>
+              <input type="text" placeholder="Type ou code..." [(ngModel)]="filters.search" (ngModelChange)="applyFilters()">
+            </div>
+          </div>
 
-        <div class="select-wrapper">
-          <select [(ngModel)]="filters.type" (change)="applyFilters()">
-            <option value="">Types</option>
-            <option value="Montant">Montant</option>
-            <option value="frequence">Fréquence</option>
-            <option value="Pays à risque">Pays à risque</option>
-            <option value="Blacklist">Blacklist</option>
-            <option value="Interdit">Interdit</option>
-            <option value="PEP">PEP</option>
-            <option value="Surveillés">Surveillés</option>
-          </select>
-          <mat-icon>expand_more</mat-icon>
-        </div>
+          <div class="filter-control">
+            <label>Type</label>
+            <select [(ngModel)]="filters.type" (change)="applyFilters()">
+              <option value="">Tous les types</option>
+              <option value="Montant">Montant</option>
+              <option value="frequence">Fréquence</option>
+              <option value="Pays à risque">Pays à risque</option>
+              <option value="Blacklist">Blacklist</option>
+              <option value="Interdit">Interdit</option>
+              <option value="PEP">PEP</option>
+              <option value="Surveillés">Surveillés</option>
+            </select>
+          </div>
 
-        <div class="select-wrapper">
-          <select [(ngModel)]="filters.severite" (change)="applyFilters()">
-            <option value="">Niveaux</option>
-            <option *ngFor="let s of severityOptions" [value]="s">{{ s }}</option>
-          </select>
-          <mat-icon>expand_more</mat-icon>
-        </div>
+          <div class="filter-control">
+            <label>Niveau</label>
+            <select [(ngModel)]="filters.severite" (change)="applyFilters()">
+              <option value="">Tous les niveaux</option>
+              <option *ngFor="let s of severityOptions" [value]="s">{{ s }}</option>
+            </select>
+          </div>
 
-        <div class="select-wrapper">
-          <select [(ngModel)]="filters.statut" (change)="applyFilters()">
-            <option value="">Statuts</option>
-            <option value="Traité">Traité</option>
-            <option value="En cours">En cours</option>
-          </select>
-          <mat-icon>expand_more</mat-icon>
+          <div class="filter-control">
+            <label>Statut</label>
+            <select [(ngModel)]="filters.statut" (change)="applyFilters()">
+              <option value="">Tous les statuts</option>
+              <option value="Traité">Traité</option>
+              <option value="En cours">En cours</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
@@ -86,15 +91,11 @@
     <p>Aucune alerte trouvee avec ces criteres.</p>
   </div>
 
-  <footer class="view-footer" *ngIf="totalPages > 1">
-    <div class="pagination">
-      <button class="nav-btn" (click)="prevPage()" [disabled]="currentPage === 1">
-        <mat-icon>chevron_left</mat-icon>
-      </button>
-      <span class="page-info">Page <strong>{{ currentPage }}</strong> sur {{ totalPages }}</span>
-      <button class="nav-btn" (click)="nextPage()" [disabled]="currentPage === totalPages">
-        <mat-icon>chevron_right</mat-icon>
-      </button>
+  <footer class="pagination-footer" *ngIf="totalPages > 1">
+    <div class="page-stats">Page {{ currentPage }} sur {{ totalPages }}</div>
+    <div class="page-nav">
+      <button (click)="prevPage()" [disabled]="currentPage === 1">Précédent</button>
+      <button (click)="nextPage()" [disabled]="currentPage === totalPages">Suivant</button>
     </div>
   </footer>
 </section>

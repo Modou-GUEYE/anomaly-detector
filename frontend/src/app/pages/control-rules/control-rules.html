@@ -86,7 +86,6 @@
   <div *ngIf="!loading && rules.length === 0" class="empty-state">
     <mat-icon>verified_user</mat-icon>
     <h3>Aucune règle définie</h3>
-    <button class="btn-outline" (click)="addRule()">Créer une règle</button>
   </div>
 </section>
 
@@ -101,24 +100,28 @@
         <div class="form-col">
           <div class="form-group">
             <label>Nom de la règle *</label>
-            <input type="text" [(ngModel)]="formData.nomRegle" placeholder="Ex: Fréquence">
+            <input type="text" [(ngModel)]="formData.nomRegle" (blur)="markFieldTouched('nomRegle')" (ngModelChange)="onFieldChange('nomRegle')" [class.input-invalid]="shouldShowFieldError('nomRegle')" placeholder="Ex: Fréquence">
+            <small class="field-error" *ngIf="shouldShowFieldError('nomRegle')">{{ formErrors['nomRegle'] }}</small>
           </div>
           <div class="form-group">
             <label>Description *</label>
-            <textarea [(ngModel)]="formData.description" rows="5" placeholder="Ex: Description de la règle"></textarea>
+            <textarea [(ngModel)]="formData.description" (blur)="markFieldTouched('description')" (ngModelChange)="onFieldChange('description')" [class.input-invalid]="shouldShowFieldError('description')" rows="5" placeholder="Ex: Description de la règle"></textarea>
+            <small class="field-error" *ngIf="shouldShowFieldError('description')">{{ formErrors['description'] }}</small>
           </div>
         </div>
         <div class="form-col">
           <div class="form-row">
             <div class="form-group">
-              <label>Type</label>
-              <select [(ngModel)]="formData.typeRegle" (change)="onRuleTypeChange()">
+              <label>Type *</label>
+              <select [(ngModel)]="formData.typeRegle" (change)="onRuleTypeChange()" (blur)="markFieldTouched('typeRegle')" [class.input-invalid]="shouldShowFieldError('typeRegle')">
                 <option *ngFor="let t of ruleTypes" [value]="t">{{ t | titlecase }}</option>
               </select>
+              <small class="field-error" *ngIf="shouldShowFieldError('typeRegle')">{{ formErrors['typeRegle'] }}</small>
             </div>
             <div class="form-group">
-              <label>Valeur seuil</label>
-              <input type="number" [(ngModel)]="formData.seuil">
+              <label>Valeur seuil *</label>
+              <input type="number" [(ngModel)]="formData.seuil" (blur)="markFieldTouched('seuil')" (ngModelChange)="onFieldChange('seuil')" [class.input-invalid]="shouldShowFieldError('seuil')">
+              <small class="field-error" *ngIf="shouldShowFieldError('seuil')">{{ formErrors['seuil'] }}</small>
             </div>
           </div>
           <div class="form-group">
@@ -129,20 +132,22 @@
             </select>
           </div>
           <div class="form-row">
-            <div class="form-group">
-              <label>Période</label>
-              <select [(ngModel)]="formData.periodeReference" [disabled]="formData.typeRegle === 'pays_risque'">
+            <div class="form-group" *ngIf="formData.typeRegle !== 'pays_risque'">
+              <label>Période *</label>
+              <select [(ngModel)]="formData.periodeReference" (blur)="markFieldTouched('periodeReference')" (ngModelChange)="onFieldChange('periodeReference')" [class.input-invalid]="shouldShowFieldError('periodeReference')">
                 <option value="24h">24 Heures</option>
                 <option value="7d">7 Jours</option>
                 <option value="30d">30 Jours</option>
               </select>
+              <small class="field-error" *ngIf="shouldShowFieldError('periodeReference')">{{ formErrors['periodeReference'] }}</small>
             </div>
             <div class="form-group">
-              <label>Action</label>
-              <select [(ngModel)]="formData.action">
+              <label>Action *</label>
+              <select [(ngModel)]="formData.action" (blur)="markFieldTouched('action')" (ngModelChange)="onFieldChange('action')" [class.input-invalid]="shouldShowFieldError('action')">
                 <option value="bloquer">Bloquer</option>
                 <option value="surveiller">Surveiller</option>
               </select>
+              <small class="field-error" *ngIf="shouldShowFieldError('action')">{{ formErrors['action'] }}</small>
             </div>
           </div>
         </div>

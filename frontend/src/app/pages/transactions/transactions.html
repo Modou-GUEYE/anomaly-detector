@@ -10,15 +10,18 @@
       </button>
     </div>
 
-    <div class="header-toolbar">
-      <div class="search-container">
-        <mat-icon>search</mat-icon>
-        <input type="text" placeholder="Compte, nom..." [(ngModel)]="filters.search" (input)="onSearchChange()">
-      </div>
+    <div class="toolbar-card">
+      <div class="filters-side">
+        <div class="filter-control search-control">
+          <label>Recherche</label>
+          <div class="search-wrapper">
+            <mat-icon>search</mat-icon>
+            <input type="text" placeholder="Compte, nom..." [(ngModel)]="filters.search" (input)="onSearchChange()">
+          </div>
+        </div>
 
-      <div class="filter-group">
-        <div class="filter-select">
-          <mat-icon>calendar_today</mat-icon>
+        <div class="filter-control">
+          <label>Période</label>
           <select [(ngModel)]="filters.periode" (change)="onFilterChange()">
             <option value="">Tous les périodes</option>
             <option value="Aujourd'hui">Aujourd'hui</option>
@@ -27,16 +30,16 @@
           </select>
         </div>
 
-        <div class="filter-select">
-          <mat-icon>public</mat-icon>
+        <div class="filter-control">
+          <label>Pays</label>
           <select [(ngModel)]="filters.pays" (change)="onFilterChange()">
             <option value="">Tous les pays</option>
             <option *ngFor="let p of getUniqueCountries()" [value]="p">{{p}}</option>
           </select>
         </div>
 
-        <div class="filter-select">
-          <mat-icon>compare_arrows</mat-icon>
+        <div class="filter-control">
+          <label>Portée</label>
           <select [(ngModel)]="filters.portee" (change)="onFilterChange()">
             <option value="">Tous les portées</option>
             <option value="national">National</option>
@@ -44,8 +47,8 @@
           </select>
         </div>
 
-        <div class="filter-select">
-          <mat-icon>person</mat-icon>
+        <div class="filter-control">
+          <label>Type client</label>
           <select [(ngModel)]="filters.typeClient" (change)="onFilterChange()">
             <option value="">Tous les types</option>
             <option *ngFor="let opt of typeClientOptions" [value]="opt.label">{{ opt.label }}</option>
@@ -149,8 +152,10 @@
   </div>
 
   <footer class="pagination-footer">
-    <button (click)="previousPage()" [disabled]="currentPage === 1"><mat-icon>navigate_before</mat-icon></button>
-    <span class="page-info">{{ currentPage }} / {{ totalPages }}</span>
-    <button (click)="nextPage()" [disabled]="currentPage === totalPages"><mat-icon>navigate_next</mat-icon></button>
+    <div class="page-stats">Page {{ currentPage }} sur {{ totalPages }}</div>
+    <div class="page-nav">
+      <button (click)="previousPage()" [disabled]="currentPage === 1">Précédent</button>
+      <button (click)="nextPage()" [disabled]="currentPage === totalPages">Suivant</button>
+    </div>
   </footer>
 </section>

@@ -146,9 +146,11 @@
       </div>
 
       <footer class="pagination-footer" *ngIf="totalPages > 1">
-        <button (click)="previousPage()" [disabled]="currentPage === 1"><mat-icon>navigate_before</mat-icon></button>
-        <span class="page-info">{{ currentPage }} / {{ totalPages }}</span>
-        <button (click)="nextPage()" [disabled]="currentPage === totalPages"><mat-icon>navigate_next</mat-icon></button>
+        <div class="page-stats">Page {{ currentPage }} sur {{ totalPages }}</div>
+        <div class="page-nav">
+          <button (click)="previousPage()" [disabled]="currentPage === 1">Précédent</button>
+          <button (click)="nextPage()" [disabled]="currentPage === totalPages">Suivant</button>
+        </div>
       </footer>
     </div>
   </div>

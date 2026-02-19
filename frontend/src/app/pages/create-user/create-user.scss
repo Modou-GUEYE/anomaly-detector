@@ -14,26 +14,82 @@ $bg-light: #f8fafc;
   
   .header-section {
     display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;
-    h1 { font-size: 20px; color: $text-main; font-weight: 800; margin: 0; 
-      @media (min-width: 768px) { font-size: 26px; } }
+    h1 { font-size: 1.5rem; color: #0f172a; font-weight: 800; margin: 0; }
     }
   }
   
   /* --- FILTRES RESPONSIVES --- */
   .filter-card {
-    background: white; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0;
-    display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;
-    
-    @media (min-width: 768px) { flex-direction: row; padding: 16px 20px; }
-    
-    .search-wrapper {
-      position: relative; flex: 1; display: flex; align-items: center;
-      mat-icon { position: absolute; left: 12px; color: $text-muted; font-size: 20px; }
-      input { width: 100%; padding: 10px 10px 10px 40px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; }
-    }
-    .filter-group { 
-      display: flex; gap: 8px; 
-      select { flex: 1; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: white; font-size: 14px; }
+    background: white;
+    border-radius: 12px;
+    padding: 1.25rem;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 20px;
+
+    .filters-side {
+      display: flex;
+      gap: 1.25rem;
+      flex-wrap: wrap;
+
+      .filter-control {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 180px;
+        flex: 1;
+
+        label {
+          display: block;
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: $text-muted;
+        }
+
+        select {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          padding: 10px 12px;
+          border-radius: 8px;
+          width: 100%;
+          outline: none;
+          cursor: pointer;
+          font-size: 0.85rem;
+        }
+      }
+
+      .search-control {
+        min-width: 260px;
+        flex: 1.4;
+      }
+
+      .search-wrapper {
+        position: relative;
+
+        mat-icon {
+          position: absolute;
+          left: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: $text-muted;
+          font-size: 20px;
+        }
+
+        input {
+          width: 100%;
+          padding: 10px 12px 10px 40px;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          font-size: 14px;
+          background: #f8fafc;
+          outline: none;
+          transition: all 0.2s;
+
+          &:focus {
+            border-color: $primary;
+            box-shadow: 0 0 0 3px rgba($primary, 0.1);
+          }
+        }
+      }
     }
   }
   
@@ -89,6 +145,14 @@ $bg-light: #f8fafc;
           input, select { width: 100%; padding: 11px 12px 11px 38px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px;
             transition: border 0.2s; &:focus { border-color: $primary; outline: none; box-shadow: 0 0 0 3px rgba($primary, 0.1); } }
           }
+        }
+
+        .field-error {
+          display: block;
+          margin-top: 6px;
+          font-size: 12px;
+          color: #dc2626;
+          font-weight: 600;
         }
       }
       

@@ -8,22 +8,33 @@
   </div>
 
   <div class="filter-card">
-    <div class="search-wrapper">
-      <mat-icon>search</mat-icon>
-      <input type="text" placeholder="Rechercher..." [(ngModel)]="filterText">
-    </div>
-    <div class="filter-group">
-      <select [(ngModel)]="filterRole">
-        <option value="all">Tous les rôles</option>
-        @for (r of roles; track r.value) {
-          <option [value]="r.value">{{ r.label }}</option>
-        }
-      </select>
-      <select [(ngModel)]="filterActif">
-        <option value="all">Statuts</option>
-        <option value="actif">Actifs</option>
-        <option value="inactif">Inactifs</option>
-      </select>
+    <div class="filters-side">
+      <div class="filter-control search-control">
+        <label>Recherche</label>
+        <div class="search-wrapper">
+          <mat-icon>search</mat-icon>
+          <input type="text" placeholder="Rechercher..." [(ngModel)]="filterText">
+        </div>
+      </div>
+
+      <div class="filter-control">
+        <label>Rôle</label>
+        <select [(ngModel)]="filterRole">
+          <option value="all">Tous les rôles</option>
+          @for (r of roles; track r.value) {
+            <option [value]="r.value">{{ r.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="filter-control">
+        <label>Statut</label>
+        <select [(ngModel)]="filterActif">
+          <option value="all">Tous les statuts</option>
+          <option value="actif">Actifs</option>
+          <option value="inactif">Inactifs</option>
+        </select>
+      </div>
     </div>
   </div>
 
@@ -92,33 +103,45 @@
                 <label>Nom d'utilisateur</label>
                 <div class="input-wrapper">
                   <mat-icon>person</mat-icon>
-                  <input type="text" name="nom" [(ngModel)]="nomUtilisateur" placeholder="Ex: Jean Dupont" required>
+                  <input type="text" name="nom" [(ngModel)]="nomUtilisateur" (blur)="markFieldTouched('nomUtilisateur')" (ngModelChange)="onFieldChange('nomUtilisateur')" placeholder="Ex: Jean Dupont" required>
                 </div>
+                @if (shouldShowFieldError('nomUtilisateur')) {
+                  <small class="field-error">{{ formErrors['nomUtilisateur'] }}</small>
+                }
               </div>
               <div class="form-field">
                 <label>Adresse Email</label>
                 <div class="input-wrapper">
                   <mat-icon>alternate_email</mat-icon>
-                  <input type="email" name="email" [(ngModel)]="email" placeholder="email@domaine.com" required>
+                  <input type="email" name="email" [(ngModel)]="email" (blur)="markFieldTouched('email')" (ngModelChange)="onFieldChange('email')" placeholder="email@domaine.com" required>
                 </div>
+                @if (shouldShowFieldError('email')) {
+                  <small class="field-error">{{ formErrors['email'] }}</small>
+                }
               </div>
               <div class="form-field">
                 <label>Mot de passe {{ editingUser ? '(optionnel)' : '' }}</label>
                 <div class="input-wrapper">
                   <mat-icon>lock_open</mat-icon>
-                  <input type="password" name="pass" [(ngModel)]="password" placeholder="••••••••" [required]="!editingUser">
+                  <input type="password" name="pass" [(ngModel)]="password" (blur)="markFieldTouched('password')" (ngModelChange)="onFieldChange('password')" placeholder="••••••••" [required]="!editingUser">
                 </div>
+                @if (shouldShowFieldError('password')) {
+                  <small class="field-error">{{ formErrors['password'] }}</small>
+                }
               </div>
               <div class="form-field">
                 <label>Rôle assigné</label>
                 <div class="input-wrapper">
                   <mat-icon>admin_panel_settings</mat-icon>
-                  <select name="role" [(ngModel)]="role">
+                  <select name="role" [(ngModel)]="role" (blur)="markFieldTouched('role')" (ngModelChange)="onFieldChange('role')">
                     @for (r of roles; track r.value) {
                       <option [value]="r.value">{{ r.label }}</option>
                     }
                   </select>
                 </div>
+                @if (shouldShowFieldError('role')) {
+                  <small class="field-error">{{ formErrors['role'] }}</small>
+                }
               </div>
             </div>
           </div>
