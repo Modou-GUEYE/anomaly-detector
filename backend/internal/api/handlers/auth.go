@@ -76,7 +76,7 @@ func (h *AuthHandler) HandleLogin(ctx *gin.Context) {
 	}
 
 	roles := []string{user.Role}
-	accessToken, err := auth.NewSignedTokenFromEnv(user.ID, roles, accessTTL)
+	accessToken, err := auth.NewSignedTokenFromEnv(user.ID, roles, accessTTL, user.DoitChangerMotDePasse)
 	if err != nil {
 		log.Printf("error signing access token for user %s: %v", user.ID, err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "could not sign token"})
@@ -119,7 +119,7 @@ func (h *AuthHandler) HandleGetSystemToken(ctx *gin.Context) {
 		}
 	}
 	roles := []string{req.Role}
-	token, err := auth.NewSignedTokenFromEnv(req.SystemID, roles, accessTTL)
+	token, err := auth.NewSignedTokenFromEnv(req.SystemID, roles, accessTTL, false)
 	if err != nil {
 		log.Printf("error signing system token for system %s: %v", req.SystemID, err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "could not sign token"})

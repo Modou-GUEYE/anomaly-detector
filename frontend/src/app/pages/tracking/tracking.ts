@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { ConfigService } from '../../services/config.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http';
 import { Subject, Observable, of } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged, catchError } from 'rxjs/operators';
 
@@ -103,7 +103,7 @@ export class TrackingComponent implements OnInit, OnDestroy {
     this.getAuditData().pipe(
       takeUntil(this.destroy$),
       catchError(error => {
-        this.error = 'Impossible de charger les données: ' + (error.message || error);
+        this.error = this.getUserFriendlyErrorMessage(error);
         this.loading = false;
         return of([]);
       })
@@ -126,6 +126,26 @@ export class TrackingComponent implements OnInit, OnDestroy {
     if (this.filters.dateStart) params = params.set('date_start', this.filters.dateStart);
     if (this.filters.dateEnd) params = params.set('date_end', this.filters.dateEnd);
     return this.http.get<any[]>(`${this.apiUrl}/api/v1/reports/audit`, { params });
+  }
+
+  private getUserFriendlyErrorMessage(error: unknown): string {
+    const defaultMessage = 'Impossible de charger les données pour le moment. Veuillez réessayer.';
+
+    if (error instanceof HttpErrorResponse) {
+      if (error.status === 0) {
+        return 'Le serveur backend est indisponible ou non démarré. Vérifiez que l’API est lancée puis rechargez la page.';
+      }
+
+      if (error.status >= 500) {
+        return 'Erreur côté serveur. Veuillez réessayer plus tard.';
+      }
+
+      if (error.status >= 400) {
+        return 'La requête de chargement des données a échoué. Veuillez vérifier votre session puis réessayer.';
+      }
+    }
+
+    return defaultMessage;
   }
 
   calculateStats() {

@@ -121,6 +121,39 @@ export class AuthService {
     return roles.length > 0 ? roles[0] : null;
   }
 
+  // Vérifie si l'utilisateur doit changer son mot de passe
+  mustChangePassword(): boolean {
+    const token = this.getAccessToken();
+    if (!token) return false;
+    try {
+      const decoded: any = jwtDecode(token);
+      return decoded?.must_change_password === true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Changer le mot de passe lors de la première connexion
+  changeFirstPassword(oldPassword: string, newPassword: string): Observable<boolean> {
+    const url = '/api/v1/auth/first-password-change';
+    const body = { oldPassword, newPassword };
+    return this.http.post<{ access_token: string; expires_in: number; message: string }>(url, body).pipe(
+      tap((res) => {
+        // Mettre à jour le token avec le nouveau
+        this.accessToken = res.access_token;
+        try {
+          if (typeof window !== 'undefined' && window.sessionStorage) {
+            sessionStorage.setItem('token', res.access_token);
+          }
+        } catch (e) {
+          // ignore storage errors
+        }
+      }),
+      map(() => true),
+      catchError(() => of(false))
+    );
+  }
+
   isAdmin(): boolean {
     return this.hasRole('admin');
   }

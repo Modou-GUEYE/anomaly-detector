@@ -153,11 +153,12 @@ func ParseAndValidateToken(tokenStr string) (jwt.MapClaims, error) {
 	return claims, nil
 }
 
-func NewSignedTokenFromEnv(subject string, roles []string, ttl time.Duration) (string, error) {
+func NewSignedTokenFromEnv(subject string, roles []string, ttl time.Duration, mustChangePassword bool) (string, error) {
 	claims := jwt.MapClaims{
-		"sub":   subject,
-		"roles": roles,
-		"iat":   time.Now().Unix(),
+		"sub":                  subject,
+		"roles":                roles,
+		"iat":                  time.Now().Unix(),
+		"must_change_password": mustChangePassword,
 	}
 	if ttl > 0 {
 		claims["exp"] = time.Now().Add(ttl).Unix()

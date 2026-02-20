@@ -6,7 +6,7 @@ import { map } from 'rxjs/operators';
 export interface NewUserPayload {
   nomUtilisateur: string;
   email: string;
-  password: string;
+  password?: string;
   role: string;
   actif?: boolean;
 }
@@ -20,11 +20,6 @@ export class UsersService {
   createUser(payload: NewUserPayload): Observable<any> {
     const headers = this.getAuthHeaders();
     return this.http.post(this.usersUrl, payload, { headers });
-  }
-
-  // Public signup - used by the public signup page. Does not attach auth headers.
-  signup(payload: NewUserPayload): Observable<any> {
-    return this.http.post('/api/v1/auth/signup', payload, { headers: new HttpHeaders({ 'Content-Type': 'application/json' }) });
   }
 
   getUsers(): Observable<any[]> {

@@ -28,13 +28,9 @@ func NewService() *Service {
 	}
 }
 
-// SendSignupEmail envoie un email de bienvenue après inscription
-func (s *Service) SendSignupEmail(toEmail, username, password, role string) error {
+// SendUserProvisioningEmail envoie un email de bienvenue après création du compte par un administrateur
+func (s *Service) SendUserProvisioningEmail(toEmail, username, password, role string) error {
 	subject := "Bienvenue sur Le Moteur de Détection d'Anomalies !"
-	loginURL := os.Getenv("FRONTEND_LOGIN_URL")
-	if loginURL == "" {
-		loginURL = "http://localhost:4200/login"
-	}
 	body := fmt.Sprintf(`
 <!DOCTYPE html>
 <html>
@@ -65,12 +61,6 @@ func (s *Service) SendSignupEmail(toEmail, username, password, role string) erro
             Une fois activé, vous recevrez un email de confirmation et pourrez accéder à votre espace.
         </p>
 
-        <p style="margin-top: 30px;">
-			<a href="%s" style="background-color: #2463DE; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                Accéder à la connexion
-            </a>
-        </p>
-
         <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
         <p style="color: #999; font-size: 12px;">
             Cet email a été envoyé automatiquement. Merci de ne pas répondre à ce message.
@@ -78,7 +68,7 @@ func (s *Service) SendSignupEmail(toEmail, username, password, role string) erro
     </div>
 </body>
 </html>
-`, username, toEmail, password, role, loginURL)
+`, username, toEmail, password, role)
 
 	return s.SendEmail(toEmail, subject, body)
 }
@@ -86,10 +76,6 @@ func (s *Service) SendSignupEmail(toEmail, username, password, role string) erro
 // SendAccountActivatedEmail envoie un email de confirmation d'activation
 func (s *Service) SendAccountActivatedEmail(toEmail, username string) error {
 	subject := "Votre compte a été activé ✓"
-	loginURL := os.Getenv("FRONTEND_LOGIN_URL")
-	if loginURL == "" {
-		loginURL = "http://localhost:4200/login"
-	}
 	body := fmt.Sprintf(`
 <!DOCTYPE html>
 <html>
@@ -108,12 +94,6 @@ func (s *Service) SendAccountActivatedEmail(toEmail, username string) error {
             <p>Connectez-vous avec vos identifiants pour accéder à votre dashboard.</p>
         </div>
 
-        <p style="margin-top: 30px;">
-			<a href="%s" style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                Accéder à ma session
-            </a>
-        </p>
-
         <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
         <p style="color: #999; font-size: 12px;">
             Cet email a été envoyé automatiquement. Merci de ne pas répondre à ce message.
@@ -121,7 +101,7 @@ func (s *Service) SendAccountActivatedEmail(toEmail, username string) error {
     </div>
 </body>
 </html>
-`, username, loginURL)
+`, username)
 
 	return s.SendEmail(toEmail, subject, body)
 }

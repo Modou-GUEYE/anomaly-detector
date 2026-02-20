@@ -1,9 +1,11 @@
 package routes
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/big"
 	"os"
 	"strings"
 	"time"
@@ -104,13 +106,14 @@ func setupAuthRoutes(apiV1 *gin.RouterGroup, authHandler *handlers.AuthHandler, 
 	{
 		authRoutes.POST("/login", authHandler.HandleLogin)
 		authRoutes.POST("/system-token", authHandler.HandleGetSystemToken)
-		// Public signup endpoint: creates a user inactif (requires admin activation)
-		authRoutes.POST("/signup", func(ctx *gin.Context) {
+
+		// Route protégée pour forcer le changement de mot de passe à la première connexion
+		authRoutes.POST("/first-password-change", middleware.JwtAuthMiddleware(store), func(ctx *gin.Context) {
+			userID, _ := ctx.Get("userID")
+
 			var req struct {
-				NomUtilisateur string `json:"nomUtilisateur" binding:"required"`
-				Email          string `json:"email" binding:"required,email"`
-				Password       string `json:"password" binding:"required,min=6"`
-				Role           string `json:"role" binding:"required,oneof=admin analyst"`
+				OldPassword string `json:"oldPassword" binding:"required"`
+				NewPassword string `json:"newPassword" binding:"required,min=6"`
 			}
 
 			if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -118,58 +121,60 @@ func setupAuthRoutes(apiV1 *gin.RouterGroup, authHandler *handlers.AuthHandler, 
 				return
 			}
 
-			// Check existing user
-			existing, _ := store.GetUserByEmail(ctx, req.Email)
-			if existing != nil {
-				ctx.JSON(409, gin.H{"error": "Un utilisateur avec cet email existe déjà"})
+			// Récupérer l'utilisateur
+			user, err := store.GetUserByID(ctx, userID.(string))
+			if err != nil {
+				ctx.JSON(500, gin.H{"error": "Impossible de récupérer l'utilisateur"})
 				return
 			}
 
-			// Hash password
-			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+			// Vérifier si l'ancien mot de passe est correct
+			err = bcrypt.CompareHashAndPassword([]byte(user.MotDePasseHash), []byte(req.OldPassword))
+			if err != nil {
+				ctx.JSON(401, gin.H{"error": "L'ancien mot de passe est incorrect"})
+				return
+			}
+
+			// Hacher le nouveau mot de passe
+			hashed, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
 			if err != nil {
 				ctx.JSON(500, gin.H{"error": "Erreur lors du hachage du mot de passe"})
 				return
 			}
 
-			user := &models.Utilisateur{
-				NomUtilisateur: req.NomUtilisateur,
-				Email:          req.Email,
-				MotDePasseHash: string(hashedPassword),
-				Role:           req.Role,
-				Actif:          false,
-				DateCreation:   time.Now(),
+			// Mettre à jour le mot de passe ET réinitialiser le flag
+			updates := map[string]interface{}{
+				"mot_de_passe_hash":         string(hashed),
+				"doit_changer_mot_de_passe": false,
 			}
 
-			id, err := store.CreateUser(ctx, user)
+			_, err = store.UpdateUser(ctx, userID.(string), updates)
 			if err != nil {
-				ctx.JSON(500, gin.H{"error": "Impossible de créer l'utilisateur", "details": err.Error()})
+				ctx.JSON(500, gin.H{"error": "Impossible de mettre à jour le mot de passe"})
 				return
 			}
 
-			createdUser, err := store.GetUserByID(ctx, id)
+			// Générer un nouveau token sans le flag must_change_password
+			accessTTL := time.Duration(0)
+			if v := os.Getenv("KEY_JWT_ACCESS_TTL_MIN"); v != "" && v != "0" {
+				if d, err := time.ParseDuration(v + "m"); err == nil {
+					accessTTL = d
+				}
+			}
+
+			roles := []string{user.Role}
+			newToken, err := auth.NewSignedTokenFromEnv(user.ID, roles, accessTTL, false)
 			if err != nil {
-				ctx.JSON(500, gin.H{"error": "Utilisateur créé mais impossible de le récupérer"})
+				log.Printf("error signing new token for user %s: %v", user.ID, err)
+				ctx.JSON(500, gin.H{"error": "Mot de passe changé mais impossible de générer un nouveau token"})
 				return
 			}
 
-			// Envoyer l'email de bienvenue
-			emailService := email.NewService()
-			if err := emailService.SendSignupEmail(createdUser.Email, createdUser.NomUtilisateur, req.Password, createdUser.Role); err != nil {
-				// Log the error but continue - email failure shouldn't block signup
-				log.Printf("Email signup failed for user %s: %v", createdUser.Email, err)
-			}
-
-			resp := gin.H{
-				"id":             createdUser.ID,
-				"nomUtilisateur": createdUser.NomUtilisateur,
-				"email":          createdUser.Email,
-				"role":           createdUser.Role,
-				"actif":          createdUser.Actif,
-				"dateCreation":   createdUser.DateCreation,
-			}
-
-			ctx.JSON(201, gin.H{"message": "Inscription réussie ! Consultez votre email pour vos identifiants. En attente d'activation administrative.", "user": resp})
+			ctx.JSON(200, gin.H{
+				"message":      "Mot de passe changé avec succès",
+				"access_token": newToken,
+				"expires_in":   int(accessTTL.Seconds()),
+			})
 		})
 	}
 }
@@ -762,9 +767,7 @@ func setupUserRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 			var req struct {
 				NomUtilisateur string `json:"nomUtilisateur" binding:"required"`
 				Email          string `json:"email" binding:"required,email"`
-				Password       string `json:"password" binding:"required,min=6"`
 				Role           string `json:"role" binding:"required,oneof=admin analyst"`
-				Actif          bool   `json:"actif"`
 			}
 
 			if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -779,8 +782,14 @@ func setupUserRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 				return
 			}
 
+			generatedPassword, err := generateTemporaryPassword(12)
+			if err != nil {
+				ctx.JSON(500, gin.H{"error": "Impossible de générer le mot de passe utilisateur"})
+				return
+			}
+
 			// Hacher le mot de passe
-			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(generatedPassword), bcrypt.DefaultCost)
 			if err != nil {
 				ctx.JSON(500, gin.H{"error": "Erreur lors du hachage du mot de passe"})
 				return
@@ -788,12 +797,13 @@ func setupUserRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 
 			// Créer l'utilisateur
 			user := &models.Utilisateur{
-				NomUtilisateur: req.NomUtilisateur,
-				Email:          req.Email,
-				MotDePasseHash: string(hashedPassword),
-				Role:           req.Role,
-				Actif:          false,
-				DateCreation:   time.Now(),
+				NomUtilisateur:        req.NomUtilisateur,
+				Email:                 req.Email,
+				MotDePasseHash:        string(hashedPassword),
+				Role:                  req.Role,
+				Actif:                 false,
+				DoitChangerMotDePasse: true, // Forcer le changement de mot de passe à la première connexion
+				DateCreation:          time.Now(),
 			}
 
 			createdUserID, err := store.CreateUser(ctx, user)
@@ -811,9 +821,9 @@ func setupUserRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 
 			// Envoyer l'email de bienvenue avec identifiants
 			emailService := email.NewService()
-			if err := emailService.SendSignupEmail(createdUser.Email, createdUser.NomUtilisateur, req.Password, createdUser.Role); err != nil {
+			if err := emailService.SendUserProvisioningEmail(createdUser.Email, createdUser.NomUtilisateur, generatedPassword, createdUser.Role); err != nil {
 				// Ne pas bloquer la création si l'email échoue
-				log.Printf("Email signup failed for admin-created user %s: %v", createdUser.Email, err)
+				log.Printf("User provisioning email failed for admin-created user %s: %v", createdUser.Email, err)
 			}
 
 			// Retourner l'utilisateur sans le mot de passe
@@ -842,9 +852,48 @@ func setupUserRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 		// Mise à jour partielle d'un utilisateur (ex: activation/désactivation)
 		usersRoutes.PUT("/:id", func(ctx *gin.Context) {
 			id := ctx.Param("id")
-			var req map[string]interface{}
+			var req struct {
+				NomUtilisateur        *string `json:"nomUtilisateur"`
+				Email                 *string `json:"email"`
+				Role                  *string `json:"role"`
+				Actif                 *bool   `json:"actif"`
+				DoitChangerMotDePasse *bool   `json:"doitChangerMotDePasse"`
+			}
 			if err := ctx.ShouldBindJSON(&req); err != nil {
 				ctx.JSON(400, gin.H{"error": "Données invalides", "details": err.Error()})
+				return
+			}
+
+			updates := make(map[string]interface{})
+			if req.NomUtilisateur != nil {
+				updates["nom_utilisateur"] = *req.NomUtilisateur
+			}
+			if req.Email != nil {
+				// vérifier unicité email
+				existing, _ := store.GetUserByEmail(ctx, *req.Email)
+				if existing != nil && existing.ID != id {
+					ctx.JSON(409, gin.H{"error": "Un utilisateur avec cet email existe déjà"})
+					return
+				}
+				updates["email"] = *req.Email
+			}
+			if req.Role != nil {
+				role := strings.ToLower(strings.TrimSpace(*req.Role))
+				if role != "admin" && role != "analyst" {
+					ctx.JSON(400, gin.H{"error": "Rôle invalide"})
+					return
+				}
+				updates["role"] = role
+			}
+			if req.Actif != nil {
+				updates["actif"] = *req.Actif
+			}
+			if req.DoitChangerMotDePasse != nil {
+				updates["doit_changer_mot_de_passe"] = *req.DoitChangerMotDePasse
+			}
+
+			if len(updates) == 0 {
+				ctx.JSON(400, gin.H{"error": "Aucune donnée à mettre à jour"})
 				return
 			}
 
@@ -855,30 +904,18 @@ func setupUserRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 				return
 			}
 
-			updated, err := store.UpdateUser(ctx, id, req)
+			updated, err := store.UpdateUser(ctx, id, updates)
 			if err != nil {
 				ctx.JSON(500, gin.H{"error": "Impossible de mettre à jour l'utilisateur", "details": err.Error()})
 				return
 			}
 
 			// Check if user was just activated
-			if actifVal, ok := req["actif"]; ok {
-				actifRequested := false
-				switch val := actifVal.(type) {
-				case bool:
-					actifRequested = val
-				case string:
-					actifRequested = strings.ToLower(val) == "true"
-				case float64:
-					actifRequested = val != 0
-				}
-
-				if actifRequested && !userBefore.Actif {
-					// User was activated - send activation email
-					emailService := email.NewService()
-					if err := emailService.SendAccountActivatedEmail(updated.Email, updated.NomUtilisateur); err != nil {
-						log.Printf("Email activation failed for user %s: %v", updated.Email, err)
-					}
+			if req.Actif != nil && *req.Actif && !userBefore.Actif {
+				// User was activated - send activation email
+				emailService := email.NewService()
+				if err := emailService.SendAccountActivatedEmail(updated.Email, updated.NomUtilisateur); err != nil {
+					log.Printf("Email activation failed for user %s: %v", updated.Email, err)
 				}
 			}
 
@@ -921,6 +958,25 @@ func setupUserRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 			ctx.JSON(200, user)
 		})
 	}
+}
+
+func generateTemporaryPassword(length int) (string, error) {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	if length <= 0 {
+		return "", fmt.Errorf("invalid password length")
+	}
+
+	password := make([]byte, length)
+	max := big.NewInt(int64(len(charset)))
+	for i := 0; i < length; i++ {
+		n, err := rand.Int(rand.Reader, max)
+		if err != nil {
+			return "", err
+		}
+		password[i] = charset[n.Int64()]
+	}
+
+	return string(password), nil
 }
 
 // validateReportPeriod valide et normalise le paramètre period pour les rapports

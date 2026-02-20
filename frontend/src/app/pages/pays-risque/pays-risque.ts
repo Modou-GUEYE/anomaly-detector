@@ -282,7 +282,7 @@ export class PaysRisqueComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (res) => this.handleImportResult(res),
         error: (err) => {
-          this.importError = 'Erreur d\'import : ' + (err.error?.error || 'Serveur injoignable');
+          this.importError = 'Erreur côté serveur. Veuillez réessayer plus tard.';
           this.submitting = false;
         }
       });

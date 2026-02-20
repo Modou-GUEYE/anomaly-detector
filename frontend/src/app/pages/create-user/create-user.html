@@ -120,16 +120,6 @@
                 }
               </div>
               <div class="form-field">
-                <label>Mot de passe {{ editingUser ? '(optionnel)' : '' }}</label>
-                <div class="input-wrapper">
-                  <mat-icon>lock_open</mat-icon>
-                  <input type="password" name="pass" [(ngModel)]="password" (blur)="markFieldTouched('password')" (ngModelChange)="onFieldChange('password')" placeholder="••••••••" [required]="!editingUser">
-                </div>
-                @if (shouldShowFieldError('password')) {
-                  <small class="field-error">{{ formErrors['password'] }}</small>
-                }
-              </div>
-              <div class="form-field">
                 <label>Rôle assigné</label>
                 <div class="input-wrapper">
                   <mat-icon>admin_panel_settings</mat-icon>
@@ -144,6 +134,13 @@
                 }
               </div>
             </div>
+
+            @if (!editingUser) {
+              <div class="info-banner">
+                <mat-icon>info</mat-icon>
+                <span>Un mot de passe sera généré automatiquement par le système et envoyé à l'utilisateur par email.</span>
+              </div>
+            }
           </div>
           <div class="modal-foot">
             <button type="button" class="btn-ghost" (click)="closeModal()">Annuler</button>

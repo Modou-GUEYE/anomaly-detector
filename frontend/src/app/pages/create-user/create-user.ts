@@ -17,7 +17,6 @@ export class CreateUserComponent implements OnInit {
   // Formulaire
   nomUtilisateur = '';
   email = '';
-  password = '';
   role: string = '';
   actif = true;
 
@@ -46,14 +45,12 @@ export class CreateUserComponent implements OnInit {
   formErrors: { [key: string]: string } = {
     nomUtilisateur: '',
     email: '',
-    password: '',
     role: ''
   };
 
   touchedFields: { [key: string]: boolean } = {
     nomUtilisateur: false,
     email: false,
-    password: false,
     role: false
   };
 
@@ -117,7 +114,6 @@ export class CreateUserComponent implements OnInit {
       const payload = { 
         nomUtilisateur: this.nomUtilisateur, 
         email: this.email, 
-        password: this.password, 
         role: this.role, 
         actif: this.actif 
       };
@@ -130,7 +126,7 @@ export class CreateUserComponent implements OnInit {
         },
         error: (err: any) => {
           this.loading = false;
-          this.error = err?.error?.error || err?.error?.message || 'Erreur technique';
+          this.error = 'Erreur côté serveur. Veuillez réessayer plus tard.';
         }
       });
     } 
@@ -144,11 +140,6 @@ export class CreateUserComponent implements OnInit {
         actif: this.actif 
       };
 
-      // Ajouter le password seulement s'il a été rempli
-      if (this.password) {
-        updates.password = this.password;
-      }
-
       this.usersService.updateUser(id, updates).subscribe({
         next: () => {
           this.loading = false;
@@ -157,7 +148,7 @@ export class CreateUserComponent implements OnInit {
         },
         error: (err: any) => {
           this.loading = false;
-          this.error = err?.error?.error || err?.error?.message || 'Erreur technique';
+          this.error = 'Erreur côté serveur. Veuillez réessayer plus tard.';
         }
       });
     }
@@ -243,7 +234,7 @@ export class CreateUserComponent implements OnInit {
       };
     }
 
-    return { blocked: false, message: raw || "Erreur lors de la suppression." };
+    return { blocked: false, message: "Erreur côté serveur. Veuillez réessayer plus tard." };
   }
 
   openModal() {
@@ -256,7 +247,6 @@ export class CreateUserComponent implements OnInit {
     this.editingUser = user; // Mode édition
     this.nomUtilisateur = user.nomUtilisateur || user.nom_utilisateur || '';
     this.email = user.email || '';
-    this.password = ''; // Le password n'est pas affichable
     this.role = user.role || '';
     this.actif = user.actif !== undefined ? user.actif : true;
     this.error = '';
@@ -272,7 +262,6 @@ export class CreateUserComponent implements OnInit {
   resetForm() {
     this.nomUtilisateur = '';
     this.email = '';
-    this.password = '';
     this.role = this.roles?.[1]?.value || this.role;
     this.actif = true;
     this.error = '';
@@ -303,7 +292,6 @@ export class CreateUserComponent implements OnInit {
 
     this.validateField('nomUtilisateur');
     this.validateField('email');
-    this.validateField('password');
     this.validateField('role');
 
     return !Object.values(this.formErrors).some((value) => !!value);
@@ -333,16 +321,6 @@ export class CreateUserComponent implements OnInit {
         break;
       }
 
-      case 'password':
-        if (!this.editingUser && !this.password) {
-          this.formErrors['password'] = 'Le mot de passe est obligatoire.';
-        } else if (this.password && this.password.length < 6) {
-          this.formErrors['password'] = 'Le mot de passe doit contenir au moins 6 caractères.';
-        } else {
-          this.formErrors['password'] = '';
-        }
-        break;
-
       case 'role':
         if (!this.role) {
           this.formErrors['role'] = 'Le rôle est obligatoire.';
@@ -360,14 +338,12 @@ export class CreateUserComponent implements OnInit {
     this.formErrors = {
       nomUtilisateur: '',
       email: '',
-      password: '',
       role: ''
     };
 
     this.touchedFields = {
       nomUtilisateur: false,
       email: false,
-      password: false,
       role: false
     };
   }

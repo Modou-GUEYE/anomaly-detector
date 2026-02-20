@@ -1,29 +1,66 @@
 <div class="login-page">
-  <!-- header removed: logos not displayed as requested -->
+  <div class="overlay"></div>
+  <div class="container">
+    <div class="card">
+      @if (isLoadingMessage) {
+        <div class="loading-float">
+          <mat-icon class="loading-icon">hourglass_top</mat-icon>
+          <span>{{ message || 'Connexion...' }}</span>
+        </div>
+      }
+      <header class="header">
+        <div class="icon-circle">
+          <mat-icon>account_circle</mat-icon>
+        </div>
+        <h1>Connexion</h1>
+        <p class="subtitle">Accédez à votre espace de lutte contre le blanchiment et le financement du terrorisme (LBC/FT).</p>
+      </header>
 
-  <main class="login-center">
-    <div class="login-panel">
-      <h2 class="login-panel__title">Connexion</h2>
-      <p class="login-panel__subtitle">Ce moteur aide à détecter les anomalies et à lutter contre le blanchiment et le financement du terrorisme (LBC/FT).</p>
-
-      <form (ngSubmit)="onSubmit()" #loginForm="ngForm" class="login-form">
-  <!-- label removed to match prototype -->
-
-        <input type="email" name="email" autocomplete="email" [(ngModel)]="email" required placeholder="Votre adresse email" class="input" />
-
-        <div class="password-row">
-          <input [type]="showPassword ? 'text' : 'password'" name="password" autocomplete="current-password" [(ngModel)]="password" required placeholder="Votre mot de passe" class="input" />
-          <button type="button" class="eye" aria-label="Montrer / cacher mot de passe" (click)="togglePasswordVisibility()" [attr.aria-pressed]="showPassword">
-            <img [src]="showPassword ? '/assets/eye-off.svg' : '/assets/eye.svg'" alt="toggle" />
-          </button>
+      <form (ngSubmit)="onSubmit()" #loginForm="ngForm" class="form-container">
+        <div class="form-field">
+          <label>Adresse email</label>
+          <div class="input-group">
+            <mat-icon class="prefix-icon">alternate_email</mat-icon>
+            <input
+              type="email"
+              name="email"
+              autocomplete="email"
+              [(ngModel)]="email"
+              required
+              placeholder="Votre adresse email"
+            />
+          </div>
         </div>
 
-        <button type="submit" class="login-btn" [disabled]="!loginForm.form.valid">Se Connecter</button>
+        <div class="form-field">
+          <label>Mot de passe</label>
+          <div class="input-group">
+            <mat-icon class="prefix-icon">lock_outline</mat-icon>
+            <input
+              [type]="showPassword ? 'text' : 'password'"
+              name="password"
+              autocomplete="current-password"
+              [(ngModel)]="password"
+              required
+              placeholder="Votre mot de passe"
+            />
+            <button type="button" class="eye-toggle" (click)="togglePasswordVisibility()">
+              <mat-icon>{{ showPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
+          </div>
+        </div>
 
-        <div *ngIf="message" [ngClass]="isLoadingMessage ? 'msg-info' : (success ? 'msg-success' : 'msg-error')" class="feedback">{{ message }}</div>
+        <button type="submit" class="btn-submit" [disabled]="!loginForm.form.valid">
+          <mat-icon>login</mat-icon>
+          <span>Se connecter</span>
+        </button>
 
-  <div class="signup">Nouvel utilisateur ? <a routerLink="/signin">Cliquez ici</a> pour créer un compte.</div>
+        @if (message && !isLoadingMessage) {
+          <div [ngClass]="isLoadingMessage ? 'msg-info' : (success ? 'msg-success' : 'msg-error')" class="feedback">
+            {{ message }}
+          </div>
+        }
       </form>
     </div>
-  </main>
+  </div>
 </div>

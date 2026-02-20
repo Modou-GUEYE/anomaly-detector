@@ -1,14 +1,20 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, LOCALE_ID } from '@angular/core';
+import { CommonModule, registerLocaleData } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProfileService } from '../../services/profile.service';
 import { AuthStateService } from '../../services/auth-state.service';
 import { Router } from '@angular/router';
+import { MatIconModule } from '@angular/material/icon';
+import { HttpErrorResponse } from '@angular/common/http';
+import localeFr from '@angular/common/locales/fr';
+
+registerLocaleData(localeFr);
 
 @Component({
   selector: 'app-parametre',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MatIconModule],
+  providers: [{ provide: LOCALE_ID, useValue: 'fr-FR' }],
   templateUrl: './parametre.html',
   styleUrls: ['./parametre.scss']
 })
@@ -96,10 +102,31 @@ export class ParametreComponent implements OnInit {
       },
       error: (err: any) => {
         this.saving = false;
-        this.message = err?.error?.error || 'Erreur lors de la mise à jour du profil';
+        this.message = this.getProfileEditErrorMessage(err);
         this.messageType = 'error';
       }
     });
+  }
+
+  // Get user-friendly error message for profile edit
+  private getProfileEditErrorMessage(error: any): string {
+    if (error instanceof HttpErrorResponse) {
+      switch (error.status) {
+        case 400:
+          return 'Les données fournies sont invalides.';
+        case 409:
+          return 'Cet email est déjà utilisé par un autre utilisateur.';
+        case 0:
+          return 'Le serveur est indisponible ou non démarré.';
+        case 500:
+        case 502:
+        case 503:
+          return 'Erreur côté serveur. Veuillez réessayer plus tard.';
+        default:
+          return error.error?.message || 'Une erreur est survenue lors de la mise à jour du profil.';
+      }
+    }
+    return 'Une erreur est survenue lors de la mise à jour du profil.';
   }
 
   // Change password
@@ -121,10 +148,31 @@ export class ParametreComponent implements OnInit {
       error: (err: any) => { 
         this.saving = false; 
         console.error('Password change error:', err);
-        this.message = err?.error?.error || err?.message || 'Erreur lors de la mise à jour du mot de passe'; 
+        this.message = this.getPasswordChangeErrorMessage(err); 
         this.messageType = 'error'; 
       }
     });
+  }
+
+  // Get user-friendly error message for password change
+  private getPasswordChangeErrorMessage(error: any): string {
+    if (error instanceof HttpErrorResponse) {
+      switch (error.status) {
+        case 401:
+          return 'L\'ancien mot de passe est incorrect.';
+        case 400:
+          return 'Les données fournies sont invalides.';
+        case 0:
+          return 'Le serveur backend est indisponible ou non démarré.';
+        case 500:
+        case 502:
+        case 503:
+          return 'Erreur côté serveur. Veuillez réessayer plus tard.';
+        default:
+          return error.error?.message || 'Une erreur est survenue lors du changement de mot de passe.';
+      }
+    }
+    return 'Une erreur est survenue lors du changement de mot de passe.';
   }
 
   // Logout handler used by the left card

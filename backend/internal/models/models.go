@@ -12,13 +12,14 @@ import (
 // Utilisateur représente un acteur du système (admin, analyste).
 // @Description Utilisateur du système (admin ou analyste)
 type Utilisateur struct {
-	ID             string    `json:"id" gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
-	NomUtilisateur string    `json:"nomUtilisateur" gorm:"column:nom_utilisateur;not null"`
-	Email          string    `json:"email" gorm:"column:email;unique;not null"`
-	MotDePasseHash string    `json:"password" gorm:"column:mot_de_passe_hash;not null"`
-	Role           string    `json:"role" gorm:"column:role;not null"`
-	Actif          bool      `json:"actif" gorm:"column:actif"`
-	DateCreation   time.Time `json:"dateCreation" gorm:"column:date_creation;autoCreateTime"`
+	ID                   string    `json:"id" gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
+	NomUtilisateur       string    `json:"nomUtilisateur" gorm:"column:nom_utilisateur;not null"`
+	Email                string    `json:"email" gorm:"column:email;unique;not null"`
+	MotDePasseHash       string    `json:"password" gorm:"column:mot_de_passe_hash;not null"`
+	Role                 string    `json:"role" gorm:"column:role;not null"`
+	Actif                bool      `json:"actif" gorm:"column:actif"`
+	DoitChangerMotDePasse bool      `json:"doitChangerMotDePasse" gorm:"column:doit_changer_mot_de_passe;default:false"`
+	DateCreation         time.Time `json:"dateCreation" gorm:"column:date_creation;autoCreateTime"`
 }
 
 // ===================== COMPTES =====================

@@ -6,13 +6,15 @@ import { Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ConfigService } from '../../services/config.service';
+import { MatIcon } from '@angular/material/icon';
+
 
 @Component({
   selector: 'app-login',
   standalone: true,
   templateUrl: './login.html',
   styleUrls: ['./login.scss'],
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, MatIcon],
 })
 export class LoginComponent {
   email: string = '';
@@ -40,7 +42,13 @@ export class LoginComponent {
           this.isLoadingMessage = false;
           this.success = true;
           try { this.authState.isAuthenticated.set(true); } catch (e) {}
-          this.router.navigate(['/dashboard']);
+          
+          // Vérifier si l'utilisateur doit changer son mot de passe
+          if (this.authService.mustChangePassword()) {
+            this.router.navigate(['/first-password-change']);
+          } else {
+            this.router.navigate(['/dashboard']);
+          }
         } else {
           this.isLoadingMessage = false;
           this.success = false;
