@@ -56,6 +56,12 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   selectedAlertes: any[] = [];
   groupedAlertes: Map<string, GroupedAlert> = new Map(); // Alertes groupées par code
   
+  // Modal détails
+  showDetailsModal = false;
+  detailsTransaction: Transaction | null = null;
+  modalAlertes: any[] = [];
+  modalGroupedAlertes: Map<string, GroupedAlert> = new Map();
+  
   // Pagination
   currentPage = 1;
   pageSize = 10; 
@@ -359,5 +365,50 @@ export class TransactionsComponent implements OnInit, OnDestroy {
       currency: 'XOF',
       maximumFractionDigits: 0 
     }).format(montant);
+  }
+
+  // --- MODAL DÉTAILS ---
+  openDetailsModal(transaction: Transaction) {
+    this.detailsTransaction = transaction;
+    this.modalAlertes = this.alertes.filter(a => a.transactionId === transaction.id);
+    this.groupModalAlertes();
+    this.showDetailsModal = true;
+  }
+
+  closeDetailsModal() {
+    this.showDetailsModal = false;
+    this.detailsTransaction = null;
+    this.modalAlertes = [];
+    this.modalGroupedAlertes.clear();
+  }
+
+  groupModalAlertes() {
+    this.modalGroupedAlertes.clear();
+    
+    for (const alerte of this.modalAlertes) {
+      const code = alerte.code || 'INCONNU';
+      const numeroCompte = alerte.numeroCompte || 'N/A';
+      const key = `${code}-${numeroCompte}`;
+      
+      if (!this.modalGroupedAlertes.has(key)) {
+        this.modalGroupedAlertes.set(key, {
+          code: alerte.code,
+          message: alerte.message,
+          niveauCriticite: alerte.niveauCriticite,
+          type: alerte.type,
+          numeroCompte: numeroCompte,
+          dates: [] as string[]
+        });
+      }
+      
+      const grouped = this.modalGroupedAlertes.get(key);
+      if (grouped && alerte.dateGeneration) {
+        (grouped.dates as string[]).push(alerte.dateGeneration);
+      }
+    }
+  }
+
+  getModalGroupedAlertes(): Array<[string, GroupedAlert]> {
+    return Array.from(this.modalGroupedAlertes.entries());
   }
 }

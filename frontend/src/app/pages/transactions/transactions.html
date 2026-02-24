@@ -60,7 +60,7 @@
 
   <div class="transactions-list">
     @for (t of paginatedTransactions; track t.id) {
-      <div class="t-card-compact" [class.expanded]="isExpanded(t)" (click)="toggleDetails(t)">
+      <div class="t-card-compact row-clickable" (click)="openDetailsModal(t)">
         <div class="card-main">
           <div class="status-indicator" [ngClass]="getTransactionStatusClass(t)"></div>
           
@@ -90,62 +90,8 @@
             <span class="status-pill" [ngClass]="getTransactionStatusClass(t)">
               {{ getTransactionStatus(t) }}
             </span>
-            <mat-icon class="chevron">{{ isExpanded(t) ? 'expand_less' : 'expand_more' }}</mat-icon>
+            <mat-icon class="chevron">chevron_right</mat-icon>
           </div>
-        </div>
-
-        <div class="card-details" *ngIf="isExpanded(t)" (click)="$event.stopPropagation()">
-           <div class="details-grid">
-              <div class="detail-col">
-                <h5><mat-icon>person_outline</mat-icon> Émetteur</h5>
-                <div class="det-item"><span>Nom complet</span><strong>{{t.nom_payeur}}</strong></div>
-                <div class="det-item"><span>N° Compte</span><strong class="mono">{{t.numero_compte_payeur}}</strong></div>
-                <div class="det-item"><span>Type Client</span><strong>{{getTypeClientLabel(t.type_client_payeur)}}</strong></div>
-                <div class="det-item"><span>Localisation</span><strong>{{t.ville_payeur}}, {{getCountryNameFromCode(t.pays_payeur)}}</strong></div>
-              </div>
-
-              <div class="detail-col">
-                <h5><mat-icon>account_balance_wallet</mat-icon> Bénéficiaire</h5>
-                <div class="det-item"><span>Nom complet</span><strong>{{t.nom_paye}}</strong></div>
-                <div class="det-item"><span>N° Compte</span><strong class="mono">{{t.numero_compte_paye}}</strong></div>
-                <div class="det-item"><span>Type Client</span><strong>{{getTypeClientLabel(t.type_client_paye)}}</strong></div>
-                <div class="det-item"><span>Localisation</span><strong>{{t.ville_paye || 'N/A'}}, {{getCountryNameFromCode(t.pays_paye)}}</strong></div>
-              </div>
-
-              <div class="detail-col">
-                <h5><mat-icon>receipt_long</mat-icon> Infos Système</h5>
-                <div class="det-item"><span>ID Unique</span><strong>#{{t.id}}</strong></div>
-                <div class="det-item"><span>Date précise</span><strong>{{ formatDateFR(t.date_operation) }}</strong></div>
-                <div class="det-item"><span>Portée flux</span><strong class="portee-label">{{t.portee}}</strong></div>
-                <div class="det-item"><span>Statut final</span><strong [ngClass]="getTransactionStatusClass(t)">{{getTransactionStatus(t)}}</strong></div>
-              </div>
-           </div>
-
-           <div class="detail-section" *ngIf="selectedAlertes.length">
-             <h5 class="alertes-title"><mat-icon>warning</mat-icon> Alertes associées ({{ selectedAlertes.length }})</h5>
-             <ul class="alertes-list">
-               <li *ngFor="let item of getGroupedAlertes()" [ngClass]="'level-' + item[1].niveauCriticite">
-                 <div class="alerte-header">
-                   <span class="alerte-code">{{ item[1].code }}</span>
-                   <span class="alerte-level">{{ item[1].niveauCriticite }}</span>
-                 </div>
-                 <div class="alerte-account">
-                   <mat-icon>account_balance</mat-icon>
-                   <span class="account-number">{{ item[1].numeroCompte }}</span>
-                 </div>
-                 <span class="alerte-message">{{ item[1].message }}</span>
-                 <div class="alerte-dates" *ngIf="item[1].dates.length">
-                   <span class="dates-label">Date{{ item[1].dates.length > 1 ? 's' : '' }} de génération:</span>
-                   <div class="dates-list">
-                     <span *ngFor="let date of item[1].dates; let i = index" class="date-item">
-                       <span class="occurrence-badge">{{ i + 1 }}</span>
-                       {{ formatDateFR(date) }}
-                     </span>
-                   </div>
-                 </div>
-               </li>
-             </ul>
-           </div>
         </div>
       </div>
     }
@@ -159,3 +105,134 @@
     </div>
   </footer>
 </section>
+
+<div *ngIf="showDetailsModal" class="modal-overlay" (click)="closeDetailsModal()">
+  <div class="modal-content details-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="header-left">
+        <div class="icon-box">
+          <mat-icon>receipt_long</mat-icon>
+        </div>
+        <div class="header-titles">
+          <h2>Détails de la Transaction</h2>
+          <span class="tx-badge">ID: #{{ detailsTransaction?.id }}</span>
+        </div>
+      </div>
+      <button class="btn-close-circle" (click)="closeDetailsModal()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="status-banner" [ngClass]="{'alert': getTransactionStatus(detailsTransaction!) === 'Échec'}">
+        <div class="status-info">
+          <mat-icon>{{ getTransactionStatus(detailsTransaction!) === 'Succès' ? 'check_circle' : 'error' }}</mat-icon>
+          <div>
+            <span class="status-label">Statut de la transaction</span>
+            <span class="status-value">{{ getTransactionStatus(detailsTransaction!) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="content-scroll-area">
+        <div class="info-section">
+          <h3 class="section-title"><mat-icon>person</mat-icon> Émetteur</h3>
+          <div class="grid-display">
+            <div class="info-card">
+              <label>Nom Complet</label>
+              <p>{{ detailsTransaction?.nom_payeur }}</p>
+            </div>
+            <div class="info-card">
+              <label>N° Compte</label>
+              <p class="mono">{{ detailsTransaction?.numero_compte_payeur }}</p>
+            </div>
+            <div class="info-card">
+              <label>Type Client</label>
+              <p>{{ getTypeClientLabel(detailsTransaction?.type_client_payeur || '') }}</p>
+            </div>
+            <div class="info-card">
+              <label>Localisation</label>
+              <p>{{ detailsTransaction?.ville_payeur }}, {{ getCountryNameFromCode(detailsTransaction?.pays_payeur || '') }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-section">
+          <h3 class="section-title"><mat-icon>account_balance_wallet</mat-icon> Bénéficiaire</h3>
+          <div class="grid-display">
+            <div class="info-card">
+              <label>Nom Complet</label>
+              <p>{{ detailsTransaction?.nom_paye }}</p>
+            </div>
+            <div class="info-card">
+              <label>N° Compte</label>
+              <p class="mono">{{ detailsTransaction?.numero_compte_paye }}</p>
+            </div>
+            <div class="info-card">
+              <label>Type Client</label>
+              <p>{{ getTypeClientLabel(detailsTransaction?.type_client_paye || '') }}</p>
+            </div>
+            <div class="info-card">
+              <label>Localisation</label>
+              <p>{{ detailsTransaction?.ville_paye || 'N/A' }}, {{ getCountryNameFromCode(detailsTransaction?.pays_paye || '') }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-section">
+          <h3 class="section-title"><mat-icon>money</mat-icon> Détails de Transfert</h3>
+          <div class="grid-display">
+            <div class="info-card">
+              <label>Montant</label>
+              <p class="amount-display">{{ detailsTransaction?.montant | number:'1.0-0' }} FCFA</p>
+            </div>
+            <div class="info-card">
+              <label>Date Opération</label>
+              <p>{{ formatDateFR(detailsTransaction?.date_operation || '') }}</p>
+            </div>
+            <div class="info-card">
+              <label>Portée du Flux</label>
+              <p>{{ detailsTransaction?.portee }}</p>
+            </div>
+            <div class="info-card">
+              <label>Devise</label>
+              <p>FCFA (XOF)</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-section alerts" *ngIf="modalAlertes.length > 0">
+          <h3 class="section-title"><mat-icon>warning</mat-icon> Alertes Associées</h3>
+          <div class="alertes-container">
+            <div class="alert-item" *ngFor="let item of getModalGroupedAlertes()" [ngClass]="'level-' + item[1].niveauCriticite">
+              <div class="alert-header">
+                <span class="alert-code">{{ item[1].code }}</span>
+                <span class="alert-severity">{{ item[1].niveauCriticite }}</span>
+              </div>
+              <div class="alert-account">
+                <mat-icon>account_balance</mat-icon>
+                <span>{{ item[1].numeroCompte }}</span>
+              </div>
+              <span class="alert-message">{{ item[1].message }}</span>
+              <div class="alert-dates" *ngIf="item[1].dates.length > 0">
+                <span class="dates-label">Date{{ item[1].dates.length > 1 ? 's' : '' }} :</span>
+                <div class="dates-list">
+                  <span *ngFor="let date of item[1].dates" class="date-badge">{{ formatDateFRShort(date) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="no-alerts" *ngIf="modalAlertes.length === 0">
+          <mat-icon>check_circle</mat-icon>
+          <p>Aucune alerte associée à cette transaction</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-close-main" (click)="closeDetailsModal()">Fermer</button>
+    </div>
+  </div>
+</div>
