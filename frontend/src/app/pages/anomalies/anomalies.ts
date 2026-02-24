@@ -14,6 +14,7 @@ interface Anomaly {
   niveauCriticite: string;
   scoreRisque: number;
   analysteAssigneID?: string | null;
+  analysteNom?: string;
   dateGeneration: string;
   action: string;
   numeroCompte: string;
@@ -37,7 +38,7 @@ export class AnomaliesComponent implements OnInit {
   loading = true;
   error = '';
   currentPage = 1;
-  pageSize = 5;
+  pageSize = 10;
   totalPages = 1;
   selectedStatus: { [key: string]: string } = {};
   showDetailsModal = false;
@@ -182,5 +183,17 @@ export class AnomaliesComponent implements OnInit {
         this.selectedStatus[anomaly.id] = anomaly.statut;
       }
     });
+  }
+
+  getAnomalyStatusClass(status: string): string {
+    const normalized = status?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');
+    switch (normalized) {
+      case 'traite':
+        return 'status-trait';
+      case 'encours':
+        return 'status-encours';
+      default:
+        return 'status-unknown';
+    }
   }
 }

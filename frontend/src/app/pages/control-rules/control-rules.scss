@@ -67,7 +67,7 @@ $bg: #f8fafc;
     &.pays_risque { background: rgba($danger, 0.1); color: $danger; }
   }
   .status-pill {
-    padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; background: #e2e8f0;
+    padding: 3px 8px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; background: #e2e8f0;
     &.active { background: rgba($success, 0.1); color: $success; }
   }
 }

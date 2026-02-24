@@ -212,6 +212,18 @@ $bg-light: #f8fafc;
       line-height: 1.5;
       border-left: 4px solid $primary;
       margin-bottom: 1.5rem;
+
+      &.status-surveille {
+        border-left-color: #ef4444;
+        background: rgba(#ef4444, 0.08);
+        color: #991b1b;
+      }
+
+      &.status-nonsurveille {
+        border-left-color: #10b981;
+        background: rgba(#10b981, 0.08);
+        color: #047857;
+      }
     }
 
     .info-grid {

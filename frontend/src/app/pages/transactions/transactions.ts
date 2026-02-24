@@ -359,6 +359,21 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     return this.getTransactionStatus(tx) === 'Succès' ? 'success' : 'failed';
   }
 
+  getStatusClass(status: string): string {
+    switch (status?.toLowerCase()) {
+      case 'succès':
+        return 'status-succs';
+      case 'échec':
+        return 'status-chec';
+      case 'en attente':
+        return 'status-enattente';
+      case 'en cours':
+        return 'status-encours';
+      default:
+        return 'status-unknown';
+    }
+  }
+
   formatMontant(montant: number): string {
     return new Intl.NumberFormat('fr-FR', { 
       style: 'currency', 

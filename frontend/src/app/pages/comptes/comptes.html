@@ -114,7 +114,7 @@
     <div class="modal-body">
       <div class="info-row full">
         <label>Numéro de Compte</label>
-        <p class="description">{{ detailsAccount?.numeroCompte }}</p>
+        <p class="description" [ngClass]="detailsAccount?.isSurveilled ? 'status-surveille' : 'status-nonsurveille'">{{ detailsAccount?.numeroCompte }}</p>
       </div>
       <div class="info-grid">
         <div class="info-item"><label>Nom Client</label><span>{{ detailsAccount?.nomClient }}</span></div>
@@ -124,7 +124,7 @@
         <div class="info-item"><label>Pays</label><span>{{ getCountryNameFromCode(detailsAccount?.pays || '') }}</span></div>
         <div class="info-item"><label>Ville</label><span>{{ detailsAccount?.ville }}</span></div>
         <div class="info-item"><label>Date d'Ouverture</label><span>{{ detailsAccount?.dateCreation | date: 'dd MMMM yyyy' }}</span></div>
-        <div class="info-item"><label>Statut</label><span class="bold" [ngClass]="detailsAccount?.isSurveilled ? 'status-surveille' : 'status-standard'">{{ detailsAccount?.isSurveilled ? 'Surveillé' : 'Standard' }}</span></div>
+        <div class="info-item"><label>Statut</label><span class="bold" [ngClass]="detailsAccount?.isSurveilled ? 'status-surveille' : 'status-nonsurveille'">{{ detailsAccount?.isSurveilled ? 'Surveillé' : 'Non Surveillé' }}</span></div>
         <div class="info-item full" *ngIf="detailsAccount?.adresse"><label>Adresse</label><span>{{ detailsAccount?.adresse }}</span></div>
         <div class="info-item full" *ngIf="detailsAccount?.isSurveilled"><label>Motif de Surveillance</label><span>{{ detailsAccount?.suiviRaison }}</span></div>
         <div class="info-item" *ngIf="detailsAccount?.isSurveilled"><label>Dernière Activité</label><span>{{ detailsAccount?.suiviDate | date: 'dd/MM/yy à HH:mm' }}</span></div>

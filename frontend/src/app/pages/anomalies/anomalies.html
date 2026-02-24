@@ -101,73 +101,39 @@
 </section>
 
 <div *ngIf="showDetailsModal" class="modal-overlay" (click)="closeDetailsModal()">
-  <div class="modal-content details-modal" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <div class="title-with-icon">
-        <mat-icon class="header-icon">visibility</mat-icon>
-        <div>
-          <h2>Details de l'alerte</h2>
-          <p class="modal-subtitle">Informations completes et mise a jour du statut</p>
-        </div>
-      </div>
-      <button class="close-x" (click)="closeDetailsModal()">&times;</button>
+  <div class="modal-panel" (click)="$event.stopPropagation()">
+    <div class="modal-head">
+      <h2>Détails de l'Alerte</h2>
+      <button class="close-btn" (click)="closeDetailsModal()">&times;</button>
     </div>
     <div class="modal-body">
-      <div class="modal-meta">
-        <span class="meta-chip">Code: {{ detailsAnomaly?.code }}</span>
-        <span class="meta-chip">Type: {{ detailsAnomaly?.type }}</span>
-        <span class="meta-chip" [ngClass]="{ 'chip-success': detailsAnomaly?.statut === 'Traité', 'chip-warning': detailsAnomaly?.statut === 'En cours' }">
-          {{ detailsAnomaly?.statut }}
-        </span>
+      <div class="status-section">
+        <label>Statut</label>
+        <p class="status-value" [ngClass]="getAnomalyStatusClass(detailsAnomaly?.statut || '')">{{ detailsAnomaly?.statut }}</p>
       </div>
-      <div class="details-grid">
-        <div class="detail-item">
-          <span class="label">Compte</span>
-          <span class="value">{{ detailsAnomaly?.numeroCompte }}</span>
-        </div>
-        <div class="detail-item">
-          <span class="label">Type</span>
-          <span class="value">{{ detailsAnomaly?.type }}</span>
-        </div>
-        <div class="detail-item">
-          <span class="label">Code</span>
-          <span class="value">{{ detailsAnomaly?.code }}</span>
-        </div>
-        <div class="detail-item">
-          <span class="label">Score risque</span>
-          <span class="value">{{ detailsAnomaly?.scoreRisque }}</span>
-        </div>
-        <div class="detail-item">
-          <span class="label">Action</span>
-          <span class="value">{{ detailsAnomaly?.action }}</span>
-        </div>
-        <div class="detail-item" *ngIf="detailsAnomaly?.paysRisque">
-          <span class="label">Pays a risque</span>
-          <span class="value">{{ detailsAnomaly?.paysRisque }}</span>
-        </div>
-        <div class="detail-item">
-          <span class="label">Analyste</span>
-          <span class="value">{{ detailsAnomaly?.analysteAssigneID || 'Aucun' }}</span>
-        </div>
-        <div class="detail-item full">
-          <span class="label">Message</span>
-          <span class="value">{{ detailsAnomaly?.message }}</span>
-        </div>
+      <div class="info-grid">
+        <div class="info-item"><label>Code</label><span class="mono">{{ detailsAnomaly?.code }}</span></div>
+        <div class="info-item"><label>Type</label><span>{{ detailsAnomaly?.type }}</span></div>
+        <div class="info-item"><label>Score Risque</label><span class="bold">{{ detailsAnomaly?.scoreRisque }}</span></div>
+        <div class="info-item"><label>Compte</label><span class="mono">{{ detailsAnomaly?.numeroCompte }}</span></div>
+        <div class="info-item"><label>Action</label><span>{{ detailsAnomaly?.action }}</span></div>
+        <div class="info-item"><label>Analyste</label><span>{{ detailsAnomaly?.analysteNom || detailsAnomaly?.analysteAssigneID || 'Aucun' }}</span></div>
+        <div class="info-item" *ngIf="detailsAnomaly?.paysRisque"><label>Pays à Risque</label><span>{{ detailsAnomaly?.paysRisque }}</span></div>
+        <div class="info-item full"><label>Message</label><span>{{ detailsAnomaly?.message }}</span></div>
       </div>
-      <div class="details-actions">
+      <div class="status-change">
         <label>Changer le statut</label>
-        <select [(ngModel)]="selectedStatus[detailsAnomaly?.id || '']" class="status-select">
-          <option [value]="detailsAnomaly?.statut">{{ detailsAnomaly?.statut }}</option>
-          <option value="Traité" *ngIf="detailsAnomaly?.statut !== 'Traité'">Traité</option>
-          <option value="En cours" *ngIf="detailsAnomaly?.statut !== 'En cours'">En cours</option>
-        </select>
-        <button class="btn-update-status" (click)="detailsAnomaly && updateAnomalyStatus(detailsAnomaly)" [disabled]="!detailsAnomaly || !selectedStatus[detailsAnomaly.id] || selectedStatus[detailsAnomaly.id] === detailsAnomaly.statut">
-          Mettre a jour
-        </button>
+        <div class="select-wrapper">
+          <select [(ngModel)]="selectedStatus[detailsAnomaly?.id || '']" class="status-select">
+            <option [value]="detailsAnomaly?.statut">{{ detailsAnomaly?.statut }}</option>
+            <option value="Traité" *ngIf="detailsAnomaly?.statut !== 'Traité'">Traité</option>
+            <option value="En cours" *ngIf="detailsAnomaly?.statut !== 'En cours'">En cours</option>
+          </select>
+          <button class="btn-update" (click)="detailsAnomaly && updateAnomalyStatus(detailsAnomaly)" [disabled]="!detailsAnomaly || !selectedStatus[detailsAnomaly.id] || selectedStatus[detailsAnomaly.id] === detailsAnomaly.statut">
+            Mettre à jour
+          </button>
+        </div>
       </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-secondary" (click)="closeDetailsModal()">Fermer</button>
     </div>
   </div>
 </div>

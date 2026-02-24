@@ -15,7 +15,11 @@ import (
 // GetAlertes récupère toutes les alertes du système.
 func (s *Store) GetAlertes(ctx context.Context) ([]models.Alerte, error) {
 	var alertes []models.Alerte
-	if err := s.gormDB.WithContext(ctx).Order("date_generation DESC").Find(&alertes).Error; err != nil {
+	if err := s.gormDB.WithContext(ctx).
+		Select("alertes.*, utilisateurs.nom_utilisateur as analyste_nom").
+		Joins("LEFT JOIN utilisateurs ON NULLIF(alertes.analyste_assigne_id, '')::uuid = utilisateurs.id").
+		Order("alertes.date_generation DESC").
+		Find(&alertes).Error; err != nil {
 		return nil, err
 	}
 	return alertes, nil
