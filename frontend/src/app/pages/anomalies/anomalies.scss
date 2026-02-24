@@ -109,7 +109,14 @@ $bg-light: #f8fafc;
 .error-state { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
 
 /* Table */
-.data-wrapper { flex: 1; overflow-y: auto; border: 1px solid $border; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+.data-wrapper { 
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto; 
+  border: 1px solid $border; 
+  border-radius: 12px; 
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); 
+}
 .data-table {
   width: 100%; border-collapse: collapse;
   thead th {
@@ -155,10 +162,12 @@ $bg-light: #f8fafc;
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(1px);
   display: flex;
+  align-items: center;
   justify-content: flex-end;
-  z-index: 100;
+  z-index: 1000;
 
   .modal-panel {
     width: 450px;
@@ -357,7 +366,7 @@ $bg-light: #f8fafc;
 
   .page-stats {
     font-size: 0.8rem;
-    color: #64748b;
+    color: $text-muted;
     font-weight: 600;
   }
 

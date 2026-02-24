@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { AlertService } from '../../services/alert.service';
 import { MatIconModule } from '@angular/material/icon';
 
@@ -53,12 +54,18 @@ export class AnomaliesComponent implements OnInit {
     dateFin: ''
   };
 
-  constructor(private alertService: AlertService) {}
+  constructor(private alertService: AlertService, private route: ActivatedRoute) {}
 
   ngOnInit() {
     if (typeof window === 'undefined') {
       return;
     }
+    // Lire les query parameters depuis l'URL (ex: ?statut=En cours)
+    this.route.queryParams.subscribe(params => {
+      if (params['statut']) {
+        this.filters.statut = params['statut'];
+      }
+    });
     this.loadAnomalies();
   }
 

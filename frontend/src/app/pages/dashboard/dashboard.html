@@ -1,179 +1,102 @@
-<section class="tracking-page dashboard-tracking" *ngIf="!loading; else loadingTpl">
-  <h1>Tableau de bord</h1>
+<section class="dashboard-container" *ngIf="!loading; else loadingTpl">
+  <header class="dashboard-header">
+    <div class="title-section">
+      <h1>Tableau de bord</h1>
+      <p class="subtitle">Surveillance des flux et détection d'anomalies</p>
+    </div>
+  </header>
 
-  <div class="tracking-content">
-    <div class="kpis-grid">
-      <div class="kpi-card kpi-transactions">
-        <div class="kpi-icon"><img src="assets/analytics.svg" alt="Transactions"/></div>
-        <div class="kpi-content">
-          <div class="kpi-value">{{ kpi.transactions | number:'1.0-0' }}</div>
-          <div class="kpi-label">Transactions Analysées</div>
+  <div class="dashboard-content">
+    <div class="main-stats-strip">
+      <div class="stat-item border-primary">
+        <div class="stat-info">
+          <label>Transactions Analysées</label>
+          <div class="value">{{ kpi.transactions | number }}</div>
         </div>
+        <mat-icon class="stat-icon color-primary">analytics</mat-icon>
       </div>
 
-      <div class="kpi-card kpi-alert-detected">
-        <div class="kpi-icon"><img src="assets/bell.svg" alt="Anomalies"/></div>
-        <div class="kpi-content">
-          <div class="kpi-value">{{ kpi.anomaliesDetectees | number:'1.0-0' }}</div>
-          <div class="kpi-label">Anomalies Détectées</div>
+      <div class="stat-item border-warning">
+        <div class="stat-info">
+          <label>Anomalies Détectées</label>
+          <div class="value">{{ kpi.anomaliesDetectees | number }}</div>
         </div>
+        <mat-icon class="stat-icon color-warning">error_outline</mat-icon>
       </div>
 
-      <div class="kpi-card kpi-alert-treated">
-        <div class="kpi-icon"><img src="assets/shield-check.svg" alt="Traitée"/></div>
-        <div class="kpi-content">
-          <div class="kpi-value">{{ kpi.anomaliesTraitees | number:'1.0-0' }}</div>
-          <div class="kpi-label">Anomalies Traitées</div>
+      <div class="stat-item border-success">
+        <div class="stat-info">
+          <label>Anomalies Traitées</label>
+          <div class="value">{{ kpi.anomaliesTraitees | number }}</div>
         </div>
+        <mat-icon class="stat-icon color-success">verified_user</mat-icon>
       </div>
 
-      <div class="kpi-card kpi-monitored">
-        <div class="kpi-icon"><img src="assets/eye.svg" alt="Surveillés"/></div>
-        <div class="kpi-content">
-          <div class="kpi-value">{{ kpi.comptesSurveilles | number:'1.0-0' }}</div>
-          <div class="kpi-label">Comptes Surveillés</div>
+      <div class="stat-item border-dark">
+        <div class="stat-info">
+          <label>Comptes Surveillés</label>
+          <div class="value">{{ kpi.comptesSurveilles | number }}</div>
         </div>
+        <mat-icon class="stat-icon color-dark">visibility</mat-icon>
       </div>
     </div>
 
-    <div class="section-header-container">
-      <div class="section-title">
-        <h2>Transactions récentes</h2>
-        <button class="btn-see-all" (click)="seeAll()">
-          Voir tout
-          <span class="material-icons">arrow_forward</span>
-        </button>
-      </div>
-    </div>
-
-    <div class="transactions-list-container">
-      <div class="transactions-list">
-        @for (t of paginatedTransactions; track t.id) {
-          <div class="t-card-compact" [class.expanded]="isExpanded(t)" (click)="toggleDetails(t)">
-            <div class="card-main">
-              <div class="status-indicator" [ngClass]="getTransactionStatusClass(t)"></div>
-              
-              <div class="time-block">
-                <span class="time">{{ t.date_operation | date:'HH:mm' }}</span>
-                <span class="date">{{ formatDateFRShort(t.date_operation) }}</span>
-              </div>
-
-              <div class="transfer-block">
-                <div class="entity">
-                  <span class="name">{{ t.nom_payeur }}</span>
-                  <span class="account">{{ t.numero_compte_payeur }}</span>
-                </div>
-                <mat-icon class="arrow">east</mat-icon>
-                <div class="entity">
-                  <span class="name">{{ t.nom_paye }}</span>
-                  <span class="account">{{ t.numero_compte_paye }}</span>
-                </div>
-              </div>
-
-              <div class="amount-block">
-                <span class="amount">{{ t.montant | number:'1.0-0' }}</span>
-                <span class="currency">FCFA</span>
-              </div>
-
-              <div class="badge-block">
-                <span class="status-pill" [ngClass]="getTransactionStatusClass(t)">
-                  {{ getTransactionStatus(t) }}
-                </span>
-                <mat-icon class="chevron">{{ isExpanded(t) ? 'expand_less' : 'expand_more' }}</mat-icon>
-              </div>
-            </div>
-
-            <div class="card-details" *ngIf="isExpanded(t)" (click)="$event.stopPropagation()">
-               <div class="details-grid">
-                  <div class="detail-col">
-                    <h5><mat-icon>person_outline</mat-icon> Émetteur</h5>
-                    <div class="det-item"><span>Nom complet</span><strong>{{t.nom_payeur}}</strong></div>
-                    <div class="det-item"><span>N° Compte</span><strong class="mono">{{t.numero_compte_payeur}}</strong></div>
-                    <div class="det-item"><span>Type Client</span><strong>{{getTypeClientLabel(t.type_client_payeur)}}</strong></div>
-                    <div class="det-item"><span>Localisation</span><strong>{{t.ville_payeur}}, {{getCountryNameFromCode(t.pays_payeur)}}</strong></div>
-                  </div>
-
-                  <div class="detail-col">
-                    <h5><mat-icon>account_balance_wallet</mat-icon> Bénéficiaire</h5>
-                    <div class="det-item"><span>Nom complet</span><strong>{{t.nom_paye}}</strong></div>
-                    <div class="det-item"><span>N° Compte</span><strong class="mono">{{t.numero_compte_paye}}</strong></div>
-                    <div class="det-item"><span>Type Client</span><strong>{{getTypeClientLabel(t.type_client_paye)}}</strong></div>
-                    <div class="det-item"><span>Localisation</span><strong>{{t.ville_paye || 'N/A'}}, {{getCountryNameFromCode(t.pays_paye)}}</strong></div>
-                  </div>
-
-                  <div class="detail-col">
-                    <h5><mat-icon>receipt_long</mat-icon> Infos Système</h5>
-                    <div class="det-item"><span>ID Unique</span><strong>#{{t.id}}</strong></div>
-                    <div class="det-item"><span>Date précise</span><strong>{{ formatDateFR(t.date_operation) }}</strong></div>
-                    <div class="det-item"><span>Portée flux</span><strong class="portee-label">{{t.portee}}</strong></div>
-                    <div class="det-item"><span>Statut final</span><strong [ngClass]="getTransactionStatusClass(t)">{{getTransactionStatus(t)}}</strong></div>
-                  </div>
-               </div>
-
-               <div class="detail-section" *ngIf="selectedAlertes.length">
-                 <h5 class="alertes-title"><mat-icon>warning</mat-icon> Alertes associées ({{ selectedAlertes.length }})</h5>
-                 <ul class="alertes-list">
-                   <li *ngFor="let item of getGroupedAlertes()" [ngClass]="'level-' + item[1].niveauCriticite">
-                     <div class="alerte-header">
-                       <span class="alerte-code">{{ item[1].code }}</span>
-                       <span class="alerte-level">{{ item[1].niveauCriticite }}</span>
-                     </div>
-                     <div class="alerte-account">
-                       <mat-icon>account_balance</mat-icon>
-                       <span class="account-number">{{ item[1].numeroCompte }}</span>
-                     </div>
-                     <span class="alerte-message">{{ item[1].message }}</span>
-                     <div class="alerte-dates" *ngIf="item[1].dates.length">
-                       <span class="dates-label">Date{{ item[1].dates.length > 1 ? 's' : '' }} de génération:</span>
-                       <div class="dates-list">
-                         <span *ngFor="let date of item[1].dates; let i = index" class="date-item">
-                           <span class="occurrence-badge">{{ i + 1 }}</span>
-                           {{ formatDateFR(date) }}
-                         </span>
-                       </div>
-                     </div>
-                   </li>
-                 </ul>
-               </div>
-            </div>
-          </div>
-        } @empty {
-          <div class="empty-state">
-            <mat-icon>search_off</mat-icon>
-            <p>Aucune transaction pour aujourd'hui.</p>
-          </div>
-        }
-      </div>
-
-      <footer class="pagination-footer" *ngIf="totalPages > 1">
-        <div class="page-stats">Page {{ currentPage }} sur {{ totalPages }}</div>
-        <div class="page-nav">
-          <button (click)="previousPage()" [disabled]="currentPage === 1">Précédent</button>
-          <button (click)="nextPage()" [disabled]="currentPage === totalPages">Suivant</button>
+    <div class="analysis-grid">
+      <div class="analysis-panel">
+        <div class="panel-header">
+          <h2>Typologie des Risques</h2>
+          <mat-icon>bar_chart</mat-icon>
         </div>
-      </footer>
+        <div class="risk-distribution">
+          <div class="risk-row">
+            <span class="risk-name">Montants Suspects</span>
+            <div class="progress-container">
+              <div class="progress-bar warning" [style.width.%]="(kpi.montantSuspect / kpi.anomaliesDetectees) * 100"></div>
+            </div>
+            <span class="risk-val">{{ kpi.montantSuspect }}</span>
+          </div>
+          <div class="risk-row">
+            <span class="risk-name">Fréquence Anormale</span>
+            <div class="progress-container">
+              <div class="progress-bar primary" [style.width.%]="(kpi.frequenceAnormale / kpi.anomaliesDetectees) * 100"></div>
+            </div>
+            <span class="risk-val">{{ kpi.frequenceAnormale }}</span>
+          </div>
+          <div class="risk-row">
+            <span class="risk-name">Entités Blacklist</span>
+            <div class="progress-container">
+              <div class="progress-bar danger" [style.width.%]="(kpi.entitesBlacklistees / kpi.anomaliesDetectees) * 100"></div>
+            </div>
+            <span class="risk-val">{{ kpi.entitesBlacklistees }}</span>
+          </div>
+          <div class="risk-row">
+            <span class="risk-name">Pays à Risque</span>
+            <div class="progress-container">
+              <div class="progress-bar dark" [style.width.%]="(kpi.paysARisque / kpi.anomaliesDetectees) * 100"></div>
+            </div>
+            <span class="risk-val">{{ kpi.paysARisque }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="analysis-panel highlight">
+        <div class="panel-header">
+          <h2>Anomalies Non Traitées</h2>
+          <mat-icon>notifications_active</mat-icon>
+        </div>
+        <div class="notif-center">
+          <div class="notif-badge">{{ kpi.anomaliesNonTraitees }}</div>
+          <p>Anomalies en attente de traitement</p>
+          <button class="btn-view-all" (click)="goToAnomaliesQueue()">Accéder à la file d'attente</button>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
 <ng-template #loadingTpl>
-  <div class="loading-container">
-    <div class="spinner"></div>
-    <p>Chargement du tableau de bord…</p>
+  <div class="dashboard-loader">
+    <div class="pulse-ring"></div>
+    <p>Synchronisation du module LAB...</p>
   </div>
 </ng-template>
-
-<div *ngIf="selectedTransaction" class="modal-overlay" (click)="selectedTransaction = null">
-  <div class="modal-content dashboard-card" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-        <h3>Expertise Transaction #{{ selectedTransaction.id }}</h3>
-        <button class="modal-close" (click)="selectedTransaction = null"><span class="material-icons">close</span></button>
-    </div>
-    <div class="modal-body">
-      <div class="detail-section" *ngIf="selectedTransaction.raw_data">
-        <h4>Données brutes (JSON)</h4>
-        <pre class="raw-json">{{ selectedTransaction.raw_data | json }}</pre>
-      </div>
-    </div>
-  </div>
-</div>

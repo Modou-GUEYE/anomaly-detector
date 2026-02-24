@@ -140,7 +140,7 @@ $danger: #EF4444;
 
   /* MODAL */
   .modal-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; justify-content: flex-end; z-index: 100;
+    position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(1px); display: flex; align-items: center; justify-content: flex-end; z-index: 1000;
     .modal-panel {
       width: 450px; background: white; height: 100%; box-shadow: -10px 0 30px rgba(0,0,0,0.1); padding: 2rem;
       display: flex; flex-direction: column;

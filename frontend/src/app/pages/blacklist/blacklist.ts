@@ -24,7 +24,7 @@ export class BlacklistComponent implements OnInit {
 
   // Pagination
   currentPage = 1;
-  pageSize = 5;
+  pageSize = 10;
   totalPages = 1;
 
   // Filtres
@@ -65,6 +65,12 @@ export class BlacklistComponent implements OnInit {
     this.blacklistService.getEntities().subscribe({
       next: (data) => {
         this.entities = data || [];
+        // Trier par date décroissante (plus récentes en premier)
+        this.entities.sort((a, b) => {
+          const dateA = a.dateAjout ? new Date(a.dateAjout).getTime() : 0;
+          const dateB = b.dateAjout ? new Date(b.dateAjout).getTime() : 0;
+          return dateB - dateA;
+        });
         this.applyFilters();
         this.loading = false;
       },

@@ -10,9 +10,9 @@ export class DashboardService {
   constructor(private http: HttpClient) { }
 
   /**
-   * Récupère le résumé complet du dashboard en UNE SEULE requête
+   * Récupère le résumé du dashboard en UNE SEULE requête
    * L'interceptor ajoute automatiquement le token en header
-   * Contient : KPIs, transactions récentes, alertes récentes, métriques
+   * Contient : KPIs (transactions, anomalies, comptes surveillés), alertes récentes, comptages par type
    */
   getDashboardSummary(): Observable<any> {
     return this.http.get<any>('/api/v1/dashboard/summary');

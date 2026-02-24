@@ -116,8 +116,16 @@ $bg-light: #f8fafc;
 }
 
 /* Tableau */
-.data-wrapper { flex: 1; overflow-y: auto; border: 1px solid $border; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+.data-wrapper { 
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto; 
+  border: 1px solid $border; 
+  border-radius: 12px; 
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); 
+}
 .data-table {
+  flex-shrink: 0;
   width: 100%; border-collapse: collapse;
   thead th {
     position: sticky; top: 0; background: $bg-light; z-index: 10; padding: 14px;
@@ -172,66 +180,264 @@ $bg-light: #f8fafc;
 
 /* Modales */
 .modal-overlay {
-  position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px);
-  display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem;
+  position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(1px);
+  display: flex; align-items: center; justify-content: flex-end; z-index: 1000;
 }
 
+.modal-panel {
+  width: 450px;
+  background: white;
+  height: 100%;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+
+  @media (max-width: 500px) {
+    width: 100%;
+  }
+
+  .modal-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid $border;
+    padding-bottom: 1.5rem;
+    margin-bottom: 1.5rem;
+
+    h2 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: $text-dark;
+    }
+
+    .close-btn {
+      font-size: 2rem;
+      border: none;
+      background: none;
+      cursor: pointer;
+      color: $text-muted;
+      transition: all 0.2s ease;
+
+      &:hover {
+        color: $primary;
+      }
+    }
+  }
+
+  .modal-body {
+    padding: 0;
+    flex: 1;
+    overflow-y: auto;
+
+    .risk-section {
+      margin-bottom: 1.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid $border;
+
+      label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: $text-muted;
+        text-transform: uppercase;
+        margin-bottom: 0.75rem;
+        letter-spacing: 0.02em;
+      }
+
+      .risk-display {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: #f8fafc;
+        padding: 12px;
+        border-radius: 8px;
+        border-left: 4px solid $primary;
+
+        &.blacklist {
+          border-left-color: #111827;
+        }
+
+        &.pep {
+          border-left-color: #f59e0b;
+        }
+
+        &.surveillés {
+          border-left-color: $primary;
+        }
+
+        &.interdit {
+          border-left-color: $danger;
+        }
+
+        .risk-indicator {
+          flex-shrink: 0;
+        }
+
+        .risk-label {
+          font-weight: 700;
+          color: $text-dark;
+          font-size: 0.95rem;
+        }
+      }
+    }
+
+    .details-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+
+      .detail-item {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+
+        .label {
+          font-size: 0.75rem;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          color: $text-muted;
+          font-weight: 700;
+        }
+
+        .value {
+          font-size: 0.95rem;
+          color: $text-dark;
+          font-weight: 600;
+          word-break: break-word;
+          line-height: 1.5;
+
+          &.mono {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+          }
+        }
+      }
+
+      .full {
+        grid-column: span 1;
+      }
+    }
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid $border;
+  }
+}
+
+/* Modal centré (confirmations) */
 .modal-content {
-  background: white; width: 500px; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-  animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  overflow: hidden;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  z-index: 1001;
 
-  &.danger-modal { width: 400px; text-align: center; }
-  &.details-modal { width: 520px; }
-}
-
-.modal-header {
-  padding: 1.25rem 1.5rem; border-bottom: 1px solid $border; display: flex; justify-content: space-between; align-items: center;
-  .title-with-icon { display: flex; align-items: center; gap: 10px; 
-    .header-icon { color: $primary; }
-    h2 { margin: 0; font-size: 1.1rem; font-weight: 700; }
-  }
-  .close-x { border: none; background: none; font-size: 1.5rem; color: $text-muted; cursor: pointer; }
-}
-
-.modal-body {
-  padding: 1.5rem;
-  &.central { padding: 2.5rem 2rem; }
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; 
-    .full-width { grid-column: span 2; }
-  }
-}
-
-.details-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 1.5rem;
-
-  .detail-item {
-    display: flex; flex-direction: column; gap: 6px;
-    .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: $text-muted; font-weight: 700; }
-    .value { font-size: 0.95rem; color: $text-dark; font-weight: 600; word-break: break-word; }
+  &.danger-modal {
+    width: 400px;
+    text-align: center;
   }
 
-  .detail-item.full { grid-column: span 2; }
-}
+  .modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid $border;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 
-.form-group {
-  display: flex; flex-direction: column; gap: 6px;
-  label { font-size: 0.85rem; font-weight: 600; color: $text-dark; .required { color: $danger; } }
-  input, select, textarea { 
-    border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; font-size: 0.9rem; outline: none;
-    &:focus { border-color: $primary; box-shadow: 0 0 0 3px rgba($primary, 0.1); }
+    h2 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .close-x {
+      border: none;
+      background: none;
+      font-size: 1.5rem;
+      color: $text-muted;
+      cursor: pointer;
+    }
   }
-}
 
-.modal-footer {
-  padding: 1.25rem 1.5rem; background: $bg-light; display: flex; justify-content: flex-end; gap: 10px;
-  &.central { justify-content: center; padding-bottom: 2rem; }
-}
+  .modal-body {
+    padding: 1.5rem;
 
-.danger-icon-box {
-  width: 60px; height: 60px; background: rgba($danger, 0.1); color: $danger; 
-  border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;
-  mat-icon { font-size: 32px; width: 32px; height: 32px; }
+    &.central {
+      padding: 2.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+
+      .full-width {
+        grid-column: span 2;
+      }
+    }
+
+    .details-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+
+      .detail-item {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+
+        .label {
+          font-size: 0.75rem;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          color: $text-muted;
+          font-weight: 700;
+        }
+
+        .value {
+          font-size: 0.95rem;
+          color: $text-dark;
+          font-weight: 600;
+          word-break: break-word;
+        }
+      }
+
+      .full {
+        grid-column: span 1;
+      }
+    }
+  }
+
+  .modal-footer {
+    padding: 1.25rem 1.5rem;
+    background: $bg-light;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+
+    &.central {
+      justify-content: center;
+      padding-bottom: 2rem;
+    }
+  }
 }
 
 /* Buttons (modals) */
@@ -254,6 +460,22 @@ $bg-light: #f8fafc;
   border-radius: 10px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
   box-shadow: 0 8px 18px rgba($danger, 0.25); transition: all 0.2s ease;
   &:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba($danger, 0.3); }
+}
+
+/* Form groups */
+.form-group {
+  display: flex; flex-direction: column; gap: 6px;
+  label { font-size: 0.85rem; font-weight: 600; color: $text-dark; .required { color: $danger; } }
+  input, select, textarea { 
+    border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; font-size: 0.9rem; outline: none;
+    &:focus { border-color: $primary; box-shadow: 0 0 0 3px rgba($primary, 0.1); }
+  }
+}
+
+.danger-icon-box {
+  width: 60px; height: 60px; background: rgba($danger, 0.1); color: $danger; 
+  border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;
+  mat-icon { font-size: 32px; width: 32px; height: 32px; }
 }
 
 /* Pagination */

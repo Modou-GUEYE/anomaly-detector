@@ -20,7 +20,9 @@
             <label>Type d'entité</label>
             <select class="type-dropdown" [(ngModel)]="filters.typeEntite" (change)="applyFilters()">
               <option value="">Tous les types</option>
-              <option *ngFor="let type of typeOptions" [value]="type">{{ type }}</option>
+              @for (type of typeOptions; track type) {
+                <option [value]="type">{{ type }}</option>
+              }
             </select>
           </div>
         </div>
@@ -48,7 +50,7 @@
         </tr>
       </thead>
       <tbody>
-        <ng-container *ngFor="let entity of paginatedEntities">
+        @for (entity of paginatedEntities; track entity.id) {
           <tr>
             <td class="col-indicator">
               <span class="risk-indicator" [ngClass]="entity.typeEntite.toLowerCase()"></span>
@@ -77,10 +79,12 @@
               </div>
             </td>
           </tr>
-        </ng-container>
+        }
       </tbody>
     </table>
+  </div>
 
+  @if (totalPages > 1) {
     <footer class="pagination-footer">
       <div class="page-stats">Page {{ currentPage }} sur {{ totalPages }}</div>
       <div class="page-nav">
@@ -88,21 +92,18 @@
         <button [disabled]="currentPage === totalPages" (click)="nextPage()">Suivant</button>
       </div>
     </footer>
-  </div>
+  }
 </section>
 
-<div *ngIf="showModal" class="modal-overlay" (click)="closeModal()">
-  <div class="modal-content" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <div class="title-with-icon">
-        <mat-icon class="header-icon">{{ isEditMode ? 'edit_note' : 'person_add' }}</mat-icon>
+@if (showModal) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <div class="modal-panel" (click)="$event.stopPropagation()">
+      <div class="modal-head">
         <h2>{{ isEditMode ? 'Modifier l\'entité' : 'Nouvelle entité' }}</h2>
+        <button class="close-btn" (click)="closeModal()">&times;</button>
       </div>
-      <button class="close-x" (click)="closeModal()">&times;</button>
-    </div>
-    
-    <div class="modal-body">
-      <div class="form-grid">
+      
+      <div class="modal-body">
         <div class="form-group full-width">
           <label>Nom complet <span class="required">*</span></label>
           <input type="text" [(ngModel)]="formData.nom" placeholder="Ex: John Doe">
@@ -115,7 +116,9 @@
           <label>Type d'entité <span class="required">*</span></label>
           <select [(ngModel)]="formData.typeEntite">
             <option value="">Sélectionner...</option>
-            <option *ngFor="let type of typeOptions" [value]="type">{{ type }}</option>
+            @for (type of typeOptions; track type) {
+              <option [value]="type">{{ type }}</option>
+            }
           </select>
         </div>
         <div class="form-group full-width">
@@ -123,68 +126,69 @@
           <textarea rows="3" [(ngModel)]="formData.informationsSupplementaires" placeholder="Notes ou détails importants..."></textarea>
         </div>
       </div>
-    </div>
-    
-    <div class="modal-footer">
-      <button class="btn-secondary" (click)="closeModal()">Annuler</button>
-      <button class="btn-save" (click)="saveEntity()">
-        <mat-icon>check</mat-icon> {{ isEditMode ? 'Mettre à jour' : 'Enregistrer' }}
-      </button>
+      
+      <div class="modal-actions">
+        <button class="btn-secondary" (click)="closeModal()">Annuler</button>
+        <button class="btn-save" (click)="saveEntity()">
+          <mat-icon>check</mat-icon> {{ isEditMode ? 'Mettre à jour' : 'Enregistrer' }}
+        </button>
+      </div>
     </div>
   </div>
-</div>
+}
 
-<div *ngIf="showDeleteModal" class="modal-overlay" (click)="closeDeleteModal()">
-  <div class="modal-content danger-modal" (click)="$event.stopPropagation()">
-    <div class="modal-body central">
-      <div class="danger-icon-box">
-        <mat-icon>delete_forever</mat-icon>
+@if (showDeleteModal) {
+  <div class="modal-overlay" (click)="closeDeleteModal()">
+    <div class="modal-content danger-modal" (click)="$event.stopPropagation()">
+      <div class="modal-body central">
+        <div class="danger-icon-box">
+          <mat-icon>delete_forever</mat-icon>
+        </div>
+        <h3>Confirmer la suppression</h3>
+        <p>Êtes-vous sûr de vouloir retirer <strong>{{ deletingEntity?.nom }}</strong> de la liste ? Cette action est irréversible.</p>
       </div>
-      <h3>Confirmer la suppression</h3>
-      <p>Êtes-vous sûr de vouloir retirer <strong>{{ deletingEntity?.nom }}</strong> de la liste ? Cette action est irréversible.</p>
-    </div>
-    <div class="modal-footer central">
-      <button class="btn-secondary" (click)="closeDeleteModal()">Conserver</button>
-      <button class="btn-confirm-delete" (click)="confirmDelete()">Supprimer définitivement</button>
+      <div class="modal-footer central">
+        <button class="btn-secondary" (click)="closeDeleteModal()">Conserver</button>
+        <button class="btn-confirm-delete" (click)="confirmDelete()">Supprimer définitivement</button>
+      </div>
     </div>
   </div>
-</div>
+}
 
-<div *ngIf="showDetailsModal" class="modal-overlay" (click)="closeDetailsModal()">
-  <div class="modal-content details-modal" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <div class="title-with-icon">
-        <mat-icon class="header-icon">visibility</mat-icon>
-        <h2>Details de l'entite</h2>
+@if (showDetailsModal) {
+  <div class="modal-overlay" (click)="closeDetailsModal()">
+    <div class="modal-panel" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h2>Détails de l'entité</h2>
+        <button class="close-btn" (click)="closeDetailsModal()">&times;</button>
       </div>
-      <button class="close-x" (click)="closeDetailsModal()">&times;</button>
-    </div>
-    <div class="modal-body">
-      <div class="details-grid">
-        <div class="detail-item">
-          <span class="label">Nom</span>
-          <span class="value">{{ detailsEntity?.nom }}</span>
+      <div class="modal-body">
+        <div class="risk-section">
+          <label>Type d'entité</label>
+          <div class="risk-display" [ngClass]="detailsEntity?.typeEntite?.toLowerCase()">
+            <span class="risk-indicator" [ngClass]="detailsEntity?.typeEntite?.toLowerCase()"></span>
+            <span class="risk-label">{{ detailsEntity?.typeEntite }}</span>
+          </div>
         </div>
-        <div class="detail-item">
-          <span class="label">Type</span>
-          <span class="value">{{ detailsEntity?.typeEntite }}</span>
-        </div>
-        <div class="detail-item">
-          <span class="label">Compte</span>
-          <span class="value">{{ detailsEntity?.numeroCompte }}</span>
-        </div>
-        <div class="detail-item">
-          <span class="label">Date d'ajout</span>
-          <span class="value">{{ detailsEntity?.dateAjout | date:'dd/MM/yyyy' }}</span>
-        </div>
-        <div class="detail-item full">
-          <span class="label">Informations</span>
-          <span class="value">{{ detailsEntity?.informationsSupplementaires || 'Aucune' }}</span>
+        <div class="details-grid">
+          <div class="detail-item">
+            <span class="label">Nom</span>
+            <span class="value">{{ detailsEntity?.nom }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">Compte</span>
+            <span class="value mono">{{ detailsEntity?.numeroCompte }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">Date d'ajout</span>
+            <span class="value">{{ detailsEntity?.dateAjout | date:'dd/MM/yyyy' }}</span>
+          </div>
+          <div class="detail-item full">
+            <span class="label">Informations</span>
+            <span class="value">{{ detailsEntity?.informationsSupplementaires || 'Aucune information' }}</span>
+          </div>
         </div>
       </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-secondary" (click)="closeDetailsModal()">Fermer</button>
     </div>
   </div>
-</div>
+}
