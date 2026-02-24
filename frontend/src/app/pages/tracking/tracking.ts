@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http';
 import { Subject, Observable, of } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged, catchError } from 'rxjs/operators';
+import * as XLSX from 'xlsx';
 
 interface TrackingStats {
   totalEvents: number;
@@ -196,8 +197,135 @@ export class TrackingComponent implements OnInit, OnDestroy {
   closeEventDetails() { this.selectedEvent = null; }
 
   exportData(format: string) {
-    // Logique d'export déjà présente dans ton code initial...
-    console.log('Exporting as', format);
+    if (!this.filteredEvents || this.filteredEvents.length === 0) {
+      alert('Aucune donnée à exporter. Veuillez charger les données d\'audit.');
+      return;
+    }
+
+    if (format === 'excel') {
+      this.exportToExcel();
+    } else if (format === 'csv') {
+      this.exportToCSV();
+    }
+  }
+
+  private exportToExcel() {
+    try {
+      // Préparation des données au format tableau
+      const dataToExport = this.filteredEvents.map(event => ({
+        'Horodatage': this.formatDate(event['date_heure'] || event['timestamp']),
+        'Heure': this.formatTime(event['date_heure'] || event['timestamp']),
+        'Action / Type': event['type_action'] || 'N/A',
+        'Utilisateur': event['nom_utilisateur'] || event['userName'] || 'N/A',
+        'Rôle': event['role'] || 'N/A',
+        'Événement': event['action_effectuee'] || event['eventType'] || 'N/A',
+        'Résultat': event['resultat'] || 'N/A',
+        'ID Log': event['id'] || 'N/A',
+        'Entity ID': event['entity_id'] || 'N/A'
+      }));
+
+      // Création du workbook et worksheet
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport, {
+        header: ['Horodatage', 'Heure', 'Action / Type', 'Utilisateur', 'Rôle', 'Événement', 'Résultat', 'ID Log', 'Entity ID']
+      });
+
+      // Ajustement des largeurs de colonnes
+      const columnWidths = [
+        { wch: 12 },  // Horodatage
+        { wch: 10 },  // Heure
+        { wch: 20 },  // Action / Type
+        { wch: 20 },  // Utilisateur
+        { wch: 15 },  // Rôle
+        { wch: 30 },  // Événement
+        { wch: 12 },  // Résultat
+        { wch: 15 },  // ID Log
+        { wch: 15 }   // Entity ID
+      ];
+      worksheet['!cols'] = columnWidths;
+
+      // Création du workbook
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Audit');
+
+      // Génération du nom du fichier avec la date
+      const now = new Date();
+      const fileName = `audit_export_${now.toISOString().split('T')[0]}_${now.getTime()}.xlsx`;
+
+      // Téléchargement du fichier
+      XLSX.writeFile(workbook, fileName);
+    } catch (error) {
+      console.error('Erreur lors de l\'export Excel:', error);
+      alert('Une erreur est survenue lors de l\'export. Veuillez vérifier la console.');
+    }
+  }
+
+  private exportToCSV() {
+    try {
+      // Préparation des données au format CSV
+      const headers = ['Horodatage', 'Heure', 'Action / Type', 'Utilisateur', 'Rôle', 'Événement', 'Résultat', 'ID Log', 'Entity ID'];
+      
+      const rows = this.filteredEvents.map(event => [
+        this.formatDate(event['date_heure'] || event['timestamp']),
+        this.formatTime(event['date_heure'] || event['timestamp']),
+        this.escapeCsvField(event['type_action'] || 'N/A'),
+        this.escapeCsvField(event['nom_utilisateur'] || event['userName'] || 'N/A'),
+        this.escapeCsvField(event['role'] || 'N/A'),
+        this.escapeCsvField(event['action_effectuee'] || event['eventType'] || 'N/A'),
+        this.escapeCsvField(event['resultat'] || 'N/A'),
+        event['id'] || 'N/A',
+        event['entity_id'] || 'N/A'
+      ]);
+
+      // Création du contenu CSV
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.join(','))
+      ].join('\n');
+
+      // Création du blob
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      
+      // Génération du nom du fichier
+      const now = new Date();
+      const fileName = `audit_export_${now.toISOString().split('T')[0]}_${now.getTime()}.csv`;
+
+      // Téléchargement du fichier
+      this.downloadFile(blob, fileName);
+    } catch (error) {
+      console.error('Erreur lors de l\'export CSV:', error);
+      alert('Une erreur est survenue lors de l\'export. Veuillez vérifier la console.');
+    }
+  }
+
+  private formatDate(date: any): string {
+    if (!date) return 'N/A';
+    const d = new Date(date);
+    return d.toLocaleDateString('fr-FR');
+  }
+
+  private formatTime(date: any): string {
+    if (!date) return 'N/A';
+    const d = new Date(date);
+    return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  private escapeCsvField(field: string): string {
+    // Échappe les guillemets et ajoute des guillemets si le champ contient une virgule, un retour à la ligne ou un guillemet
+    if (field.includes(',') || field.includes('\n') || field.includes('"')) {
+      return `"${field.replace(/"/g, '""')}"`;
+    }
+    return field;
+  }
+
+  private downloadFile(blob: Blob, fileName: string) {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
   }
 
   trackByEventId(index: number, event: any) { return event.id || index; }
