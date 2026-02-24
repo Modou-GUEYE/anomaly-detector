@@ -6,6 +6,7 @@ import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http'
 import { Subject, Observable, of } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged, catchError } from 'rxjs/operators';
 import * as XLSX from 'xlsx';
+import { MatIconModule } from '@angular/material/icon';
 
 interface TrackingStats {
   totalEvents: number;
@@ -26,13 +27,13 @@ interface TrackingFilters {
 @Component({
   selector: 'app-tracking',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MatIconModule],
   templateUrl: './tracking.html',
   styleUrls: ['./tracking.scss']
 })
 export class TrackingComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
-  public searchSubject = new Subject<string>(); // Rendu public pour le template
+  public searchSubject = new Subject<string>(); 
 
   events: any[] = [];
   filteredEvents: any[] = [];

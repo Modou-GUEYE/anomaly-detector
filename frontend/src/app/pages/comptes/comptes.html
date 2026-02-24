@@ -113,7 +113,7 @@
           <mat-icon>account_balance</mat-icon>
         </div>
         <div class="header-titles">
-          <h2>Fiche Détails Compte</h2>
+          <h2>Détails du Compte</h2>
           <span class="acc-badge">{{ detailsAccount?.numeroCompte }}</span>
         </div>
       </div>
@@ -142,11 +142,11 @@
               <p>{{ detailsAccount?.nomClient }}</p>
             </div>
             <div class="info-card">
-              <label>Profil</label>
+              <label>Profil Client</label>
               <p>{{ getProfileClientName(detailsAccount?.profilClientId) }}</p>
             </div>
             <div class="info-card">
-              <label>Type client</label>
+              <label>Type Client</label>
               <p>{{ getTypeClientLabel(detailsAccount?.typeClient || '') }}</p>
             </div>
             <div class="info-card">
@@ -154,11 +154,15 @@
               <p>{{ detailsAccount?.categorie }}</p>
             </div>
             <div class="info-card">
-              <label>Pays / Ville</label>
-              <p>{{ getCountryNameFromCode(detailsAccount?.pays || '') }} • {{ detailsAccount?.ville }}</p>
+              <label>Pays</label>
+              <p>{{ getCountryNameFromCode(detailsAccount?.pays || '') }}</p>
             </div>
             <div class="info-card">
-              <label>Date d'ouverture</label>
+              <label>Ville</label>
+              <p>{{ detailsAccount?.ville }}</p>
+            </div>
+            <div class="info-card">
+              <label>Date d'Ouverture</label>
               <p>{{ detailsAccount?.dateCreation | date: 'dd MMMM yyyy' }}</p>
             </div>
             <div class="info-card full">
@@ -168,24 +172,27 @@
           </div>
         </div>
 
-        <div class="info-section surveillance" *ngIf="detailsAccount?.isSurveilled">
+        <div class="info-section" *ngIf="detailsAccount?.isSurveilled">
           <h3 class="section-title"><mat-icon>gavel</mat-icon> Détails de Vigilance</h3>
-          <div class="vigilance-box">
-            <div class="v-item">
-              <label>Motif de détection</label>
-              <p class="reason-text">{{ detailsAccount?.suiviRaison }}</p>
+          <div class="grid-display">
+            <div class="info-card full">
+              <label>Motif de Détection</label>
+              <p>{{ detailsAccount?.suiviRaison }}</p>
             </div>
-            <div class="v-grid">
-              <div class="v-sub-item">
-                <label>Dernière activité</label>
-                <span>{{ detailsAccount?.suiviDate | date: 'dd/MM/yy à HH:mm' }}</span>
-              </div>
-              <div class="v-sub-item">
-                <label>Statut de suivi</label>
-                <span class="badge-status">{{ detailsAccount?.suiviStatus }}</span>
-              </div>
+            <div class="info-card">
+              <label>Dernière Activité</label>
+              <p>{{ detailsAccount?.suiviDate | date: 'dd MMMM yyyy à HH:mm' }}</p>
+            </div>
+            <div class="info-card">
+              <label>Statut de Suivi</label>
+              <p>{{ detailsAccount?.suiviStatus }}</p>
             </div>
           </div>
+        </div>
+
+        <div class="no-alerts" *ngIf="!detailsAccount?.isSurveilled">
+          <mat-icon>check_circle</mat-icon>
+          <p>Compte sans alerte - Statut standard</p>
         </div>
       </div>
     </div>
