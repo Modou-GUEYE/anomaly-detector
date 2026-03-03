@@ -11,14 +11,10 @@
       <div class="search-wrapper">
         <i class="material-icons">search</i>
         <input type="search" 
-               placeholder="Rechercher utilisateur, action, rôle..." 
+            placeholder="Rechercher événement, utilisateur..." 
                [(ngModel)]="filters.search" 
                (ngModelChange)="searchSubject.next($event)">
       </div>
-      
-      <button class="btn-icon-refresh" (click)="refreshData()" [disabled]="loading" title="Actualiser">
-        <i class="material-icons" [class.spinning]="loading">refresh</i>
-      </button>
     </div>
   </header>
 
@@ -76,6 +72,13 @@
           <select [(ngModel)]="filters.module" (ngModelChange)="applyFilters()">
             <option value="">Tous les modules</option>
             <option *ngFor="let m of moduleOptions" [value]="m">{{ m }}</option>
+          </select>
+        </div>
+        <div class="filter-control">
+          <label>Utilisateurs</label>
+          <select [(ngModel)]="filters.user" (ngModelChange)="applyFilters()">
+            <option value="">Tous les utilisateurs</option>
+            <option *ngFor="let u of userOptions" [value]="u">{{ u }}</option>
           </select>
         </div>
       </div>

@@ -52,7 +52,13 @@
         <div class="type-icon" [ngClass]="rule.typeRegle">
           <mat-icon>{{ getRuleIcon(rule.typeRegle) }}</mat-icon>
         </div>
-        <span class="status-pill" [class.active]="rule.active">{{ rule.active ? 'Actif' : 'Inactif' }}</span>
+        <div class="header-pills">
+          <span class="status-pill" [class.active]="rule.active">{{ rule.active ? 'Actif' : 'Inactif' }}</span>
+          <span class="action-pill" [ngClass]="'action-' + rule.action">
+            <mat-icon>{{ rule.action === 'bloquer' ? 'block' : 'visibility' }}</mat-icon>
+            {{ rule.action === 'bloquer' ? 'Bloquer' : 'Surveiller' }}
+          </span>
+        </div>
       </div>
 
       <div class="rule-content">

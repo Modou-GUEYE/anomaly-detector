@@ -21,6 +21,7 @@ interface TrackingFilters {
   dateEnd: string;
   severity: string;
   module: string;
+  user: string;
   search: string;
 }
 
@@ -54,6 +55,7 @@ export class TrackingComponent implements OnInit, OnDestroy {
     dateEnd: '',
     severity: '',
     module: '',
+    user: '',
     search: ''
   };
 
@@ -64,6 +66,7 @@ export class TrackingComponent implements OnInit, OnDestroy {
 
   severityOptions = ['succès', 'bloqué', 'échec', 'surveillance'];
   moduleOptions = ['Alertes', 'Blacklist', 'Règles de Contrôle', 'Pays à Risque', 'Comptes'];
+  userOptions: string[] = [];
 
   private apiUrl = '';
   private http = inject(HttpClient);
@@ -116,6 +119,7 @@ export class TrackingComponent implements OnInit, OnDestroy {
           id: item.id || Math.random().toString(36).substr(2, 9),
           timestamp: new Date(item.date_heure || item.created_at || Date.now())
         }));
+        this.userOptions = this.buildUserOptions(this.events);
         this.calculateStats();
         this.applyFilters();
         this.loading = false;
@@ -173,15 +177,30 @@ export class TrackingComponent implements OnInit, OnDestroy {
     this.filteredEvents = this.events.filter(event => {
       if (this.filters.search) {
         const s = this.filters.search.toLowerCase();
-        const match = [event.nom_utilisateur, event.action_effectuee, event.resultat, event.type_action]
+        const match = [event.action_effectuee, this.getEventUser(event)]
           .some(f => f?.toString().toLowerCase().includes(s));
         if (!match) return false;
       }
       if (this.filters.severity && event.resultat !== this.filters.severity) return false;
       if (this.filters.module && event.type_action !== this.filters.module) return false;
+      if (this.filters.user) {
+        const eventUser = this.getEventUser(event);
+        if (eventUser !== this.filters.user) return false;
+      }
       return true;
     });
     this.updatePagination();
+  }
+
+  private getEventUser(event: any): string {
+    return (event.nom_utilisateur || event.userName || '').toString().trim();
+  }
+
+  private buildUserOptions(events: any[]): string[] {
+    return Array.from(new Set(events
+      .map(e => this.getEventUser(e))
+      .filter(name => !!name)))
+      .sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
   }
 
   updatePagination() {
@@ -193,7 +212,6 @@ export class TrackingComponent implements OnInit, OnDestroy {
 
   nextPage() { if (this.currentPage < this.totalPages) { this.currentPage++; this.updatePagination(); } }
   previousPage() { if (this.currentPage > 1) { this.currentPage--; this.updatePagination(); } }
-  refreshData() { this.loadRealData(); }
   selectEvent(event: any) { this.selectedEvent = event; }
   closeEventDetails() { this.selectedEvent = null; }
 

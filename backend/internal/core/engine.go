@@ -267,7 +267,9 @@ func (re *RulesEngine) applyRulesForAccount(ctx context.Context, tx *models.Tran
 			}
 
 			total, _ := re.store.GetTransactionSumForPeriod(ctx, numeroCompte, days)
-			if total >= regle.Seuil {
+			// Inclure le montant de la transaction courante dans le calcul du cumul
+			total += tx.Montant
+			if total > regle.Seuil {
 				violation = true
 			}
 			if violation {
@@ -303,7 +305,9 @@ func (re *RulesEngine) applyRulesForAccount(ctx context.Context, tx *models.Tran
 			}
 
 			count, _ := re.store.GetTransactionCountForPeriod(ctx, numeroCompte, days)
-			if count >= int64(regle.Seuil) {
+			// Inclure la transaction courante dans le comptage
+			count += 1
+			if count > int64(regle.Seuil) {
 				violation = true
 			}
 		}

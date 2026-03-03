@@ -66,9 +66,40 @@ $bg: #f8fafc;
     &.montant { background: rgba($success, 0.1); color: $success; }
     &.pays_risque { background: rgba($danger, 0.1); color: $danger; }
   }
+  .header-pills {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
   .status-pill {
     padding: 3px 8px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; background: #e2e8f0;
     &.active { background: rgba($success, 0.1); color: $success; }
+  }
+  .action-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    white-space: nowrap;
+
+    mat-icon {
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
+    }
+
+    &.action-bloquer {
+      background: rgba($danger, 0.15);
+      color: $danger;
+    }
+
+    &.action-surveiller {
+      background: rgba($primary, 0.15);
+      color: $primary;
+    }
   }
 }
 

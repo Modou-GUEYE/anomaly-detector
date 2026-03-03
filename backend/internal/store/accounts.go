@@ -59,8 +59,9 @@ func (s *Store) GetReglesForCompte(ctx context.Context, numeroCompte string) ([]
 	}
 
 	var regles []models.RegleControle
+	// Récupérer les règles spécifiques au compte ET les règles universelles (tous les clients)
 	err := s.gormDB.WithContext(ctx).
-		Where("profil_client_id = ? AND active = ?", compte.ProfilClientID, true).
+		Where("active = ? AND (profil_client_id = ? OR profil_client_id IS NULL OR profil_client_id = '')", true, compte.ProfilClientID).
 		Find(&regles).Error
 	return regles, err
 }
