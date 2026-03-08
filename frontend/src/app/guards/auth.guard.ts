@@ -33,9 +33,9 @@ export class AuthGuard implements CanActivate {
       return true;
     }
 
-    // Sinon, vérifier directement le localStorage
-    if (typeof window !== 'undefined' && window.localStorage) {
-      const token = localStorage.getItem('token');
+    // Sinon, vérifier directement le sessionStorage
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      const token = sessionStorage.getItem('token');
       if (token) {
         // validate exp claim if present
         try {
@@ -46,13 +46,13 @@ export class AuthGuard implements CanActivate {
               return true;
             }
             // expired -> remove
-            try { localStorage.removeItem('token'); } catch (e) {}
+            try { sessionStorage.removeItem('token'); } catch (e) {}
             return false;
           }
           // no exp claim -> accept
           return true;
         } catch (e) {
-          try { localStorage.removeItem('token'); } catch (e) {}
+          try { sessionStorage.removeItem('token'); } catch (e) {}
           return false;
         }
       }

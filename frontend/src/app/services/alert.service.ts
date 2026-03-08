@@ -58,8 +58,8 @@ export class AlertService {
    */
   private getAuthHeaders(): HttpHeaders {
     let headers = new HttpHeaders();
-    if (typeof window !== 'undefined' && window.localStorage) {
-      const token = localStorage.getItem('token');
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      const token = sessionStorage.getItem('token');
       if (token) {
         headers = headers.set('Authorization', `Bearer ${token}`);
       }

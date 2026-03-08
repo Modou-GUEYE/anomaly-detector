@@ -22,8 +22,8 @@ export class BlacklistService {
 
   private getHeaders() {
     let token = '';
-    if (typeof window !== 'undefined' && window.localStorage) {
-      token = localStorage.getItem('token') || '';
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      token = sessionStorage.getItem('token') || '';
     }
     return new HttpHeaders({
       'Authorization': `Bearer ${token}`,
