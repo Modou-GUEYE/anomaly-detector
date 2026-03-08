@@ -13,6 +13,8 @@ build_and_push_backend:
   image: docker:24
   services:
     - docker:24-dind
+  tags:
+    - docker
   variables:
     DOCKER_TLS_CERTDIR: ""
     DOCKER_DRIVER: overlay2
@@ -33,6 +35,8 @@ build_and_push_frontend:
   image: docker:24
   services:
     - docker:24-dind
+  tags:
+    - docker
   variables:
     DOCKER_TLS_CERTDIR: ""
     DOCKER_DRIVER: overlay2
