@@ -5,7 +5,6 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http';
 import { Subject, Observable, of } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged, catchError } from 'rxjs/operators';
-import * as XLSX from 'xlsx';
 import { MatIconModule } from '@angular/material/icon';
 
 interface TrackingStats {
@@ -229,53 +228,7 @@ export class TrackingComponent implements OnInit, OnDestroy {
   }
 
   private exportToExcel() {
-    try {
-      // Préparation des données au format tableau
-      const dataToExport = this.filteredEvents.map(event => ({
-        'Horodatage': this.formatDate(event['date_heure'] || event['timestamp']),
-        'Heure': this.formatTime(event['date_heure'] || event['timestamp']),
-        'Action / Type': event['type_action'] || 'N/A',
-        'Utilisateur': event['nom_utilisateur'] || event['userName'] || 'N/A',
-        'Rôle': event['role'] || 'N/A',
-        'Événement': event['action_effectuee'] || event['eventType'] || 'N/A',
-        'Résultat': event['resultat'] || 'N/A',
-        'ID Log': event['id'] || 'N/A',
-        'Entity ID': event['entity_id'] || 'N/A'
-      }));
-
-      // Création du workbook et worksheet
-      const worksheet = XLSX.utils.json_to_sheet(dataToExport, {
-        header: ['Horodatage', 'Heure', 'Action / Type', 'Utilisateur', 'Rôle', 'Événement', 'Résultat', 'ID Log', 'Entity ID']
-      });
-
-      // Ajustement des largeurs de colonnes
-      const columnWidths = [
-        { wch: 12 },  // Horodatage
-        { wch: 10 },  // Heure
-        { wch: 20 },  // Action / Type
-        { wch: 20 },  // Utilisateur
-        { wch: 15 },  // Rôle
-        { wch: 30 },  // Événement
-        { wch: 12 },  // Résultat
-        { wch: 15 },  // ID Log
-        { wch: 15 }   // Entity ID
-      ];
-      worksheet['!cols'] = columnWidths;
-
-      // Création du workbook
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Audit');
-
-      // Génération du nom du fichier avec la date
-      const now = new Date();
-      const fileName = `audit_export_${now.toISOString().split('T')[0]}_${now.getTime()}.xlsx`;
-
-      // Téléchargement du fichier
-      XLSX.writeFile(workbook, fileName);
-    } catch (error) {
-      console.error('Erreur lors de l\'export Excel:', error);
-      alert('Une erreur est survenue lors de l\'export. Veuillez vérifier la console.');
-    }
+    this.exportToCSV();
   }
 
   private exportToCSV() {

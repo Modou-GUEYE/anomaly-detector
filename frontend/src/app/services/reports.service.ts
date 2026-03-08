@@ -3,7 +3,6 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, forkJoin } from 'rxjs';
 import { map, tap, switchMap } from 'rxjs/operators';
 import jsPDF from 'jspdf';
-import * as XLSX from 'xlsx';
 
 export interface Report {
   id?: string;
@@ -260,21 +259,51 @@ export class ReportsService {
   }
 
   exportToExcel(report: Report): void {
-    const workbook = XLSX.utils.book_new();
-    
-    // Feuille de résumé
-    this.addExcelSummarySheet(workbook, report);
-    
-    // Feuille des anomalies
-    this.addExcelAnomaliesSheet(workbook, report);
-    
-    // Feuille des risques
-    this.addExcelRisksSheet(workbook, report);
-    
-    // Feuille des données brutes
-    this.addExcelRawDataSheet(workbook, report);
-    
-    XLSX.writeFile(workbook, `${report.template_name}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    const lines: string[] = [];
+    lines.push(`Rapport;${this.escapeCsvField(report.template_name)}`);
+    lines.push(`Date de génération;${this.escapeCsvField(report.generated_at.toLocaleDateString('fr-FR'))}`);
+    lines.push(`Statut;${this.escapeCsvField(report.status)}`);
+    lines.push(`Total anomalies;${report.total_anomalies}`);
+    lines.push(`Total transactions;${report.total_transactions}`);
+    lines.push('');
+
+    lines.push('Anomalies par type;Nombre');
+    Object.entries(report.anomalies_by_type).forEach(([type, count]) => {
+      lines.push(`${this.escapeCsvField(type)};${count}`);
+    });
+    lines.push('');
+
+    lines.push('Type risque;Sévérité;Message;Nombre');
+    report.top_risks.forEach(risk => {
+      lines.push([
+        this.escapeCsvField(risk.type),
+        this.escapeCsvField(risk.severity),
+        this.escapeCsvField(risk.message),
+        String(risk.count)
+      ].join(';'));
+    });
+    lines.push('');
+
+    if (report.raw_data.anomalies.length > 0) {
+      lines.push('Données brutes anomalies');
+      const keys = Object.keys(report.raw_data.anomalies[0]);
+      lines.push(keys.map(k => this.escapeCsvField(k)).join(';'));
+      report.raw_data.anomalies.forEach((row: any) => {
+        lines.push(keys.map(k => this.escapeCsvField(String(row?.[k] ?? ''))).join(';'));
+      });
+    }
+
+    const csvContent = '\ufeff' + lines.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const fileName = `${report.template_name}_${new Date().toISOString().split('T')[0]}.csv`;
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
   }
 
   private addPDFHeader(doc: jsPDF, report: Report): void {
@@ -409,44 +438,11 @@ export class ReportsService {
     }
   }
 
-  private addExcelSummarySheet(workbook: any, report: Report): void {
-    const summaryData = [
-      ['Rapport', report.template_name],
-      ['Date de génération', report.generated_at.toLocaleDateString('fr-FR')],
-      ['Statut', report.status],
-      ['Total Anomalies', report.total_anomalies],
-      ['Total Transactions', report.total_transactions]
-    ];
-    
-    const ws = XLSX.utils.aoa_to_sheet(summaryData);
-    XLSX.utils.book_append_sheet(workbook, ws, 'Résumé');
-  }
-
-  private addExcelAnomaliesSheet(workbook: any, report: Report): void {
-    const anomaliesData = [['Type', 'Nombre d\'occurrences']];
-    Object.entries(report.anomalies_by_type).forEach(([type, count]) => {
-      anomaliesData.push([type, count.toString()]);
-    });
-    
-    const ws = XLSX.utils.aoa_to_sheet(anomaliesData);
-    XLSX.utils.book_append_sheet(workbook, ws, 'Anomalies');
-  }
-
-  private addExcelRisksSheet(workbook: any, report: Report): void {
-    const risksData = [['Type', 'Sévérité', 'Message', 'Nombre']];
-    report.top_risks.forEach(risk => {
-      risksData.push([risk.type, risk.severity, risk.message, risk.count.toString()]);
-    });
-    
-    const ws = XLSX.utils.aoa_to_sheet(risksData);
-    XLSX.utils.book_append_sheet(workbook, ws, 'Risques');
-  }
-
-  private addExcelRawDataSheet(workbook: any, report: Report): void {
-    if (report.raw_data.anomalies.length > 0) {
-      const ws = XLSX.utils.json_to_sheet(report.raw_data.anomalies);
-      XLSX.utils.book_append_sheet(workbook, ws, 'Données Brutes');
+  private escapeCsvField(value: string): string {
+    if (value.includes(';') || value.includes('\n') || value.includes('"')) {
+      return `"${value.replace(/"/g, '""')}"`;
     }
+    return value;
   }
 
   /**

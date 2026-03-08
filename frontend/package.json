@@ -42,7 +42,6 @@
     "ng2-charts": "^4.1.1",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
-    "xlsx": "^0.18.5",
     "zone.js": "~0.15.0"
   },
   "devDependencies": {
@@ -52,7 +51,6 @@
     "@types/express": "^5.0.1",
     "@types/jasmine": "~5.1.0",
     "@types/node": "^20.19.21",
-    "@types/xlsx": "^0.0.35",
     "baseline-browser-mapping": "^2.10.0",
     "jasmine-core": "~5.9.0",
     "karma": "~6.4.0",
