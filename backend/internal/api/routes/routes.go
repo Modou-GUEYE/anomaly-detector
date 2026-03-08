@@ -688,8 +688,6 @@ func setupUserRoutes(apiV1 *gin.RouterGroup, store *store.Store) {
 
 		// Mise à jour du profil de l'utilisateur connecté (nomUtilisateur, email, password)
 		userRoutes.PUT("", func(ctx *gin.Context) {
-			log.Printf("PUT /api/v1/profile called - Authorization header present: %v", ctx.GetHeader("Authorization") != "")
-
 			userID, _ := ctx.Get("userID")
 			var req struct {
 				NomUtilisateur *string `json:"nomUtilisateur" binding:"omitempty"`
