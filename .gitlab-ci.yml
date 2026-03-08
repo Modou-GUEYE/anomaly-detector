@@ -1,7 +1,5 @@
 # GitLab CI pipeline to build and push backend and frontend Docker images
-# Expects the following CI variables to be set in the project/group settings:
-# - CI_REGISTRY_USER (usually $CI_REGISTRY_USER provided by GitLab)
-# - CI_REGISTRY_PASSWORD (a Personal Access Token or Deploy Token with write_registry)
+# Uses GitLab's built-in registry with auto-provided credentials
 
 variables:
   IMAGE_REGISTRY_HOST: "$CI_REGISTRY"
@@ -10,22 +8,18 @@ variables:
 
 stages:
   - build
-  - publish
 
-.dind: &dind
+build_and_push_backend:
   image: docker:24
   services:
     - docker:24-dind
   variables:
     DOCKER_TLS_CERTDIR: ""
-
-before_script:
-  - echo "Logging in to registry ${IMAGE_REGISTRY_HOST}"
-  - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
-
-build_and_push_backend:
-  <<: *dind
   stage: build
+  before_script:
+    - echo "Registry: ${IMAGE_REGISTRY_HOST}"
+    - echo "Namespace: ${IMAGE_REGISTRY_NS}"
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
   script:
     - docker build -t ${IMAGE_REGISTRY_HOST}/${IMAGE_REGISTRY_NS}/anomaly-api:${IMAGE_TAG} ./backend
     - docker push ${IMAGE_REGISTRY_HOST}/${IMAGE_REGISTRY_NS}/anomaly-api:${IMAGE_TAG}
@@ -34,8 +28,16 @@ build_and_push_backend:
     - tags
 
 build_and_push_frontend:
-  <<: *dind
+  image: docker:24
+  services:
+    - docker:24-dind
+  variables:
+    DOCKER_TLS_CERTDIR: ""
   stage: build
+  before_script:
+    - echo "Registry: ${IMAGE_REGISTRY_HOST}"
+    - echo "Namespace: ${IMAGE_REGISTRY_NS}"
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
   script:
     - docker build -t ${IMAGE_REGISTRY_HOST}/${IMAGE_REGISTRY_NS}/anomaly-frontend:${IMAGE_TAG} ./frontend
     - docker push ${IMAGE_REGISTRY_HOST}/${IMAGE_REGISTRY_NS}/anomaly-frontend:${IMAGE_TAG}
