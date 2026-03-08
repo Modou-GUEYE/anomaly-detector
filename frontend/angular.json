@@ -34,7 +34,12 @@
               "src/styles.scss"
             ],
             "allowedCommonJsDependencies": [
-              "i18n-iso-countries"
+              "i18n-iso-countries",
+              "canvg",
+              "core-js",
+              "html2canvas",
+              "raf",
+              "rgbcolor"
             ]
           },
           "configurations": {
@@ -42,7 +47,7 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "800kB",
+                  "maximumWarning": "2MB",
                   "maximumError": "3MB"
                 }
               ],
