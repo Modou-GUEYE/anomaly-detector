@@ -16,14 +16,14 @@ export interface EntiteBlacklist {
   providedIn: 'root'
 })
 export class BlacklistService {
-  private apiUrl = '/api/v1/entities';
+  private readonly apiUrl = '/api/v1/entities';
 
-  constructor(private http: HttpClient) {}
+  constructor(private readonly http: HttpClient) {}
 
   private getHeaders() {
     let token = '';
-    if (typeof window !== 'undefined' && window.sessionStorage) {
-      token = sessionStorage.getItem('token') || '';
+    if (globalThis.window?.sessionStorage) {
+      token = globalThis.window.sessionStorage.getItem('token') || '';
     }
     return new HttpHeaders({
       'Authorization': `Bearer ${token}`,

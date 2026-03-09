@@ -72,13 +72,13 @@ export class ControlRulesComponent implements OnInit {
   };
 
   constructor(
-    private controlRulesService: ControlRulesService, 
-    private authService: AuthService, 
-    private config: ConfigService
+    private readonly controlRulesService: ControlRulesService,
+    private readonly authService: AuthService,
+    private readonly config: ConfigService
   ) {}
 
   ngOnInit(): void {
-    if (typeof window === 'undefined') return;
+    if (globalThis.window === undefined) return;
     this.isAdmin = this.authService.isAdmin();
     this.loadProfilsClient();
     this.loadRules();
@@ -98,7 +98,7 @@ export class ControlRulesComponent implements OnInit {
     this.controlRulesService.getRules().subscribe({
       next: (data: any) => {
         this.rules = Array.isArray(data) ? data : (data.rules || []);
-        this.ruleTypes = [...this.predefinedRuleTypes].sort();
+        this.ruleTypes = [...this.predefinedRuleTypes].sort((left, right) => left.localeCompare(right));
         this.loading = false;
       },
       error: () => {
@@ -219,7 +219,12 @@ export class ControlRulesComponent implements OnInit {
   showAccessDenied() { this.showAccessDeniedModal = true; }
   closeAccessDeniedModal() { this.showAccessDeniedModal = false; }
   getProfilName(id?: string) { return this.profils.find(p => p.id === id)?.label || 'Tous'; }
-  getPeriodLabel(p?: string) { return p === '24h' ? '24h' : p === '7d' ? '7 jours' : p === '30d' ? '30 jours' : p; }
+  getPeriodLabel(p?: string) {
+    if (p === '24h') return '24h';
+    if (p === '7d') return '7 jours';
+    if (p === '30d') return '30 jours';
+    return p;
+  }
   editRule(rule: ControlRule) { this.openEditRuleModal(rule); }
 
   markFieldTouched(field: string): void {
@@ -255,54 +260,63 @@ export class ControlRulesComponent implements OnInit {
   }
 
   private validateField(field: string): void {
-    switch (field) {
-      case 'nomRegle':
-        if (!this.formData.nomRegle.trim()) {
-          this.formErrors['nomRegle'] = 'Le nom de la règle est obligatoire.';
-        } else if (this.formData.nomRegle.trim().length < 3) {
-          this.formErrors['nomRegle'] = 'Le nom de la règle doit contenir au moins 3 caractères.';
-        } else {
-          this.formErrors['nomRegle'] = '';
-        }
-        break;
+    const validators: Record<string, () => string> = {
+      nomRegle: () => this.getNomRegleError(),
+      description: () => this.getDescriptionError(),
+      typeRegle: () => this.getTypeRegleError(),
+      seuil: () => this.getSeuilError(),
+      periodeReference: () => this.getPeriodeReferenceError(),
+      action: () => this.getActionError()
+    };
 
-      case 'description':
-        if (!this.formData.description.trim()) {
-          this.formErrors['description'] = 'La description est obligatoire.';
-        } else if (this.formData.description.trim().length < 10) {
-          this.formErrors['description'] = 'La description doit contenir au moins 10 caractères.';
-        } else {
-          this.formErrors['description'] = '';
-        }
-        break;
-
-      case 'typeRegle':
-        this.formErrors['typeRegle'] = this.formData.typeRegle ? '' : 'Le type de règle est obligatoire.';
-        break;
-
-      case 'seuil':
-        if ((this.formData.typeRegle === 'montant' || this.formData.typeRegle === 'frequence') && Number(this.formData.seuil) <= 0) {
-          this.formErrors['seuil'] = 'La valeur seuil doit être supérieure à 0.';
-        } else {
-          this.formErrors['seuil'] = '';
-        }
-        break;
-
-      case 'periodeReference':
-        if (this.formData.typeRegle !== 'pays_risque' && !this.formData.periodeReference) {
-          this.formErrors['periodeReference'] = 'La période est obligatoire.';
-        } else {
-          this.formErrors['periodeReference'] = '';
-        }
-        break;
-
-      case 'action':
-        this.formErrors['action'] = this.formData.action ? '' : 'L\'action est obligatoire.';
-        break;
-
-      default:
-        break;
+    const validate = validators[field];
+    if (validate) {
+      this.formErrors[field] = validate();
     }
+  }
+
+  private getNomRegleError(): string {
+    const nomRegle = this.formData.nomRegle.trim();
+    if (!nomRegle) {
+      return 'Le nom de la règle est obligatoire.';
+    }
+    if (nomRegle.length < 3) {
+      return 'Le nom de la règle doit contenir au moins 3 caractères.';
+    }
+    return '';
+  }
+
+  private getDescriptionError(): string {
+    const description = this.formData.description.trim();
+    if (!description) {
+      return 'La description est obligatoire.';
+    }
+    if (description.length < 10) {
+      return 'La description doit contenir au moins 10 caractères.';
+    }
+    return '';
+  }
+
+  private getTypeRegleError(): string {
+    return this.formData.typeRegle ? '' : 'Le type de règle est obligatoire.';
+  }
+
+  private getSeuilError(): string {
+    if ((this.formData.typeRegle === 'montant' || this.formData.typeRegle === 'frequence') && Number(this.formData.seuil) <= 0) {
+      return 'La valeur seuil doit être supérieure à 0.';
+    }
+    return '';
+  }
+
+  private getPeriodeReferenceError(): string {
+    if (this.formData.typeRegle !== 'pays_risque' && !this.formData.periodeReference) {
+      return 'La période est obligatoire.';
+    }
+    return '';
+  }
+
+  private getActionError(): string {
+    return this.formData.action ? '' : 'L\'action est obligatoire.';
   }
 
   private resetValidation(): void {

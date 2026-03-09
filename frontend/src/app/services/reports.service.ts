@@ -68,9 +68,9 @@ export interface EfficiencyData {
   providedIn: 'root'
 })
 export class ReportsService {
-  private apiUrl = ''; 
+  private readonly apiUrl = ''; 
 
-  private templates: ReportTemplate[] = [
+  private readonly templates: ReportTemplate[] = [
     {
       id: 'security-daily',
       name: 'Rapport de Sécurité Quotidien',
@@ -97,7 +97,7 @@ export class ReportsService {
     }
   ];
 
-  constructor(private http: HttpClient) {}
+  constructor(private readonly http: HttpClient) {}
 
   private getSystemToken(): Observable<string> {
     const systemRequest = {
@@ -231,7 +231,7 @@ export class ReportsService {
   }
 
   private generateReportId(): string {
-    return `RPT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `RPT-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
   }
 
   exportToPDF(report: Report): void {
@@ -259,21 +259,19 @@ export class ReportsService {
   }
 
   exportToExcel(report: Report): void {
-    const lines: string[] = [];
-    lines.push(`Rapport;${this.escapeCsvField(report.template_name)}`);
-    lines.push(`Date de génération;${this.escapeCsvField(report.generated_at.toLocaleDateString('fr-FR'))}`);
-    lines.push(`Statut;${this.escapeCsvField(report.status)}`);
-    lines.push(`Total anomalies;${report.total_anomalies}`);
-    lines.push(`Total transactions;${report.total_transactions}`);
-    lines.push('');
-
-    lines.push('Anomalies par type;Nombre');
+    const lines: string[] = [
+      `Rapport;${this.escapeCsvField(report.template_name)}`,
+      `Date de génération;${this.escapeCsvField(report.generated_at.toLocaleDateString('fr-FR'))}`,
+      `Statut;${this.escapeCsvField(report.status)}`,
+      `Total anomalies;${report.total_anomalies}`,
+      `Total transactions;${report.total_transactions}`,
+      '',
+      'Anomalies par type;Nombre'
+    ];
     Object.entries(report.anomalies_by_type).forEach(([type, count]) => {
       lines.push(`${this.escapeCsvField(type)};${count}`);
     });
-    lines.push('');
-
-    lines.push('Type risque;Sévérité;Message;Nombre');
+    lines.push('', 'Type risque;Sévérité;Message;Nombre');
     report.top_risks.forEach(risk => {
       lines.push([
         this.escapeCsvField(risk.type),
@@ -296,14 +294,14 @@ export class ReportsService {
     const csvContent = '\ufeff' + lines.join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const fileName = `${report.template_name}_${new Date().toISOString().split('T')[0]}.csv`;
-    const url = window.URL.createObjectURL(blob);
+    const url = globalThis.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.download = fileName;
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    link.remove();
+    globalThis.URL.revokeObjectURL(url);
   }
 
   private addPDFHeader(doc: jsPDF, report: Report): void {
@@ -395,9 +393,12 @@ export class ReportsService {
     
     report.top_risks.forEach((risk, index) => {
       // Couleur selon la sévérité
-      const severityColor = risk.severity === 'CRITICAL' ? [255, 0, 0] :
-                           risk.severity === 'HIGH' ? [255, 140, 0] :
-                           [255, 193, 7];
+      let severityColor: [number, number, number] = [255, 193, 7];
+      if (risk.severity === 'CRITICAL') {
+        severityColor = [255, 0, 0];
+      } else if (risk.severity === 'HIGH') {
+        severityColor = [255, 140, 0];
+      }
       
       doc.setTextColor(46, 108, 242);
       doc.text(`${index + 1}.`, 20, yPosition);
@@ -440,7 +441,7 @@ export class ReportsService {
 
   private escapeCsvField(value: string): string {
     if (value.includes(';') || value.includes('\n') || value.includes('"')) {
-      return `"${value.replace(/"/g, '""')}"`;
+      return `"${value.replaceAll('"', '""')}"`;
     }
     return value;
   }

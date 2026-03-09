@@ -10,16 +10,16 @@
   <div class="filter-card">
     <div class="filters-side">
       <div class="filter-control search-control">
-        <label>Recherche</label>
+        <label for="users-search">Recherche</label>
         <div class="search-wrapper">
           <mat-icon>search</mat-icon>
-          <input type="text" placeholder="Rechercher..." [(ngModel)]="filterText">
+          <input id="users-search" type="text" placeholder="Rechercher..." [(ngModel)]="filterText">
         </div>
       </div>
 
       <div class="filter-control">
-        <label>Rôle</label>
-        <select [(ngModel)]="filterRole">
+        <label for="users-role">Rôle</label>
+        <select id="users-role" [(ngModel)]="filterRole">
           <option value="all">Tous les rôles</option>
           @for (r of roles; track r.value) {
             <option [value]="r.value">{{ r.label }}</option>
@@ -28,8 +28,8 @@
       </div>
 
       <div class="filter-control">
-        <label>Statut</label>
-        <select [(ngModel)]="filterActif">
+        <label for="users-status">Statut</label>
+        <select id="users-status" [(ngModel)]="filterActif">
           <option value="all">Tous les statuts</option>
           <option value="actif">Actifs</option>
           <option value="inactif">Inactifs</option>
@@ -81,8 +81,8 @@
   </div>
 
   @if (showModal) {
-    <div class="modal-backdrop" (click)="closeModal()">
-      <div class="modal-box creation-dialog" (click)="$event.stopPropagation()">
+    <div class="modal-backdrop" (click)="closeModal()" (keydown.enter)="closeModal()" (keydown.space)="closeModal(); $event.preventDefault()" (keydown.escape)="closeModal()">
+      <div class="modal-box creation-dialog" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
         <div class="modal-head">
           <div class="title-with-icon">
             <div class="icon-bg"><mat-icon>{{ editingUser ? 'edit' : 'person_add' }}</mat-icon></div>
@@ -100,30 +100,30 @@
             
             <div class="form-grid">
               <div class="form-field">
-                <label>Nom d'utilisateur</label>
+                <label for="user-name">Nom d'utilisateur</label>
                 <div class="input-wrapper">
                   <mat-icon>person</mat-icon>
-                  <input type="text" name="nom" [(ngModel)]="nomUtilisateur" (blur)="markFieldTouched('nomUtilisateur')" (ngModelChange)="onFieldChange('nomUtilisateur')" placeholder="Ex: Jean Dupont" required>
+                  <input id="user-name" type="text" name="nom" [(ngModel)]="nomUtilisateur" (blur)="markFieldTouched('nomUtilisateur')" (ngModelChange)="onFieldChange('nomUtilisateur')" placeholder="Ex: Jean Dupont" required>
                 </div>
                 @if (shouldShowFieldError('nomUtilisateur')) {
                   <small class="field-error">{{ formErrors['nomUtilisateur'] }}</small>
                 }
               </div>
               <div class="form-field">
-                <label>Adresse Email</label>
+                <label for="user-email">Adresse Email</label>
                 <div class="input-wrapper">
                   <mat-icon>alternate_email</mat-icon>
-                  <input type="email" name="email" [(ngModel)]="email" (blur)="markFieldTouched('email')" (ngModelChange)="onFieldChange('email')" placeholder="email@domaine.com" required>
+                  <input id="user-email" type="email" name="email" [(ngModel)]="email" (blur)="markFieldTouched('email')" (ngModelChange)="onFieldChange('email')" placeholder="email@domaine.com" required>
                 </div>
                 @if (shouldShowFieldError('email')) {
                   <small class="field-error">{{ formErrors['email'] }}</small>
                 }
               </div>
               <div class="form-field">
-                <label>Rôle assigné</label>
+                <label for="user-assigned-role">Rôle assigné</label>
                 <div class="input-wrapper">
                   <mat-icon>admin_panel_settings</mat-icon>
-                  <select name="role" [(ngModel)]="role" (blur)="markFieldTouched('role')" (ngModelChange)="onFieldChange('role')">
+                  <select id="user-assigned-role" name="role" [(ngModel)]="role" (blur)="markFieldTouched('role')" (ngModelChange)="onFieldChange('role')">
                     @for (r of roles; track r.value) {
                       <option [value]="r.value">{{ r.label }}</option>
                     }
@@ -155,8 +155,8 @@
   }
 
   @if (showDeleteModal) {
-    <div class="modal-backdrop" (click)="showDeleteModal = false">
-      <div class="modal-box delete-modal" (click)="$event.stopPropagation()">
+    <div class="modal-backdrop" (click)="showDeleteModal = false" (keydown.enter)="showDeleteModal = false" (keydown.space)="showDeleteModal = false; $event.preventDefault()" (keydown.escape)="showDeleteModal = false">
+      <div class="modal-box delete-modal" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
         <div class="delete-header">
           <div class="delete-icon" [class.blocked]="deleteBlocked">
             <mat-icon>{{ deleteBlocked ? 'lock' : 'delete' }}</mat-icon>

@@ -6,60 +6,75 @@ import { jwtDecode } from 'jwt-decode';
 @Injectable({ providedIn: 'root' })
 export class AuthGuard implements CanActivate {
   constructor(
-    private router: Router,
-    private authStateService: AuthStateService
+    private readonly router: Router,
+    private readonly authStateService: AuthStateService
   ) {}
 
   async canActivate(): Promise<boolean> {
-    // Vérifier qu'on est côté client
-    if (typeof window === 'undefined') {
+    if (!this.isBrowser()) {
       return true;
     }
 
-    // Attendre que l'initialisation soit complète
-    if (!this.authStateService.isInitialized()) {
-      await new Promise(resolve => {
-        const interval = setInterval(() => {
-          if (this.authStateService.isInitialized()) {
-            clearInterval(interval);
-            resolve(true);
-          }
-        }, 50);
-      });
-    }
+    await this.waitForInitialization();
 
-    // Vérifier d'abord le signal
     if (this.authStateService.isAuthenticated()) {
       return true;
     }
 
-    // Sinon, vérifier directement le sessionStorage
-    if (typeof window !== 'undefined' && window.sessionStorage) {
-      const token = sessionStorage.getItem('token');
-      if (token) {
-        // validate exp claim if present
-        try {
-          const decoded: any = jwtDecode(token);
-          if (decoded && decoded.exp) {
-            const now = Math.floor(Date.now() / 1000);
-            if (decoded.exp > now) {
-              return true;
-            }
-            // expired -> remove
-            try { sessionStorage.removeItem('token'); } catch (e) {}
-            return false;
-          }
-          // no exp claim -> accept
-          return true;
-        } catch (e) {
-          try { sessionStorage.removeItem('token'); } catch (e) {}
-          return false;
-        }
-      }
+    const token = this.getSessionToken();
+    if (token && this.hasValidToken(token)) {
+      return true;
     }
 
     this.router.navigate(['/login']);
     return false;
+  }
+
+  private isBrowser(): boolean {
+    return globalThis.window !== undefined;
+  }
+
+  private async waitForInitialization(): Promise<void> {
+    if (this.authStateService.isInitialized()) {
+      return;
+    }
+
+    await new Promise<void>((resolve) => {
+      const interval = setInterval(() => {
+        if (this.authStateService.isInitialized()) {
+          clearInterval(interval);
+          resolve();
+        }
+      }, 50);
+    });
+  }
+
+  private getSessionToken(): string | null {
+    return globalThis.window?.sessionStorage?.getItem('token') ?? null;
+  }
+
+  private clearSessionToken(): void {
+    if (globalThis.window?.sessionStorage) {
+      globalThis.window.sessionStorage.removeItem('token');
+    }
+  }
+
+  private hasValidToken(token: string): boolean {
+    try {
+      const decoded: { exp?: number } = jwtDecode(token);
+      if (decoded?.exp) {
+        const now = Math.floor(Date.now() / 1000);
+        if (decoded.exp > now) {
+          return true;
+        }
+        this.clearSessionToken();
+        return false;
+      }
+      return true;
+    } catch {
+      this.clearSessionToken();
+      return false;
+    }
   }
 }
 

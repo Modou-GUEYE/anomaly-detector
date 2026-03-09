@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
 
 export interface Account {
   id: string;
@@ -38,12 +37,12 @@ export interface PaysRisque {
 
 @Injectable({ providedIn: 'root' })
 export class ProfileService {
-  private apiUrl = '/api/v1/accounts';
-  private profileUrl = '/api/v1/profile';
-  private suiviUrl = '/api/v1/suivi-blacklist';
-  private paysRisqueUrl = '/api/v1/pays-risque';
+  private readonly apiUrl = '/api/v1/accounts';
+  private readonly profileUrl = '/api/v1/profile';
+  private readonly suiviUrl = '/api/v1/suivi-blacklist';
+  private readonly paysRisqueUrl = '/api/v1/pays-risque';
 
-  constructor(private http: HttpClient) {}
+  constructor(private readonly http: HttpClient) {}
 
   getProfile(): Observable<any> {
     return this.http.get(this.profileUrl);
@@ -78,7 +77,7 @@ export class ProfileService {
 
   // Ajouter un pays à risque (code OBLIGATOIRE)
   createPaysARisque(nomPays: string, code: string): Observable<any> {
-    if (!code || code.trim().length !== 2) {
+    if (code?.trim().length !== 2) {
       throw new Error('Le code pays ISO alpha-2 est obligatoire (2 caractères)');
     }
     const payload = {
@@ -95,7 +94,7 @@ export class ProfileService {
 
   // Mettre à jour un pays à risque (code OBLIGATOIRE)
   updatePaysARisque(ancienNom: string, nouveauNom: string, code: string): Observable<any> {
-    if (!code || code.trim().length !== 2) {
+    if (code?.trim().length !== 2) {
       throw new Error('Le code pays ISO alpha-2 est obligatoire (2 caractères)');
     }
     const payload = {

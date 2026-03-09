@@ -26,7 +26,7 @@ interface GroupedAlert {
 // Fonction utilitaire pour normaliser les chaînes (sans accents, minuscule)
 function normalizeStr(str: string): string {
   if (!str) return '';
-  return str.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+  return str.normalize('NFD').replaceAll(/\p{Diacritic}/gu, '').toLowerCase();
 }
 
 @Component({
@@ -83,18 +83,22 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   ];
 
   constructor(
-    private transactionService: TransactionService, 
-    private dashboardService: DashboardService
+    private readonly transactionService: TransactionService,
+    private readonly dashboardService: DashboardService
   ) {}
 
   ngOnInit() {
-    if (typeof window !== 'undefined') {
+    if (globalThis.window !== undefined) {
       this.loadTransactions();
     }
   }
 
   ngOnDestroy() {
-    // Nettoyage si nécessaire
+    this.expandedRowId = null;
+    this.showDetailsModal = false;
+    this.detailsTransaction = null;
+    this.groupedAlertes.clear();
+    this.modalGroupedAlertes.clear();
   }
 
   loadTransactions() {
@@ -283,7 +287,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
       
       const grouped = this.groupedAlertes.get(key);
       if (grouped && alerte.dateGeneration) {
-        (grouped.dates as string[]).push(alerte.dateGeneration);
+        grouped.dates.push(alerte.dateGeneration);
       }
     }
   }
@@ -298,7 +302,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     if (!dateStr) return '';
     
     const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
-    if (isNaN(date.getTime())) return '';
+    if (Number.isNaN(date.getTime())) return '';
 
     const options: Intl.DateTimeFormatOptions = {
       year: 'numeric',
@@ -318,7 +322,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     if (!dateStr) return '';
     
     const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
-    if (isNaN(date.getTime())) return '';
+    if (Number.isNaN(date.getTime())) return '';
 
     const options: Intl.DateTimeFormatOptions = {
       year: 'numeric',
@@ -349,7 +353,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     const alertesTransaction = this.alertes.filter(a => a.transactionId === tx.id);
     
     const isBlocked = alertesTransaction.some(a => 
-      (a.action && a.action.toLowerCase() === 'bloquer') || a.type === 'Interdit'
+      (a.action?.toLowerCase() === 'bloquer') || a.type === 'Interdit'
     );
     
     return isBlocked ? 'Échec' : 'Succès';
@@ -418,7 +422,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
       
       const grouped = this.modalGroupedAlertes.get(key);
       if (grouped && alerte.dateGeneration) {
-        (grouped.dates as string[]).push(alerte.dateGeneration);
+        grouped.dates.push(alerte.dateGeneration);
       }
     }
   }

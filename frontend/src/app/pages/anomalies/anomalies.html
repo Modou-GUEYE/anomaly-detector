@@ -9,16 +9,16 @@
       <div class="toolbar-card">
         <div class="filters-side">
           <div class="filter-control search-control">
-            <label>Recherche</label>
+            <label for="anomaly-search">Recherche</label>
             <div class="search-wrapper">
               <mat-icon>search</mat-icon>
-              <input type="text" placeholder="Type ou code..." [(ngModel)]="filters.search" (ngModelChange)="applyFilters()">
+              <input id="anomaly-search" type="text" placeholder="Type ou code..." [(ngModel)]="filters.search" (ngModelChange)="applyFilters()">
             </div>
           </div>
 
           <div class="filter-control">
-            <label>Type</label>
-            <select [(ngModel)]="filters.type" (change)="applyFilters()">
+            <label for="anomaly-type">Type</label>
+            <select id="anomaly-type" [(ngModel)]="filters.type" (change)="applyFilters()">
               <option value="">Tous les types</option>
               <option value="Montant">Montant</option>
               <option value="frequence">Fréquence</option>
@@ -31,16 +31,16 @@
           </div>
 
           <div class="filter-control">
-            <label>Niveau</label>
-            <select [(ngModel)]="filters.severite" (change)="applyFilters()">
+            <label for="anomaly-level">Niveau</label>
+            <select id="anomaly-level" [(ngModel)]="filters.severite" (change)="applyFilters()">
               <option value="">Tous les niveaux</option>
               <option *ngFor="let s of severityOptions" [value]="s">{{ s }}</option>
             </select>
           </div>
 
           <div class="filter-control">
-            <label>Statut</label>
-            <select [(ngModel)]="filters.statut" (change)="applyFilters()">
+            <label for="anomaly-status">Statut</label>
+            <select id="anomaly-status" [(ngModel)]="filters.statut" (change)="applyFilters()">
               <option value="">Tous les statuts</option>
               <option value="Traité">Traité</option>
               <option value="En cours">En cours</option>
@@ -67,7 +67,7 @@
       </thead>
       <tbody>
         <ng-container *ngFor="let anomaly of paginatedAnomalies">
-          <tr class="row-clickable" (click)="openDetailsModal(anomaly)" title="Details">
+          <tr class="row-clickable" (click)="openDetailsModal(anomaly)" (keydown.enter)="openDetailsModal(anomaly)" (keydown.space)="openDetailsModal(anomaly); $event.preventDefault()" title="Details">
             <td class="col-code">{{ anomaly.code }}</td>
             <td class="col-type">{{ anomaly.type }}</td>
             <td class="col-severite">
@@ -100,31 +100,31 @@
   </footer>
 </section>
 
-<div *ngIf="showDetailsModal" class="modal-overlay" (click)="closeDetailsModal()">
-  <div class="modal-panel" (click)="$event.stopPropagation()">
+<div *ngIf="showDetailsModal" class="modal-overlay" (click)="closeDetailsModal()" (keydown.enter)="closeDetailsModal()" (keydown.space)="closeDetailsModal(); $event.preventDefault()" (keydown.escape)="closeDetailsModal()">
+  <div class="modal-panel" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
     <div class="modal-head">
       <h2>Détails de l'Alerte</h2>
       <button class="close-btn" (click)="closeDetailsModal()">&times;</button>
     </div>
     <div class="modal-body">
       <div class="status-section">
-        <label>Statut</label>
+        <span>Statut</span>
         <p class="status-value" [ngClass]="getAnomalyStatusClass(detailsAnomaly?.statut || '')">{{ detailsAnomaly?.statut }}</p>
       </div>
       <div class="info-grid">
-        <div class="info-item"><label>Code</label><span class="mono">{{ detailsAnomaly?.code }}</span></div>
-        <div class="info-item"><label>Type</label><span>{{ detailsAnomaly?.type }}</span></div>
-        <div class="info-item"><label>Score Risque</label><span class="bold">{{ detailsAnomaly?.scoreRisque }}</span></div>
-        <div class="info-item"><label>Compte</label><span class="mono">{{ detailsAnomaly?.numeroCompte }}</span></div>
-        <div class="info-item"><label>Action</label><span>{{ detailsAnomaly?.action }}</span></div>
-        <div class="info-item"><label>Analyste</label><span>{{ detailsAnomaly?.analysteNom || detailsAnomaly?.analysteAssigneID || 'Aucun' }}</span></div>
-        <div class="info-item" *ngIf="detailsAnomaly?.paysRisque"><label>Pays à Risque</label><span>{{ detailsAnomaly?.paysRisque }}</span></div>
-        <div class="info-item full"><label>Message</label><span>{{ detailsAnomaly?.message }}</span></div>
+        <div class="info-item"><span>Code</span><span class="mono">{{ detailsAnomaly?.code }}</span></div>
+        <div class="info-item"><span>Type</span><span>{{ detailsAnomaly?.type }}</span></div>
+        <div class="info-item"><span>Score Risque</span><span class="bold">{{ detailsAnomaly?.scoreRisque }}</span></div>
+        <div class="info-item"><span>Compte</span><span class="mono">{{ detailsAnomaly?.numeroCompte }}</span></div>
+        <div class="info-item"><span>Action</span><span>{{ detailsAnomaly?.action }}</span></div>
+        <div class="info-item"><span>Analyste</span><span>{{ detailsAnomaly?.analysteNom || detailsAnomaly?.analysteAssigneID || 'Aucun' }}</span></div>
+        <div class="info-item" *ngIf="detailsAnomaly?.paysRisque"><span>Pays à Risque</span><span>{{ detailsAnomaly?.paysRisque }}</span></div>
+        <div class="info-item full"><span>Message</span><span>{{ detailsAnomaly?.message }}</span></div>
       </div>
       <div class="status-change">
-        <label>Changer le statut</label>
+        <label for="anomaly-change-status">Changer le statut</label>
         <div class="select-wrapper">
-          <select [(ngModel)]="selectedStatus[detailsAnomaly?.id || '']" class="status-select">
+          <select id="anomaly-change-status" [(ngModel)]="selectedStatus[detailsAnomaly?.id || '']" class="status-select">
             <option [value]="detailsAnomaly?.statut">{{ detailsAnomaly?.statut }}</option>
             <option value="Traité" *ngIf="detailsAnomaly?.statut !== 'Traité'">Traité</option>
             <option value="En cours" *ngIf="detailsAnomaly?.statut !== 'En cours'">En cours</option>

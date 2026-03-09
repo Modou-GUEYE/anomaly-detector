@@ -58,12 +58,12 @@ export class PaysRisqueComponent implements OnInit, OnDestroy {
   // --- Animation Highlight ---
   highlightPaysNom: string | null = null;
 
-  private destroy$ = new Subject<void>();
+  private readonly destroy$ = new Subject<void>();
 
   constructor(
-    private profileService: ProfileService,
-    private authService: AuthService,
-    private config: ConfigService
+    private readonly profileService: ProfileService,
+    private readonly authService: AuthService,
+    private readonly config: ConfigService
   ) {}
 
   get isAdmin(): boolean {
@@ -71,13 +71,11 @@ export class PaysRisqueComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    if (typeof window === 'undefined') return;
+    if (globalThis.window === undefined) return;
     
     // Initialisation du message admin dynamique
-    try {
-      const adminRole = this.config.getRoleName('admin');
-      if (adminRole) this.adminOnlyMessage = `Cette action est réservée au rôle « ${adminRole} »`;
-    } catch (e) { }
+    const adminRole = this.config.getRoleName('admin');
+    if (adminRole) this.adminOnlyMessage = `Cette action est réservée au rôle « ${adminRole} »`;
 
     this.loadPaysARisque();
   }
@@ -122,7 +120,7 @@ export class PaysRisqueComponent implements OnInit, OnDestroy {
     const term = this.searchTerm.toLowerCase().trim();
     this.filteredPays = this.pays.filter(p => 
       p.nomPays.toLowerCase().includes(term) || 
-      (p.code && p.code.toLowerCase().includes(term))
+      p.code?.toLowerCase().includes(term)
     );
     this.updatePagination();
   }
@@ -182,7 +180,7 @@ export class PaysRisqueComponent implements OnInit, OnDestroy {
     this.showEditForm = true;
     this.showForm = false;
     this.showImportForm = false;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    globalThis.window?.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   savePaysEdit(): void {

@@ -33,7 +33,11 @@ export class ParametreComponent implements OnInit {
   showConfirmPassword = false;
   private originalProfile: string | null = null;
 
-  constructor(private profileService: ProfileService, private authState: AuthStateService, private router: Router) {}
+  constructor(
+    private readonly profileService: ProfileService,
+    private readonly authState: AuthStateService,
+    private readonly router: Router
+  ) {}
 
   ngOnInit(): void {
     this.loadProfile();
@@ -48,9 +52,14 @@ export class ParametreComponent implements OnInit {
 
   // track original profile for cancel/detect changes
   private setOriginalSnapshot() {
-    try {
-      this.originalProfile = this.profile ? JSON.stringify({ nomUtilisateur: this.profile.nomUtilisateur || this.profile.nom_utilisateur, email: this.profile.email }) : null;
-    } catch (e) { this.originalProfile = null; }
+    if (!this.profile) {
+      this.originalProfile = null;
+      return;
+    }
+    this.originalProfile = JSON.stringify({
+      nomUtilisateur: this.profile.nomUtilisateur || this.profile.nom_utilisateur,
+      email: this.profile.email
+    });
   }
 
   // Helper to show role label in French
@@ -65,10 +74,11 @@ export class ParametreComponent implements OnInit {
 
   get isDirty(): boolean {
     if (!this.profile) return false;
-    try {
-      const current = JSON.stringify({ nomUtilisateur: this.profile.nomUtilisateur || this.profile.nom_utilisateur, email: this.profile.email });
-      return this.originalProfile !== current;
-    } catch (e) { return false; }
+    const current = JSON.stringify({
+      nomUtilisateur: this.profile.nomUtilisateur || this.profile.nom_utilisateur,
+      email: this.profile.email
+    });
+    return this.originalProfile !== current;
   }
 
   refreshProfile() {
@@ -177,12 +187,11 @@ export class ParametreComponent implements OnInit {
 
   // Logout handler used by the left card
   onLogout() {
-    try {
-      this.authState.logout();
-    } catch (e) {
-      try { localStorage.removeItem('token'); } catch (e) {}
-      this.router.navigate(['/login']);
+    this.authState.logout();
+    if (globalThis.window?.localStorage) {
+      globalThis.window.localStorage.removeItem('token');
     }
+    this.router.navigate(['/login']);
   }
 }
 

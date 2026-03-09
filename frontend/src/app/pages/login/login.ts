@@ -24,7 +24,12 @@ export class LoginComponent {
   isLoadingMessage: boolean = false;
   showPassword: boolean = false;
 
-  constructor(private authService: AuthService, private authState: AuthStateService, private router: Router, private config: ConfigService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly authState: AuthStateService,
+    private readonly router: Router,
+    private readonly config: ConfigService
+  ) {}
 
   onSubmit() {
     // Handler du formulaire de connexion
@@ -41,7 +46,7 @@ export class LoginComponent {
         if (ok) {
           this.isLoadingMessage = false;
           this.success = true;
-          try { this.authState.isAuthenticated.set(true); } catch (e) {}
+          this.authState.isAuthenticated.set(true);
           
           // Vérifier si l'utilisateur doit changer son mot de passe
           if (this.authService.mustChangePassword()) {
@@ -66,13 +71,11 @@ export class LoginComponent {
     this.showPassword = !this.showPassword;
   }
 
-  // Debug helper: show current location values so we can see fragments / query
   showCurrentUrl() {
     try {
-      const href = window.location.href;
-      const search = window.location.search;
-      const hash = window.location.hash;
-  // debug info removed: kept minimal behaviour
+      const href = globalThis.window.location.href;
+      const search = globalThis.window.location.search;
+      const hash = globalThis.window.location.hash;
       alert('href: ' + href + '\nsearch: ' + search + '\nhash: ' + hash);
     } catch (e) {
   console.error('showCurrentUrl failed', e);

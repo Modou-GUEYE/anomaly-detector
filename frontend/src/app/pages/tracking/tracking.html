@@ -31,28 +31,28 @@
       <div class="stat-card">
         <div class="icon-box blue"><img src="assets/event.svg" alt="Total"/></div>
         <div class="stat-content">
-          <label>Total Global</label>
+          <span>Total Global</span>
           <div class="value">{{ stats.totalEvents | number }}</div>
         </div>
       </div>
       <div class="stat-card">
         <div class="icon-box red"><img src="assets/bell.svg" alt="Critique"/></div>
         <div class="stat-content">
-          <label>Critiques</label>
+          <span>Critiques</span>
           <div class="value">{{ stats.criticalEvents | number }}</div>
         </div>
       </div>
       <div class="stat-card">
         <div class="icon-box green"><img src="assets/shield-check.svg" alt="Conformité"/></div>
         <div class="stat-content">
-          <label>Conformité</label>
+          <span>Conformité</span>
           <div class="value">{{ stats.complianceRate }}%</div>
         </div>
       </div>
       <div class="stat-card">
         <div class="icon-box purple"><img src="assets/users.svg" alt="Utilisateurs"/></div>
         <div class="stat-content">
-          <label>Utilisateurs</label>
+          <span>Utilisateurs</span>
           <div class="value">{{ stats.activeUsers | number }}</div>
         </div>
       </div>
@@ -61,22 +61,22 @@
     <div class="toolbar-card">
       <div class="filters-side">
         <div class="filter-control">
-          <label>Sévérité / Résultat</label>
-          <select [(ngModel)]="filters.severity" (ngModelChange)="applyFilters()">
+          <label for="tracking-severity">Sévérité / Résultat</label>
+          <select id="tracking-severity" [(ngModel)]="filters.severity" (ngModelChange)="applyFilters()">
             <option value="">Tous les résultats</option>
             <option *ngFor="let s of severityOptions" [value]="s">{{ s | uppercase }}</option>
           </select>
         </div>
         <div class="filter-control">
-          <label>Module Applicatif</label>
-          <select [(ngModel)]="filters.module" (ngModelChange)="applyFilters()">
+          <label for="tracking-module">Module Applicatif</label>
+          <select id="tracking-module" [(ngModel)]="filters.module" (ngModelChange)="applyFilters()">
             <option value="">Tous les modules</option>
             <option *ngFor="let m of moduleOptions" [value]="m">{{ m }}</option>
           </select>
         </div>
         <div class="filter-control">
-          <label>Utilisateurs</label>
-          <select [(ngModel)]="filters.user" (ngModelChange)="applyFilters()">
+          <label for="tracking-user">Utilisateurs</label>
+          <select id="tracking-user" [(ngModel)]="filters.user" (ngModelChange)="applyFilters()">
             <option value="">Tous les utilisateurs</option>
             <option *ngFor="let u of userOptions" [value]="u">{{ u }}</option>
           </select>
@@ -142,23 +142,23 @@
     </div>
   </div>
 
-  <div class="modal-overlay" *ngIf="selectedEvent" (click)="closeEventDetails()">
-    <div class="modal-panel" (click)="$event.stopPropagation()">
+  <div class="modal-overlay" *ngIf="selectedEvent" (click)="closeEventDetails()" (keydown.enter)="closeEventDetails()" (keydown.space)="closeEventDetails(); $event.preventDefault()" (keydown.escape)="closeEventDetails()">
+    <div class="modal-panel" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
       <div class="modal-head">
         <h2>Détails de l'événement</h2>
         <button class="close-btn" (click)="closeEventDetails()">&times;</button>
       </div>
       <div class="modal-body">
         <div class="info-row full">
-          <label>Description de l'action</label>
+          <span>Description de l'action</span>
           <p class="description">{{ selectedEvent['details'] || 'Aucun détail supplémentaire.' }}</p>
         </div>
         <div class="info-grid">
-          <div class="info-item"><label>ID Log</label><span>#{{ selectedEvent['id'] }}</span></div>
-          <div class="info-item"><label>Module</label><span>{{ selectedEvent['type_action'] }}</span></div>
-          <div class="info-item"><label>Utilisateur</label><span>{{ selectedEvent['nom_utilisateur'] }} ({{selectedEvent['utilisateur_id']}})</span></div>
-          <div class="info-item"><label>Résultat</label><span class="bold">{{ selectedEvent['resultat'] }}</span></div>
-          <div class="info-item"><label>Entité ID</label><span>{{ selectedEvent['entity_id'] || 'N/A' }}</span></div>
+          <div class="info-item"><span>ID Log</span><span>#{{ selectedEvent['id'] }}</span></div>
+          <div class="info-item"><span>Module</span><span>{{ selectedEvent['type_action'] }}</span></div>
+          <div class="info-item"><span>Utilisateur</span><span>{{ selectedEvent['nom_utilisateur'] }} ({{selectedEvent['utilisateur_id']}})</span></div>
+          <div class="info-item"><span>Résultat</span><span class="bold">{{ selectedEvent['resultat'] }}</span></div>
+          <div class="info-item"><span>Entité ID</span><span>{{ selectedEvent['entity_id'] || 'N/A' }}</span></div>
         </div>
       </div>
     </div>

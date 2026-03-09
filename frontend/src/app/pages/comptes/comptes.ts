@@ -11,7 +11,7 @@ import * as countries from 'i18n-iso-countries';
 import fr from 'i18n-iso-countries/langs/fr.json';
 
 function normalizeStr(str: string): string {
-  return str.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+  return str.normalize('NFD').replaceAll(/\p{Diacritic}/gu, '').toLowerCase();
 }
 
 // Interface locale avec données de suivi
@@ -70,21 +70,22 @@ export class ComptesComponent implements OnInit, OnDestroy {
   // Détection responsive
   isMobileOrTablet = false;
 
-  private destroy$ = new Subject<void>();
+  private readonly destroy$ = new Subject<void>();
+  private readonly onResize = () => this.checkScreenSize();
 
-  constructor(private profileService: ProfileService) {
+  constructor(private readonly profileService: ProfileService) {
     this.checkScreenSize();
   }
 
   ngOnInit() {
-    if (typeof window === 'undefined') return;
+    if (globalThis.window === undefined) return;
     // Enregistrer la locale française
     countries.registerLocale(fr);
     this.loadComptes();
     
     // Écouter les changements de taille d'écran
-    if (typeof window !== 'undefined') {
-      window.addEventListener('resize', () => this.checkScreenSize());
+    if (globalThis.window) {
+      globalThis.window.addEventListener('resize', this.onResize);
     }
   }
 
@@ -93,14 +94,14 @@ export class ComptesComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
     
     // Nettoyer l'écouteur de resize
-    if (typeof window !== 'undefined') {
-      window.removeEventListener('resize', () => this.checkScreenSize());
+    if (globalThis.window) {
+      globalThis.window.removeEventListener('resize', this.onResize);
     }
   }
 
   checkScreenSize() {
-    if (typeof window !== 'undefined') {
-      this.isMobileOrTablet = window.innerWidth <= 1024;
+    if (globalThis.window) {
+      this.isMobileOrTablet = globalThis.window.innerWidth <= 1024;
     }
   }
 
@@ -158,7 +159,7 @@ export class ComptesComponent implements OnInit, OnDestroy {
           if (this.allCountries.length === 0) {
             try {
               const names = countries.getNames('fr');
-              this.allCountries = Object.values(names).sort() as string[];
+              this.allCountries = Object.values(names).sort((left, right) => left.localeCompare(right, 'fr', { sensitivity: 'base' }));
             } catch {
               this.allCountries = [];
             }
@@ -353,6 +354,6 @@ export class ComptesComponent implements OnInit, OnDestroy {
     this.error = '';
   }
   printPage(): void {
-    window.print();
+    globalThis.print();
   }
 }

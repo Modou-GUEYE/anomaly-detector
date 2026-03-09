@@ -10,7 +10,7 @@
     <div class="main-stats-strip">
       <div class="stat-item border-primary">
         <div class="stat-info">
-          <label>Transactions Analysées</label>
+          <span>Transactions Analysées</span>
           <div class="value">{{ kpi.transactions | number }}</div>
         </div>
         <mat-icon class="stat-icon color-primary">analytics</mat-icon>
@@ -18,7 +18,7 @@
 
       <div class="stat-item border-warning">
         <div class="stat-info">
-          <label>Anomalies Détectées</label>
+          <span>Anomalies Détectées</span>
           <div class="value">{{ kpi.anomaliesDetectees | number }}</div>
         </div>
         <mat-icon class="stat-icon color-warning">error_outline</mat-icon>
@@ -26,7 +26,7 @@
 
       <div class="stat-item border-success">
         <div class="stat-info">
-          <label>Anomalies Traitées</label>
+          <span>Anomalies Traitées</span>
           <div class="value">{{ kpi.anomaliesTraitees | number }}</div>
         </div>
         <mat-icon class="stat-icon color-success">verified_user</mat-icon>
@@ -34,7 +34,7 @@
 
       <div class="stat-item border-dark">
         <div class="stat-info">
-          <label>Comptes Surveillés</label>
+          <span>Comptes Surveillés</span>
           <div class="value">{{ kpi.comptesSurveilles | number }}</div>
         </div>
         <mat-icon class="stat-icon color-dark">visibility</mat-icon>

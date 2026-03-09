@@ -24,8 +24,8 @@ export class FirstPasswordChangeComponent {
   errorMessage = '';
 
   constructor(
-    private authService: AuthService,
-    private router: Router
+    private readonly authService: AuthService,
+    private readonly router: Router
   ) {}
 
   toggleOldPassword() {

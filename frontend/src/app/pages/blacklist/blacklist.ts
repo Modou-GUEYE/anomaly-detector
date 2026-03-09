@@ -51,10 +51,10 @@ export class BlacklistComponent implements OnInit {
   // Options
   typeOptions = ['Blacklist', 'PEP', 'Surveillés', 'Interdit'];
 
-  constructor(private blacklistService: BlacklistService) {}
+  constructor(private readonly blacklistService: BlacklistService) {}
 
   ngOnInit() {
-    if (typeof window === 'undefined') {
+    if (globalThis.window === undefined) {
       return;
     }
     this.loadEntities();

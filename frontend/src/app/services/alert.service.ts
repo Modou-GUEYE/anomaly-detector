@@ -21,10 +21,10 @@ export interface Alert {
 
 @Injectable({ providedIn: 'root' })
 export class AlertService {
-  private anomaliesUrl = '/api/v1/anomalies';
-  private metricsUrl = '/api/v1/anomalies/metrics';
+  private readonly anomaliesUrl = '/api/v1/anomalies';
+  private readonly metricsUrl = '/api/v1/anomalies/metrics';
 
-  constructor(private http: HttpClient) {}
+  constructor(private readonly http: HttpClient) {}
 
   /**
    * Récupérer toutes les anomalies/alertes
@@ -58,8 +58,8 @@ export class AlertService {
    */
   private getAuthHeaders(): HttpHeaders {
     let headers = new HttpHeaders();
-    if (typeof window !== 'undefined' && window.sessionStorage) {
-      const token = sessionStorage.getItem('token');
+    if (globalThis.window?.sessionStorage) {
+      const token = globalThis.window.sessionStorage.getItem('token');
       if (token) {
         headers = headers.set('Authorization', `Bearer ${token}`);
       }

@@ -55,8 +55,8 @@ export class CreateUserComponent implements OnInit {
   };
 
   constructor(
-    private usersService: UsersService,
-    private config: ConfigService,
+    private readonly usersService: UsersService,
+    private readonly config: ConfigService,
     public router: Router
   ) {}
 
@@ -66,12 +66,8 @@ export class CreateUserComponent implements OnInit {
   }
 
   initRoles() {
-    let adminRole = 'admin';
-    let analystRole = 'analyst';
-    try {
-      adminRole = this.config.getRoleName('admin') || 'admin';
-      analystRole = this.config.getRoleName('analyst') || 'analyst';
-    } catch (e) {}
+    const adminRole = this.config.getRoleName('admin') || 'admin';
+    const analystRole = this.config.getRoleName('analyst') || 'analyst';
 
     this.roles = [
       { value: adminRole, label: 'Administrateur' },
@@ -109,16 +105,17 @@ export class CreateUserComponent implements OnInit {
 
     this.loading = true;
 
-    // Mode création
-    if (!this.editingUser) {
-      const payload = { 
-        nomUtilisateur: this.nomUtilisateur, 
-        email: this.email, 
-        role: this.role, 
-        actif: this.actif 
+    // Mode édition
+    if (this.editingUser) {
+      const id = this.editingUser.id || this.editingUser._id;
+      const updates: any = {
+        nomUtilisateur: this.nomUtilisateur,
+        email: this.email,
+        role: this.role,
+        actif: this.actif
       };
 
-      this.usersService.createUser(payload).subscribe({
+      this.usersService.updateUser(id, updates).subscribe({
         next: () => {
           this.loading = false;
           this.showModal = false;
@@ -129,18 +126,17 @@ export class CreateUserComponent implements OnInit {
           this.error = 'Erreur côté serveur. Veuillez réessayer plus tard.';
         }
       });
-    } 
-    // Mode édition
+    }
+    // Mode création
     else {
-      const id = this.editingUser.id || this.editingUser._id;
-      const updates: any = {
+      const payload = { 
         nomUtilisateur: this.nomUtilisateur, 
         email: this.email, 
         role: this.role, 
         actif: this.actif 
       };
 
-      this.usersService.updateUser(id, updates).subscribe({
+      this.usersService.createUser(payload).subscribe({
         next: () => {
           this.loading = false;
           this.showModal = false;
@@ -248,7 +244,7 @@ export class CreateUserComponent implements OnInit {
     this.nomUtilisateur = user.nomUtilisateur || user.nom_utilisateur || '';
     this.email = user.email || '';
     this.role = user.role || '';
-    this.actif = user.actif !== undefined ? user.actif : true;
+    this.actif = user.actif === undefined ? true : user.actif;
     this.error = '';
     this.resetValidation();
     this.showModal = true;
@@ -311,21 +307,21 @@ export class CreateUserComponent implements OnInit {
 
       case 'email': {
         const emailValue = this.email.trim();
-        if (!emailValue) {
-          this.formErrors['email'] = 'L\'adresse email est obligatoire.';
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
-          this.formErrors['email'] = 'Le format de l\'email est invalide.';
+        if (emailValue) {
+          this.formErrors['email'] = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)
+            ? ''
+            : 'Le format de l\'email est invalide.';
         } else {
-          this.formErrors['email'] = '';
+          this.formErrors['email'] = 'L\'adresse email est obligatoire.';
         }
         break;
       }
 
       case 'role':
-        if (!this.role) {
-          this.formErrors['role'] = 'Le rôle est obligatoire.';
-        } else {
+        if (this.role) {
           this.formErrors['role'] = '';
+        } else {
+          this.formErrors['role'] = 'Le rôle est obligatoire.';
         }
         break;
 

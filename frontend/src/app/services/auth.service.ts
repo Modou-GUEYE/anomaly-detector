@@ -12,23 +12,19 @@ interface LoginResp {
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private loginUrl = '/api/v1/auth/login';
+  private readonly loginUrl = '/api/v1/auth/login';
 
   private accessToken: string | null = null;
 
-  constructor(private http: HttpClient, private config: ConfigService) {
+  constructor(private readonly http: HttpClient, private readonly config: ConfigService) {
     // Charger le token depuis localStorage au démarrage (si présent).
     this.loadTokenFromStorage();
   }
 
   private loadTokenFromStorage() {
-    try {
-      if (typeof window !== 'undefined' && window.sessionStorage) {
-        const t = sessionStorage.getItem('token');
-        if (t) this.accessToken = t;
-      }
-    } catch (e) {
-      // ignore storage errors (e.g. private mode)
+    if (globalThis.window?.sessionStorage) {
+      const t = globalThis.window.sessionStorage.getItem('token');
+      if (t) this.accessToken = t;
     }
   }
 
@@ -40,12 +36,8 @@ export class AuthService {
       tap((res) => {
         // Sauvegarder le token en mémoire et en sessionStorage pour les rechargements de page
         this.accessToken = res.access_token;
-        try {
-          if (typeof window !== 'undefined' && window.sessionStorage) {
-            sessionStorage.setItem('token', res.access_token);
-          }
-        } catch (e) {
-          // ignore storage errors
+        if (globalThis.window?.sessionStorage) {
+          globalThis.window.sessionStorage.setItem('token', res.access_token);
         }
       }),
       map(() => true),
@@ -56,10 +48,8 @@ export class AuthService {
   // Déconnexion : suppression du token côté client
   logout(): Observable<boolean> {
     this.accessToken = null;
-    try {
-      sessionStorage.removeItem('token');
-    } catch (e) {
-      // ignore storage errors
+    if (globalThis.window?.sessionStorage) {
+      globalThis.window.sessionStorage.removeItem('token');
     }
     return of(true);
   }
@@ -80,13 +70,13 @@ export class AuthService {
     if (!t) return false;
     try {
       const decoded: any = jwtDecode(t);
-      if (decoded && decoded.exp) {
+      if (decoded?.exp) {
         const now = Math.floor(Date.now() / 1000);
         return decoded.exp > now;
       }
       // If no exp claim, treat as valid (legacy tokens)
       return true;
-    } catch (e) {
+    } catch {
       return false;
     }
   }
@@ -110,7 +100,7 @@ export class AuthService {
       // Some tokens might encode roles under different keys (e.g., 'groups') —
       // keep it minimal here and return empty if nothing found.
       return [];
-    } catch (e) {
+    } catch {
       return [];
     }
   }
@@ -128,7 +118,7 @@ export class AuthService {
     try {
       const decoded: any = jwtDecode(token);
       return decoded?.must_change_password === true;
-    } catch (e) {
+    } catch {
       return false;
     }
   }
@@ -141,12 +131,8 @@ export class AuthService {
       tap((res) => {
         // Mettre à jour le token avec le nouveau
         this.accessToken = res.access_token;
-        try {
-          if (typeof window !== 'undefined' && window.sessionStorage) {
-            sessionStorage.setItem('token', res.access_token);
-          }
-        } catch (e) {
-          // ignore storage errors
+        if (globalThis.window?.sessionStorage) {
+          globalThis.window.sessionStorage.setItem('token', res.access_token);
         }
       }),
       map(() => true),
@@ -167,11 +153,7 @@ export class AuthService {
     if (!role) return false;
     const roles = this.getUserRoles();
     // If ConfigService has a mapping for this logical role, prefer that name
-    try {
-      const expected = this.config ? this.config.getRoleName(role) : String(role).toLowerCase();
-      return roles.includes(expected.toLowerCase());
-    } catch (e) {
-      return roles.includes(String(role).toLowerCase());
-    }
+    const expected = this.config.getRoleName(role);
+    return roles.includes(expected.toLowerCase());
   }
 }

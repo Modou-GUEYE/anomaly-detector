@@ -72,18 +72,18 @@
 
             <div class="form-grid">
               <div class="form-field">
-                <label>Nom d'affichage</label>
+                <label for="profile-display-name">Nom d'affichage</label>
                 <div class="input-wrapper">
                   <mat-icon>badge</mat-icon>
-                  <input type="text" [(ngModel)]="profile.nomUtilisateur" placeholder="Votre nom complet">
+                  <input id="profile-display-name" type="text" [(ngModel)]="profile.nomUtilisateur" placeholder="Votre nom complet">
                 </div>
               </div>
 
               <div class="form-field">
-                <label>Adresse e-mail</label>
+                <label for="profile-email">Adresse e-mail</label>
                 <div class="input-wrapper">
                   <mat-icon>alternate_email</mat-icon>
-                  <input type="email" [(ngModel)]="profile.email" placeholder="votre@email.com">
+                  <input id="profile-email" type="email" [(ngModel)]="profile.email" placeholder="votre@email.com">
                 </div>
               </div>
             </div>
@@ -102,10 +102,10 @@
             <form (ngSubmit)="changePassword(oldPassword, newPassword, confirmPassword)" class="security-form">
               
               <div class="form-field">
-                <label>Ancien mot de passe</label>
+                <label for="security-old-password">Ancien mot de passe</label>
                 <div class="input-wrapper">
                   <mat-icon>lock_outline</mat-icon>
-                  <input [type]="showOldPassword ? 'text' : 'password'" [(ngModel)]="oldPassword" name="oldP">
+                  <input id="security-old-password" [type]="showOldPassword ? 'text' : 'password'" [(ngModel)]="oldPassword" name="oldP">
                   <button type="button" class="visibility-toggle" (click)="toggleOldPassword()">
                     <mat-icon>{{ showOldPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
                   </button>
@@ -116,17 +116,17 @@
 
               <div class="form-row">
                 <div class="form-field">
-                  <label>Nouveau mot de passe</label>
+                  <label for="security-new-password">Nouveau mot de passe</label>
                   <div class="input-wrapper">
                     <mat-icon>vpn_key</mat-icon>
-                    <input [type]="showNewPassword ? 'text' : 'password'" [(ngModel)]="newPassword" name="newP">
+                    <input id="security-new-password" [type]="showNewPassword ? 'text' : 'password'" [(ngModel)]="newPassword" name="newP">
                   </div>
                 </div>
                 <div class="form-field">
-                  <label>Confirmation</label>
+                  <label for="security-confirm-password">Confirmation</label>
                   <div class="input-wrapper">
                     <mat-icon>verified_user</mat-icon>
-                    <input [type]="showConfirmPassword ? 'text' : 'password'" [(ngModel)]="confirmPassword" name="confP">
+                    <input id="security-confirm-password" [type]="showConfirmPassword ? 'text' : 'password'" [(ngModel)]="confirmPassword" name="confP">
                   </div>
                 </div>
               </div>

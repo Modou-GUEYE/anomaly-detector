@@ -11,17 +11,17 @@
     <div class="header-actions">
       <div class="filter-group">
         <div class="filter-control search-control">
-          <label>Recherche</label>
+          <label for="accounts-search">Recherche</label>
           <div class="search-box">
             <mat-icon>search</mat-icon>
-            <input type="text" placeholder="Rechercher..." [(ngModel)]="searchTerm" (input)="applyFilters()">
+            <input id="accounts-search" type="text" placeholder="Rechercher..." [(ngModel)]="searchTerm" (input)="applyFilters()">
           </div>
         </div>
 
         <div class="filter-control">
-          <label>Pays</label>
+          <label for="accounts-country">Pays</label>
           <div class="select-wrapper">
-            <select [(ngModel)]="filterPays" (change)="applyFilters()">
+            <select id="accounts-country" [(ngModel)]="filterPays" (change)="applyFilters()">
               <option value="">Tous les pays</option>
               <option *ngFor="let pays of getUniqueCountries()" [value]="pays">{{ pays }}</option>
             </select>
@@ -29,9 +29,9 @@
         </div>
 
         <div class="filter-control hide-mobile">
-          <label>Type client</label>
+          <label for="accounts-type">Type client</label>
           <div class="select-wrapper">
-            <select [(ngModel)]="filterType" (change)="applyFilters()">
+            <select id="accounts-type" [(ngModel)]="filterType" (change)="applyFilters()">
               <option value="">Tous les types</option>
               <option *ngFor="let type of getTypeClientOptions()" [value]="type.code">{{ type.label }}</option>
             </select>
@@ -39,9 +39,9 @@
         </div>
 
         <div class="filter-control">
-          <label>Statut</label>
+          <label for="accounts-status">Statut</label>
           <div class="select-wrapper">
-            <select [(ngModel)]="filterSurveilles" (change)="applyFilters()">
+            <select id="accounts-status" [(ngModel)]="filterSurveilles" (change)="applyFilters()">
               <option value="">Tous les statuts</option>
               <option value="true">Surveillés</option>
               <option value="false">Non surveillés</option>
@@ -65,7 +65,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr class="row-clickable" *ngFor="let compte of paginatedComptes" (click)="openDetailsModal(compte)">
+        <tr class="row-clickable" *ngFor="let compte of paginatedComptes" (click)="openDetailsModal(compte)" (keydown.enter)="openDetailsModal(compte)" (keydown.space)="openDetailsModal(compte); $event.preventDefault()">
           <td class="col-numero"><strong>{{ getDisplayNumeroCompte(compte.numeroCompte) }}</strong></td>
           <td class="col-nom">{{ compte.nomClient }}</td>
           <td class="col-type hide-tablet"><span class="type-pill">{{ getTypeClientLabel(compte.typeClient) }}</span></td>
@@ -80,7 +80,7 @@
     </table>
 
     <div class="mobile-list show-mobile-only">
-      <div class="mobile-card" *ngFor="let compte of paginatedComptes" (click)="openDetailsModal(compte)">
+      <div class="mobile-card" *ngFor="let compte of paginatedComptes" (click)="openDetailsModal(compte)" (keydown.enter)="openDetailsModal(compte)" (keydown.space)="openDetailsModal(compte); $event.preventDefault()">
         <div class="card-header">
           <span class="acc-num">{{ getDisplayNumeroCompte(compte.numeroCompte) }}</span>
           <span *ngIf="compte.isSurveilled" class="dot-danger"></span>
@@ -105,30 +105,30 @@
   </footer>
 </section>
 
-<div *ngIf="showDetailsModal" class="modal-overlay" (click)="closeDetailsModal()">
-  <div class="modal-panel" (click)="$event.stopPropagation()">
+<div *ngIf="showDetailsModal" class="modal-overlay" (click)="closeDetailsModal()" (keydown.enter)="closeDetailsModal()" (keydown.space)="closeDetailsModal(); $event.preventDefault()" (keydown.escape)="closeDetailsModal()">
+  <div class="modal-panel" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
     <div class="modal-head">
       <h2>Détails du Compte</h2>
       <button class="close-btn" (click)="closeDetailsModal()">&times;</button>
     </div>
     <div class="modal-body">
       <div class="info-row full">
-        <label>Numéro de Compte</label>
+        <span>Numéro de Compte</span>
         <p class="description" [ngClass]="detailsAccount?.isSurveilled ? 'status-surveille' : 'status-nonsurveille'">{{ detailsAccount?.numeroCompte }}</p>
       </div>
       <div class="info-grid">
-        <div class="info-item"><label>Nom Client</label><span>{{ detailsAccount?.nomClient }}</span></div>
-        <div class="info-item"><label>Type Client</label><span>{{ getTypeClientLabel(detailsAccount?.typeClient || '') }}</span></div>
-        <div class="info-item"><label>Catégorie</label><span>{{ detailsAccount?.categorie }}</span></div>
-        <div class="info-item"><label>Profil</label><span>{{ getProfileClientName(detailsAccount?.profilClientId) }}</span></div>
-        <div class="info-item"><label>Pays</label><span>{{ getCountryNameFromCode(detailsAccount?.pays || '') }}</span></div>
-        <div class="info-item"><label>Ville</label><span>{{ detailsAccount?.ville }}</span></div>
-        <div class="info-item"><label>Date d'Ouverture</label><span>{{ detailsAccount?.dateCreation | date: 'dd MMMM yyyy' }}</span></div>
-        <div class="info-item"><label>Statut</label><span class="bold" [ngClass]="detailsAccount?.isSurveilled ? 'status-surveille' : 'status-nonsurveille'">{{ detailsAccount?.isSurveilled ? 'Surveillé' : 'Non Surveillé' }}</span></div>
-        <div class="info-item full" *ngIf="detailsAccount?.adresse"><label>Adresse</label><span>{{ detailsAccount?.adresse }}</span></div>
-        <div class="info-item full" *ngIf="detailsAccount?.isSurveilled"><label>Motif de Surveillance</label><span>{{ detailsAccount?.suiviRaison }}</span></div>
-        <div class="info-item" *ngIf="detailsAccount?.isSurveilled"><label>Dernière Activité</label><span>{{ detailsAccount?.suiviDate | date: 'dd/MM/yy à HH:mm' }}</span></div>
-        <div class="info-item" *ngIf="detailsAccount?.isSurveilled"><label>Statut Suivi</label><span>{{ detailsAccount?.suiviStatus }}</span></div>
+        <div class="info-item"><span>Nom Client</span><span>{{ detailsAccount?.nomClient }}</span></div>
+        <div class="info-item"><span>Type Client</span><span>{{ getTypeClientLabel(detailsAccount?.typeClient || '') }}</span></div>
+        <div class="info-item"><span>Catégorie</span><span>{{ detailsAccount?.categorie }}</span></div>
+        <div class="info-item"><span>Profil</span><span>{{ getProfileClientName(detailsAccount?.profilClientId) }}</span></div>
+        <div class="info-item"><span>Pays</span><span>{{ getCountryNameFromCode(detailsAccount?.pays || '') }}</span></div>
+        <div class="info-item"><span>Ville</span><span>{{ detailsAccount?.ville }}</span></div>
+        <div class="info-item"><span>Date d'Ouverture</span><span>{{ detailsAccount?.dateCreation | date: 'dd MMMM yyyy' }}</span></div>
+        <div class="info-item"><span>Statut</span><span class="bold" [ngClass]="detailsAccount?.isSurveilled ? 'status-surveille' : 'status-nonsurveille'">{{ detailsAccount?.isSurveilled ? 'Surveillé' : 'Non Surveillé' }}</span></div>
+        <div class="info-item full" *ngIf="detailsAccount?.adresse"><span>Adresse</span><span>{{ detailsAccount?.adresse }}</span></div>
+        <div class="info-item full" *ngIf="detailsAccount?.isSurveilled"><span>Motif de Surveillance</span><span>{{ detailsAccount?.suiviRaison }}</span></div>
+        <div class="info-item" *ngIf="detailsAccount?.isSurveilled"><span>Dernière Activité</span><span>{{ detailsAccount?.suiviDate | date: 'dd/MM/yy à HH:mm' }}</span></div>
+        <div class="info-item" *ngIf="detailsAccount?.isSurveilled"><span>Statut Suivi</span><span>{{ detailsAccount?.suiviStatus }}</span></div>
       </div>
     </div>
   </div>

@@ -9,16 +9,16 @@
       <div class="toolbar-card">
         <div class="filters-side">
           <div class="filter-control search-control">
-            <label>Recherche</label>
+            <label for="blacklist-search">Recherche</label>
             <div class="search-wrapper">
               <mat-icon>search</mat-icon>
-              <input type="text" placeholder="Nom ou compte..." [(ngModel)]="filters.search" (ngModelChange)="applyFilters()">
+              <input id="blacklist-search" type="text" placeholder="Nom ou compte..." [(ngModel)]="filters.search" (ngModelChange)="applyFilters()">
             </div>
           </div>
 
           <div class="filter-control">
-            <label>Type d'entité</label>
-            <select class="type-dropdown" [(ngModel)]="filters.typeEntite" (change)="applyFilters()">
+            <label for="blacklist-type">Type d'entité</label>
+            <select id="blacklist-type" class="type-dropdown" [(ngModel)]="filters.typeEntite" (change)="applyFilters()">
               <option value="">Tous les types</option>
               @for (type of typeOptions; track type) {
                 <option [value]="type">{{ type }}</option>
@@ -96,8 +96,8 @@
 </section>
 
 @if (showModal) {
-  <div class="modal-overlay" (click)="closeModal()">
-    <div class="modal-panel" (click)="$event.stopPropagation()">
+  <div class="modal-overlay" (click)="closeModal()" (keydown.enter)="closeModal()" (keydown.space)="closeModal(); $event.preventDefault()" (keydown.escape)="closeModal()">
+    <div class="modal-panel" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
       <div class="modal-head">
         <h2>{{ isEditMode ? 'Modifier l\'entité' : 'Nouvelle entité' }}</h2>
         <button class="close-btn" (click)="closeModal()">&times;</button>
@@ -105,16 +105,16 @@
       
       <div class="modal-body">
         <div class="form-group full-width">
-          <label>Nom complet <span class="required">*</span></label>
-          <input type="text" [(ngModel)]="formData.nom" placeholder="Ex: John Doe">
+          <label for="entity-full-name">Nom complet <span class="required">*</span></label>
+          <input id="entity-full-name" type="text" [(ngModel)]="formData.nom" placeholder="Ex: John Doe">
         </div>
         <div class="form-group">
-          <label>Numéro de compte <span class="required">*</span></label>
-          <input type="text" [(ngModel)]="formData.numeroCompte" placeholder="Ex: 123456789">
+          <label for="entity-account">Numéro de compte <span class="required">*</span></label>
+          <input id="entity-account" type="text" [(ngModel)]="formData.numeroCompte" placeholder="Ex: 123456789">
         </div>
         <div class="form-group">
-          <label>Type d'entité <span class="required">*</span></label>
-          <select [(ngModel)]="formData.typeEntite">
+          <label for="entity-type">Type d'entité <span class="required">*</span></label>
+          <select id="entity-type" [(ngModel)]="formData.typeEntite">
             <option value="">Sélectionner...</option>
             @for (type of typeOptions; track type) {
               <option [value]="type">{{ type }}</option>
@@ -122,8 +122,8 @@
           </select>
         </div>
         <div class="form-group full-width">
-          <label>Informations supplémentaires</label>
-          <textarea rows="3" [(ngModel)]="formData.informationsSupplementaires" placeholder="Notes ou détails importants..."></textarea>
+          <label for="entity-extra-info">Informations supplémentaires</label>
+          <textarea id="entity-extra-info" rows="3" [(ngModel)]="formData.informationsSupplementaires" placeholder="Notes ou détails importants..."></textarea>
         </div>
       </div>
       
@@ -138,8 +138,8 @@
 }
 
 @if (showDeleteModal) {
-  <div class="modal-overlay" (click)="closeDeleteModal()">
-    <div class="modal-content danger-modal" (click)="$event.stopPropagation()">
+  <div class="modal-overlay" (click)="closeDeleteModal()" (keydown.enter)="closeDeleteModal()" (keydown.space)="closeDeleteModal(); $event.preventDefault()" (keydown.escape)="closeDeleteModal()">
+    <div class="modal-content danger-modal" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
       <div class="modal-body central">
         <div class="danger-icon-box">
           <mat-icon>delete_forever</mat-icon>
@@ -156,15 +156,15 @@
 }
 
 @if (showDetailsModal) {
-  <div class="modal-overlay" (click)="closeDetailsModal()">
-    <div class="modal-panel" (click)="$event.stopPropagation()">
+  <div class="modal-overlay" (click)="closeDetailsModal()" (keydown.enter)="closeDetailsModal()" (keydown.space)="closeDetailsModal(); $event.preventDefault()" (keydown.escape)="closeDetailsModal()">
+    <div class="modal-panel" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
       <div class="modal-head">
         <h2>Détails de l'entité</h2>
         <button class="close-btn" (click)="closeDetailsModal()">&times;</button>
       </div>
       <div class="modal-body">
         <div class="risk-section">
-          <label>Type d'entité</label>
+          <span>Type d'entité</span>
           <div class="risk-display" [ngClass]="detailsEntity?.typeEntite?.toLowerCase()">
             <span class="risk-indicator" [ngClass]="detailsEntity?.typeEntite?.toLowerCase()"></span>
             <span class="risk-label">{{ detailsEntity?.typeEntite }}</span>

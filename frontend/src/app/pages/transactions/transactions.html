@@ -13,16 +13,16 @@
     <div class="toolbar-card">
       <div class="filters-side">
         <div class="filter-control search-control">
-          <label>Recherche</label>
+          <label for="tx-search">Recherche</label>
           <div class="search-wrapper">
             <mat-icon>search</mat-icon>
-            <input type="text" placeholder="Compte, nom..." [(ngModel)]="filters.search" (input)="onSearchChange()">
+            <input id="tx-search" type="text" placeholder="Compte, nom..." [(ngModel)]="filters.search" (input)="onSearchChange()">
           </div>
         </div>
 
         <div class="filter-control">
-          <label>Période</label>
-          <select [(ngModel)]="filters.periode" (change)="onFilterChange()">
+          <label for="tx-periode">Période</label>
+          <select id="tx-periode" [(ngModel)]="filters.periode" (change)="onFilterChange()">
             <option value="">Toutes les périodes</option>
             <option value="Aujourd'hui">Aujourd'hui</option>
             <option value="7 derniers jours">7 derniers jours</option>
@@ -31,16 +31,16 @@
         </div>
 
         <div class="filter-control">
-          <label>Pays</label>
-          <select [(ngModel)]="filters.pays" (change)="onFilterChange()">
+          <label for="tx-pays">Pays</label>
+          <select id="tx-pays" [(ngModel)]="filters.pays" (change)="onFilterChange()">
             <option value="">Tous les pays</option>
             <option *ngFor="let p of getUniqueCountries()" [value]="p">{{p}}</option>
           </select>
         </div>
 
         <div class="filter-control">
-          <label>Portée</label>
-          <select [(ngModel)]="filters.portee" (change)="onFilterChange()">
+          <label for="tx-portee">Portée</label>
+          <select id="tx-portee" [(ngModel)]="filters.portee" (change)="onFilterChange()">
             <option value="">Toutes les portées</option>
             <option value="national">National</option>
             <option value="international">International</option>
@@ -48,8 +48,8 @@
         </div>
 
         <div class="filter-control">
-          <label>Type client</label>
-          <select [(ngModel)]="filters.typeClient" (change)="onFilterChange()">
+          <label for="tx-type-client">Type client</label>
+          <select id="tx-type-client" [(ngModel)]="filters.typeClient" (change)="onFilterChange()">
             <option value="">Tous les types</option>
             <option *ngFor="let opt of typeClientOptions" [value]="opt.label">{{ opt.label }}</option>
           </select>
@@ -60,7 +60,7 @@
 
   <div class="transactions-list">
     @for (t of paginatedTransactions; track t.id) {
-      <div class="t-card-compact row-clickable" (click)="openDetailsModal(t)">
+      <div class="t-card-compact row-clickable" (click)="openDetailsModal(t)" (keydown.enter)="openDetailsModal(t)" (keydown.space)="openDetailsModal(t); $event.preventDefault()">
         <div class="card-main">
           <div class="status-indicator" [ngClass]="getTransactionStatusClass(t)"></div>
           
@@ -105,41 +105,41 @@
   </footer>
 </section>
 
-<div *ngIf="showDetailsModal" class="modal-overlay" (click)="closeDetailsModal()">
-  <div class="modal-panel" (click)="$event.stopPropagation()">
+<div *ngIf="showDetailsModal" class="modal-overlay" (click)="closeDetailsModal()" (keydown.enter)="closeDetailsModal()" (keydown.space)="closeDetailsModal(); $event.preventDefault()" (keydown.escape)="closeDetailsModal()">
+  <div class="modal-panel" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
     <div class="modal-head">
       <h2>Détails de la Transaction</h2>
       <button class="close-btn" (click)="closeDetailsModal()">&times;</button>
     </div>
     <div class="modal-body">
       <div class="info-row full">
-        <label>Statut</label>
+        <span>Statut</span>
         <p class="description" [ngClass]="getStatusClass(getTransactionStatus(detailsTransaction!))">{{ getTransactionStatus(detailsTransaction!) }}</p>
       </div>
       <div class="info-grid">
-        <div class="info-item"><label>ID Transaction</label><span class="mono">#{{ detailsTransaction?.id }}</span></div>
-        <div class="info-item"><label>Montant</label><span class="bold">{{ detailsTransaction?.montant | number:'1.0-0' }} FCFA</span></div>
-        <div class="info-item"><label>Date Opération</label><span>{{ formatDateFR(detailsTransaction?.date_operation || '') }}</span></div>
-        <div class="info-item"><label>Portée</label><span>{{ detailsTransaction?.portee }}</span></div>
-        <div class="info-item"><label>Devise</label><span>FCFA (XOF)</span></div>
+        <div class="info-item"><span>ID Transaction</span><span class="mono">#{{ detailsTransaction?.id }}</span></div>
+        <div class="info-item"><span>Montant</span><span class="bold">{{ detailsTransaction?.montant | number:'1.0-0' }} FCFA</span></div>
+        <div class="info-item"><span>Date Opération</span><span>{{ formatDateFR(detailsTransaction?.date_operation || '') }}</span></div>
+        <div class="info-item"><span>Portée</span><span>{{ detailsTransaction?.portee }}</span></div>
+        <div class="info-item"><span>Devise</span><span>FCFA (XOF)</span></div>
         
-        <div class="info-item"><label>Payeur</label><span>{{ detailsTransaction?.nom_payeur }}</span></div>
-        <div class="info-item"><label>N° Compte Payeur</label><span class="mono">{{ detailsTransaction?.numero_compte_payeur }}</span></div>
-        <div class="info-item"><label>Type Payeur</label><span>{{ getTypeClientLabel(detailsTransaction?.type_client_payeur || '') }}</span></div>
+        <div class="info-item"><span>Payeur</span><span>{{ detailsTransaction?.nom_payeur }}</span></div>
+        <div class="info-item"><span>N° Compte Payeur</span><span class="mono">{{ detailsTransaction?.numero_compte_payeur }}</span></div>
+        <div class="info-item"><span>Type Payeur</span><span>{{ getTypeClientLabel(detailsTransaction?.type_client_payeur || '') }}</span></div>
         
-        <div class="info-item"><label>Bénéficiaire</label><span>{{ detailsTransaction?.nom_paye }}</span></div>
-        <div class="info-item"><label>N° Compte Bénéficiaire</label><span class="mono">{{ detailsTransaction?.numero_compte_paye }}</span></div>
-        <div class="info-item"><label>Type Bénéficiaire</label><span>{{ getTypeClientLabel(detailsTransaction?.type_client_paye || '') }}</span></div>
+        <div class="info-item"><span>Bénéficiaire</span><span>{{ detailsTransaction?.nom_paye }}</span></div>
+        <div class="info-item"><span>N° Compte Bénéficiaire</span><span class="mono">{{ detailsTransaction?.numero_compte_paye }}</span></div>
+        <div class="info-item"><span>Type Bénéficiaire</span><span>{{ getTypeClientLabel(detailsTransaction?.type_client_paye || '') }}</span></div>
         
-        <div class="info-item"><label>Ville Payeur</label><span>{{ detailsTransaction?.ville_payeur }}</span></div>
-        <div class="info-item"><label>Pays Payeur</label><span>{{ getCountryNameFromCode(detailsTransaction?.pays_payeur || '') }}</span></div>
-        <div class="info-item"><label>Ville Bénéficiaire</label><span>{{ detailsTransaction?.ville_paye || 'N/A' }}</span></div>
-        <div class="info-item"><label>Pays Bénéficiaire</label><span>{{ getCountryNameFromCode(detailsTransaction?.pays_paye || '') }}</span></div>
+        <div class="info-item"><span>Ville Payeur</span><span>{{ detailsTransaction?.ville_payeur }}</span></div>
+        <div class="info-item"><span>Pays Payeur</span><span>{{ getCountryNameFromCode(detailsTransaction?.pays_payeur || '') }}</span></div>
+        <div class="info-item"><span>Ville Bénéficiaire</span><span>{{ detailsTransaction?.ville_paye || 'N/A' }}</span></div>
+        <div class="info-item"><span>Pays Bénéficiaire</span><span>{{ getCountryNameFromCode(detailsTransaction?.pays_paye || '') }}</span></div>
       </div>
 
       <!-- Alertes Associées Section -->
       <div class="alerts-section" *ngIf="modalAlertes.length > 0">
-        <label class="alerts-title">Alertes Détectées</label>
+        <span class="alerts-title">Alertes Détectées</span>
         <div class="alerts-list">
           <div *ngFor="let item of getModalGroupedAlertes()" class="alert-item" [ngClass]="'level-' + item[1].niveauCriticite">
             <div class="alert-header-row">

@@ -95,8 +95,8 @@
   </div>
 </section>
 
-<div *ngIf="showModal" class="modal-overlay" (click)="closeModal()">
-  <div class="modal-card wide" (click)="$event.stopPropagation()">
+<div *ngIf="showModal" class="modal-overlay" (click)="closeModal()" (keydown.enter)="closeModal()" (keydown.space)="closeModal(); $event.preventDefault()" (keydown.escape)="closeModal()">
+  <div class="modal-card wide" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
     <div class="modal-header">
       <h2>{{ isEditMode ? 'Édition Règle' : 'Nouvelle Règle' }}</h2>
       <button class="close-x" (click)="closeModal()">✕</button>
@@ -105,42 +105,42 @@
       <div class="form-layout">
         <div class="form-col">
           <div class="form-group">
-            <label>Nom de la règle *</label>
-            <input type="text" [(ngModel)]="formData.nomRegle" (blur)="markFieldTouched('nomRegle')" (ngModelChange)="onFieldChange('nomRegle')" [class.input-invalid]="shouldShowFieldError('nomRegle')" placeholder="Ex: Fréquence">
+            <label for="rule-name">Nom de la règle *</label>
+            <input id="rule-name" type="text" [(ngModel)]="formData.nomRegle" (blur)="markFieldTouched('nomRegle')" (ngModelChange)="onFieldChange('nomRegle')" [class.input-invalid]="shouldShowFieldError('nomRegle')" placeholder="Ex: Fréquence">
             <small class="field-error" *ngIf="shouldShowFieldError('nomRegle')">{{ formErrors['nomRegle'] }}</small>
           </div>
           <div class="form-group">
-            <label>Description *</label>
-            <textarea [(ngModel)]="formData.description" (blur)="markFieldTouched('description')" (ngModelChange)="onFieldChange('description')" [class.input-invalid]="shouldShowFieldError('description')" rows="5" placeholder="Ex: Description de la règle"></textarea>
+            <label for="rule-description">Description *</label>
+            <textarea id="rule-description" [(ngModel)]="formData.description" (blur)="markFieldTouched('description')" (ngModelChange)="onFieldChange('description')" [class.input-invalid]="shouldShowFieldError('description')" rows="5" placeholder="Ex: Description de la règle"></textarea>
             <small class="field-error" *ngIf="shouldShowFieldError('description')">{{ formErrors['description'] }}</small>
           </div>
         </div>
         <div class="form-col">
           <div class="form-row">
             <div class="form-group">
-              <label>Type *</label>
-              <select [(ngModel)]="formData.typeRegle" (change)="onRuleTypeChange()" (blur)="markFieldTouched('typeRegle')" [class.input-invalid]="shouldShowFieldError('typeRegle')">
+              <label for="rule-type">Type *</label>
+              <select id="rule-type" [(ngModel)]="formData.typeRegle" (change)="onRuleTypeChange()" (blur)="markFieldTouched('typeRegle')" [class.input-invalid]="shouldShowFieldError('typeRegle')">
                 <option *ngFor="let t of ruleTypes" [value]="t">{{ t | titlecase }}</option>
               </select>
               <small class="field-error" *ngIf="shouldShowFieldError('typeRegle')">{{ formErrors['typeRegle'] }}</small>
             </div>
             <div class="form-group">
-              <label>Valeur seuil *</label>
-              <input type="number" [(ngModel)]="formData.seuil" (blur)="markFieldTouched('seuil')" (ngModelChange)="onFieldChange('seuil')" [class.input-invalid]="shouldShowFieldError('seuil')">
+              <label for="rule-threshold">Valeur seuil *</label>
+              <input id="rule-threshold" type="number" [(ngModel)]="formData.seuil" (blur)="markFieldTouched('seuil')" (ngModelChange)="onFieldChange('seuil')" [class.input-invalid]="shouldShowFieldError('seuil')">
               <small class="field-error" *ngIf="shouldShowFieldError('seuil')">{{ formErrors['seuil'] }}</small>
             </div>
           </div>
           <div class="form-group">
-            <label>Profil Client</label>
-            <select [(ngModel)]="formData.profilClientId">
+            <label for="rule-profile">Profil Client</label>
+            <select id="rule-profile" [(ngModel)]="formData.profilClientId">
               <option value="">Tous les clients</option>
               <option *ngFor="let p of profils" [value]="p.id">{{ p.label }}</option>
             </select>
           </div>
           <div class="form-row">
             <div class="form-group" *ngIf="formData.typeRegle !== 'pays_risque'">
-              <label>Période *</label>
-              <select [(ngModel)]="formData.periodeReference" (blur)="markFieldTouched('periodeReference')" (ngModelChange)="onFieldChange('periodeReference')" [class.input-invalid]="shouldShowFieldError('periodeReference')">
+              <label for="rule-period">Période *</label>
+              <select id="rule-period" [(ngModel)]="formData.periodeReference" (blur)="markFieldTouched('periodeReference')" (ngModelChange)="onFieldChange('periodeReference')" [class.input-invalid]="shouldShowFieldError('periodeReference')">
                 <option value="24h">24 Heures</option>
                 <option value="7d">7 Jours</option>
                 <option value="30d">30 Jours</option>
@@ -148,8 +148,8 @@
               <small class="field-error" *ngIf="shouldShowFieldError('periodeReference')">{{ formErrors['periodeReference'] }}</small>
             </div>
             <div class="form-group">
-              <label>Action *</label>
-              <select [(ngModel)]="formData.action" (blur)="markFieldTouched('action')" (ngModelChange)="onFieldChange('action')" [class.input-invalid]="shouldShowFieldError('action')">
+              <label for="rule-action">Action *</label>
+              <select id="rule-action" [(ngModel)]="formData.action" (blur)="markFieldTouched('action')" (ngModelChange)="onFieldChange('action')" [class.input-invalid]="shouldShowFieldError('action')">
                 <option value="bloquer">Bloquer</option>
                 <option value="surveiller">Surveiller</option>
               </select>
@@ -167,8 +167,8 @@
 </div>
 
 <!-- Delete Confirmation Modal -->
-<div *ngIf="showDeleteConfirmModal" class="modal-overlay" (click)="closeDeleteConfirmModal()">
-  <div class="modal-card confirm" (click)="$event.stopPropagation()">
+<div *ngIf="showDeleteConfirmModal" class="modal-overlay" (click)="closeDeleteConfirmModal()" (keydown.enter)="closeDeleteConfirmModal()" (keydown.space)="closeDeleteConfirmModal(); $event.preventDefault()" (keydown.escape)="closeDeleteConfirmModal()">
+  <div class="modal-card confirm" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
     <div class="modal-header">
       <h2>Confirmer la suppression</h2>
       <button class="close-x" (click)="closeDeleteConfirmModal()">✕</button>

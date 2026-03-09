@@ -54,10 +54,10 @@ export class AnomaliesComponent implements OnInit {
     dateFin: ''
   };
 
-  constructor(private alertService: AlertService, private route: ActivatedRoute) {}
+  constructor(private readonly alertService: AlertService, private readonly route: ActivatedRoute) {}
 
   ngOnInit() {
-    if (typeof window === 'undefined') {
+    if (globalThis.window === undefined) {
       return;
     }
     // Lire les query parameters depuis l'URL (ex: ?statut=En cours)
@@ -84,9 +84,9 @@ export class AnomaliesComponent implements OnInit {
           // Construire la liste unique d'options de sévérité dans un ordre raisonnable
           const order = ['Critique', 'Haute', 'Moyenne', 'Faible'];
           const uniques = Array.from(new Set(this.anomalies.map(a => a.niveauCriticite).filter(Boolean)));
-          this.severityOptions = uniques.sort((a, b) => {
-            const ia = order.indexOf(a) === -1 ? order.length : order.indexOf(a);
-            const ib = order.indexOf(b) === -1 ? order.length : order.indexOf(b);
+          this.severityOptions = [...uniques].sort((a, b) => {
+            const ia = order.includes(a) ? order.indexOf(a) : order.length;
+            const ib = order.includes(b) ? order.indexOf(b) : order.length;
             return ia - ib || a.localeCompare(b);
           });
         
@@ -193,7 +193,7 @@ export class AnomaliesComponent implements OnInit {
   }
 
   getAnomalyStatusClass(status: string): string {
-    const normalized = status?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');
+    const normalized = status?.toLowerCase().normalize('NFD').replaceAll(/[\u0300-\u036f]/g, '').replaceAll(/\s+/g, '');
     switch (normalized) {
       case 'traite':
         return 'status-trait';

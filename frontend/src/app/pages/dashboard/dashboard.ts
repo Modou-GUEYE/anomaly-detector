@@ -29,12 +29,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
   };
 
   constructor(
-    private dashboardService: DashboardService,
-    private router: Router
+    private readonly dashboardService: DashboardService,
+    private readonly router: Router
   ) {}
 
   ngOnInit(): void {
-    if (typeof window !== 'undefined') {
+    if (globalThis.window !== undefined) {
       document.title = 'Cockpit LAB';
       this.loadSummary();
       // Rafraîchir les données automatiquement toutes les 30 secondes

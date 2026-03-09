@@ -18,10 +18,11 @@
 
       <form (ngSubmit)="onSubmit()" #loginForm="ngForm" class="form-container">
         <div class="form-field">
-          <label>Adresse email</label>
+          <label for="login-email">Adresse email</label>
           <div class="input-group">
             <mat-icon class="prefix-icon">alternate_email</mat-icon>
             <input
+              id="login-email"
               type="email"
               name="email"
               autocomplete="email"
@@ -33,13 +34,14 @@
         </div>
 
         <div class="form-field">
-          <label>Mot de passe</label>
+          <label for="login-password">Mot de passe</label>
           <div class="input-group">
             <mat-icon class="prefix-icon">lock_outline</mat-icon>
             <input
+              id="login-password"
               [type]="showPassword ? 'text' : 'password'"
               name="password"
-              autocomplete="current-password"
+              [attr.autocomplete]="showPassword ? 'off' : 'current-password'"
               [(ngModel)]="password"
               required
               placeholder="Votre mot de passe"

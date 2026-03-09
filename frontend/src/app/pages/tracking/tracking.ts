@@ -32,7 +32,7 @@ interface TrackingFilters {
   styleUrls: ['./tracking.scss']
 })
 export class TrackingComponent implements OnInit, OnDestroy {
-  private destroy$ = new Subject<void>();
+  private readonly destroy$ = new Subject<void>();
   public searchSubject = new Subject<string>(); 
 
   events: any[] = [];
@@ -67,10 +67,10 @@ export class TrackingComponent implements OnInit, OnDestroy {
   moduleOptions = ['Alertes', 'Blacklist', 'Règles de Contrôle', 'Pays à Risque', 'Comptes'];
   userOptions: string[] = [];
 
-  private apiUrl = '';
-  private http = inject(HttpClient);
+  private readonly apiUrl = '';
+  private readonly http = inject(HttpClient);
 
-  constructor(private config: ConfigService) {}
+  constructor(private readonly config: ConfigService) {}
 
   ngOnInit() {
     this.initializeFilters();
@@ -115,7 +115,7 @@ export class TrackingComponent implements OnInit, OnDestroy {
       next: (auditData) => {
         this.events = auditData.map((item: any) => ({
           ...item,
-          id: item.id || Math.random().toString(36).substr(2, 9),
+          id: item.id || Math.random().toString(36).slice(2, 11),
           timestamp: new Date(item.date_heure || item.created_at || Date.now())
         }));
         this.userOptions = this.buildUserOptions(this.events);
@@ -284,20 +284,20 @@ export class TrackingComponent implements OnInit, OnDestroy {
   private escapeCsvField(field: string): string {
     // Échappe les guillemets et ajoute des guillemets si le champ contient une virgule, un retour à la ligne ou un guillemet
     if (field.includes(',') || field.includes('\n') || field.includes('"')) {
-      return `"${field.replace(/"/g, '""')}"`;
+      return `"${field.replaceAll('"', '""')}"`;
     }
     return field;
   }
 
   private downloadFile(blob: Blob, fileName: string) {
-    const url = window.URL.createObjectURL(blob);
+    const url = globalThis.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.download = fileName;
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    link.remove();
+    globalThis.URL.revokeObjectURL(url);
   }
 
   trackByEventId(index: number, event: any) { return event.id || index; }
