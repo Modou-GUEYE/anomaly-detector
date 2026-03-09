@@ -10,6 +10,8 @@ import (
 	"anomaly-detector/internal/models"
 )
 
+const whereIDEquals = "id = ?"
+
 // ===================== ALERTES =====================
 
 // GetAlertes récupère toutes les alertes du système.
@@ -107,7 +109,7 @@ func (s *Store) FixAlertesTaitesesSansDateTraitement(ctx context.Context) error 
 	for _, alerte := range alertes {
 		err = s.gormDB.WithContext(ctx).
 			Model(&models.Alerte{}).
-			Where("id = ?", alerte.ID).
+			Where(whereIDEquals, alerte.ID).
 			Update("date_traitement", alerte.DateGeneration).Error
 
 		if err != nil {
@@ -125,7 +127,7 @@ func (s *Store) UpdateAlerteStatus(ctx context.Context, alerteID string, analyst
 	var alerte models.Alerte
 
 	// Récupérer l'alerte actuelle pour le log
-	if err := s.gormDB.WithContext(ctx).First(&alerte, "id = ?", alerteID).Error; err != nil {
+	if err := s.gormDB.WithContext(ctx).First(&alerte, whereIDEquals, alerteID).Error; err != nil {
 		return nil, err
 	}
 
@@ -143,12 +145,12 @@ func (s *Store) UpdateAlerteStatus(ctx context.Context, alerteID string, analyst
 	}
 
 	// Met à jour le statut, l'analyste et potentiellement la date de traitement
-	if err := s.gormDB.WithContext(ctx).Model(&models.Alerte{}).Where("id = ?", alerteID).Updates(updates).Error; err != nil {
+	if err := s.gormDB.WithContext(ctx).Model(&models.Alerte{}).Where(whereIDEquals, alerteID).Updates(updates).Error; err != nil {
 		return nil, err
 	}
 
 	// Recharge l'alerte mise à jour
-	if err := s.gormDB.WithContext(ctx).First(&alerte, "id = ?", alerteID).Error; err != nil {
+	if err := s.gormDB.WithContext(ctx).First(&alerte, whereIDEquals, alerteID).Error; err != nil {
 		return nil, err
 	}
 

@@ -16,47 +16,12 @@ import (
 )
 
 func LoadPrivateKeyFromEnv() (*rsa.PrivateKey, error) {
-	pemStr := os.Getenv("KEY_JWT_PRIVATE_KEY")
-	if pemStr != "" {
-		block, _ := pem.Decode([]byte(pemStr))
-		if block == nil {
-			return nil, errors.New("invalid PEM data in KEY_JWT_PRIVATE_KEY")
-		}
-		key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-		if err != nil {
-			pk, err2 := x509.ParsePKCS8PrivateKey(block.Bytes)
-			if err2 != nil {
-				return nil, err
-			}
-			if rsaKey, ok := pk.(*rsa.PrivateKey); ok {
-				return rsaKey, nil
-			}
-			return nil, errors.New("private key is not RSA")
-		}
-		return key, nil
+	if key, ok, err := loadPrivateKeyFromEnvValue("KEY_JWT_PRIVATE_KEY", "invalid PEM data in KEY_JWT_PRIVATE_KEY", "private key is not RSA"); ok {
+		return key, err
 	}
 
-	if keyFile := os.Getenv("KEY_JWT_PRIVATE_KEY_FILE"); keyFile != "" {
-		data, err := os.ReadFile(keyFile)
-		if err != nil {
-			return nil, err
-		}
-		block, _ := pem.Decode(data)
-		if block == nil {
-			return nil, errors.New("invalid PEM data in KEY_JWT_PRIVATE_KEY_FILE")
-		}
-		key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-		if err != nil {
-			pk, err2 := x509.ParsePKCS8PrivateKey(block.Bytes)
-			if err2 != nil {
-				return nil, err
-			}
-			if rsaKey, ok := pk.(*rsa.PrivateKey); ok {
-				return rsaKey, nil
-			}
-			return nil, errors.New("private key in file is not RSA")
-		}
-		return key, nil
+	if key, ok, err := loadPrivateKeyFromEnvFile("KEY_JWT_PRIVATE_KEY_FILE", "invalid PEM data in KEY_JWT_PRIVATE_KEY_FILE", "private key in file is not RSA"); ok {
+		return key, err
 	}
 
 	if cachedPriv := getCachedPrivate(); cachedPriv != nil {
@@ -64,6 +29,57 @@ func LoadPrivateKeyFromEnv() (*rsa.PrivateKey, error) {
 	}
 
 	return nil, errors.New("no private RSA key configured: set KEY_JWT_PRIVATE_KEY or KEY_JWT_PRIVATE_KEY_FILE")
+}
+
+func loadPrivateKeyFromEnvValue(envVar string, invalidPEMMessage string, notRSAMessage string) (*rsa.PrivateKey, bool, error) {
+	pemStr := os.Getenv(envVar)
+	if pemStr == "" {
+		return nil, false, nil
+	}
+
+	key, err := parsePrivateKeyPEM([]byte(pemStr), invalidPEMMessage, notRSAMessage)
+	return key, true, err
+}
+
+func loadPrivateKeyFromEnvFile(envVar string, invalidPEMMessage string, notRSAMessage string) (*rsa.PrivateKey, bool, error) {
+	keyFile := os.Getenv(envVar)
+	if keyFile == "" {
+		return nil, false, nil
+	}
+
+	data, err := os.ReadFile(keyFile)
+	if err != nil {
+		return nil, true, err
+	}
+
+	key, parseErr := parsePrivateKeyPEM(data, invalidPEMMessage, notRSAMessage)
+	return key, true, parseErr
+}
+
+func parsePrivateKeyPEM(pemData []byte, invalidPEMMessage string, notRSAMessage string) (*rsa.PrivateKey, error) {
+	block, _ := pem.Decode(pemData)
+	if block == nil {
+		return nil, errors.New(invalidPEMMessage)
+	}
+	return parseRSAPrivateKeyBytes(block.Bytes, notRSAMessage)
+}
+
+func parseRSAPrivateKeyBytes(derBytes []byte, notRSAMessage string) (*rsa.PrivateKey, error) {
+	key, err := x509.ParsePKCS1PrivateKey(derBytes)
+	if err == nil {
+		return key, nil
+	}
+
+	pk, err2 := x509.ParsePKCS8PrivateKey(derBytes)
+	if err2 != nil {
+		return nil, err
+	}
+
+	rsaKey, ok := pk.(*rsa.PrivateKey)
+	if !ok {
+		return nil, errors.New(notRSAMessage)
+	}
+	return rsaKey, nil
 }
 
 var (

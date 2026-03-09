@@ -9,6 +9,8 @@ import (
 	"gorm.io/gorm"
 )
 
+const whereUserIDEquals = "id = ?"
+
 // ===================== UTILISATEURS =====================
 
 // CreateUser insère un nouvel utilisateur dans la base de données.
@@ -46,7 +48,7 @@ func (s *Store) GetUserByEmail(ctx context.Context, email string) (*models.Utili
 // GetUserByID récupère un utilisateur par son ID.
 func (s *Store) GetUserByID(ctx context.Context, id string) (*models.Utilisateur, error) {
 	var user models.Utilisateur
-	result := s.gormDB.WithContext(ctx).First(&user, "id = ?", id)
+	result := s.gormDB.WithContext(ctx).First(&user, whereUserIDEquals, id)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -66,7 +68,7 @@ func (s *Store) GetAllUsers(ctx context.Context) ([]models.Utilisateur, error) {
 // UpdateUser met à jour certains champs d'un utilisateur (actif, role, nomUtilisateur)
 func (s *Store) UpdateUser(ctx context.Context, id string, updates map[string]interface{}) (*models.Utilisateur, error) {
 	var user models.Utilisateur
-	if err := s.gormDB.WithContext(ctx).First(&user, "id = ?", id).Error; err != nil {
+	if err := s.gormDB.WithContext(ctx).First(&user, whereUserIDEquals, id).Error; err != nil {
 		return nil, err
 	}
 
@@ -75,7 +77,7 @@ func (s *Store) UpdateUser(ctx context.Context, id string, updates map[string]in
 	}
 
 	// Recharger
-	if err := s.gormDB.WithContext(ctx).First(&user, "id = ?", id).Error; err != nil {
+	if err := s.gormDB.WithContext(ctx).First(&user, whereUserIDEquals, id).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
@@ -91,7 +93,7 @@ func (s *Store) DeleteUser(ctx context.Context, id string) error {
 	}
 	if count > 0 {
 		// Désactiver si des traces existent
-		err := s.gormDB.WithContext(ctx).Model(&models.Utilisateur{}).Where("id = ?", id).Update("actif", false).Error
+		err := s.gormDB.WithContext(ctx).Model(&models.Utilisateur{}).Where(whereUserIDEquals, id).Update("actif", false).Error
 		if err != nil {
 			return err
 		}
@@ -99,5 +101,5 @@ func (s *Store) DeleteUser(ctx context.Context, id string) error {
 		return fmt.Errorf("blocked:disabled")
 	}
 	// Sinon, supprimer physiquement
-	return s.gormDB.WithContext(ctx).Delete(&models.Utilisateur{}, "id = ?", id).Error
+	return s.gormDB.WithContext(ctx).Delete(&models.Utilisateur{}, whereUserIDEquals, id).Error
 }

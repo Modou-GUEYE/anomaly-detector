@@ -12,6 +12,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const invalidCredentialsMessage = "Identifiants invalides"
+
 // AuthHandler gère les opérations d'authentification
 type AuthHandler struct {
 	store *store.Store
@@ -43,11 +45,11 @@ func (h *AuthHandler) HandleLogin(ctx *gin.Context) {
 	}
 	user, err := h.store.GetUserByEmail(ctx, loginReq.Email)
 	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Identifiants invalides"})
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": invalidCredentialsMessage})
 		return
 	}
 	if !checkPasswordHash(loginReq.Password, user.MotDePasseHash) {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Identifiants invalides"})
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": invalidCredentialsMessage})
 		return
 	}
 
@@ -61,7 +63,7 @@ func (h *AuthHandler) HandleLogin(ctx *gin.Context) {
 	// Si l'utilisateur est désactivé, ne pas révéler cette information:
 	// renvoyer la même réponse que pour des identifiants invalides.
 	if !user.Actif {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Identifiants invalides"})
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": invalidCredentialsMessage})
 		return
 	}
 	// Génération du token JWT signé
