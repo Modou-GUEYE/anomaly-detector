@@ -2,17 +2,26 @@ package handlers
 
 import (
 	"anomaly-detector/internal/auth"
+	"anomaly-detector/internal/email"
 	"anomaly-detector/internal/store"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
-const invalidCredentialsMessage = "Identifiants invalides"
+const (
+	invalidCredentialsMessage = "Identifiants invalides"
+	invalidRequestMessage     = "Requête invalide"
+	passwordResetSentMessage  = "Si un compte existe pour cet email, un lien de réinitialisation a été envoyé."
+	passwordResetInvalidError = "Lien de réinitialisation invalide ou expiré"
+)
 
 // AuthHandler gère les opérations d'authentification
 type AuthHandler struct {
@@ -40,7 +49,7 @@ func (h *AuthHandler) HandleLogin(ctx *gin.Context) {
 		Role     string `json:"role,omitempty"`
 	}
 	if err := ctx.ShouldBindJSON(&loginReq); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Requête invalide"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": invalidRequestMessage})
 		return
 	}
 	user, err := h.store.GetUserByEmail(ctx, loginReq.Email)
@@ -128,6 +137,124 @@ func (h *AuthHandler) HandleGetSystemToken(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"access_token": token, "expires_in": int(accessTTL.Seconds())})
+}
+
+// HandleForgotPassword déclenche l'envoi d'un lien de réinitialisation de mot de passe.
+func (h *AuthHandler) HandleForgotPassword(ctx *gin.Context) {
+	var req struct {
+		Email string `json:"email" binding:"required,email"`
+	}
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": invalidRequestMessage})
+		return
+	}
+
+	user, err := h.store.GetUserByEmail(ctx, strings.TrimSpace(req.Email))
+	if err != nil || user == nil || !user.Actif {
+		ctx.JSON(http.StatusOK, gin.H{"message": passwordResetSentMessage})
+		return
+	}
+
+	resetToken, err := auth.NewPasswordResetTokenFromEnv(user.ID, user.Email, getPasswordResetTTL())
+	if err != nil {
+		log.Printf("error signing password reset token for user %s: %v", user.ID, err)
+		ctx.JSON(http.StatusOK, gin.H{"message": passwordResetSentMessage})
+		return
+	}
+
+	resetLink := buildPasswordResetLink(resetToken)
+	if err := email.NewService().SendPasswordResetEmail(user.Email, user.NomUtilisateur, resetLink); err != nil {
+		log.Printf("password reset email failed for user %s: %v", user.Email, err)
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": passwordResetSentMessage})
+}
+
+// HandleResetPassword applique un nouveau mot de passe à partir d'un token de réinitialisation.
+func (h *AuthHandler) HandleResetPassword(ctx *gin.Context) {
+	var req struct {
+		Token       string `json:"token" binding:"required"`
+		NewPassword string `json:"newPassword" binding:"required,min=6"`
+	}
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": invalidRequestMessage})
+		return
+	}
+
+	claims, err := auth.ParseAndValidateToken(req.Token)
+	if err != nil || !isPasswordResetToken(claims) {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": passwordResetInvalidError})
+		return
+	}
+
+	userID, ok := claimString(claims, "sub")
+	if !ok || userID == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": passwordResetInvalidError})
+		return
+	}
+
+	user, err := h.store.GetUserByID(ctx, userID)
+	if err != nil || user == nil || !user.Actif {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": passwordResetInvalidError})
+		return
+	}
+
+	hashed, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors du hachage du mot de passe"})
+		return
+	}
+
+	updates := map[string]interface{}{
+		"mot_de_passe_hash":         string(hashed),
+		"doit_changer_mot_de_passe": false,
+	}
+
+	if _, err = h.store.UpdateUser(ctx, userID, updates); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de mettre à jour le mot de passe"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "Mot de passe réinitialisé avec succès"})
+}
+
+func getPasswordResetTTL() time.Duration {
+	if v := os.Getenv("KEY_JWT_RESET_TTL_MIN"); v != "" && v != "0" {
+		if d, err := time.ParseDuration(v + "m"); err == nil {
+			return d
+		}
+	}
+	return 15 * time.Minute
+}
+
+func buildPasswordResetLink(token string) string {
+	baseURL := os.Getenv("PASSWORD_RESET_URL")
+	if baseURL == "" {
+		baseURL = "http://localhost:4200/forgot-password"
+	}
+
+	separator := "?"
+	if strings.Contains(baseURL, "?") {
+		separator = "&"
+	}
+	return baseURL + separator + "token=" + url.QueryEscape(token)
+}
+
+func isPasswordResetToken(claims jwt.MapClaims) bool {
+	purpose, ok := claimString(claims, "purpose")
+	return ok && purpose == "password_reset"
+}
+
+func claimString(claims jwt.MapClaims, key string) (string, bool) {
+	v, ok := claims[key]
+	if !ok {
+		return "", false
+	}
+	value, isString := v.(string)
+	if !isString {
+		return "", false
+	}
+	return value, true
 }
 
 // checkPasswordHash vérifie si un mot de passe correspond à son hash bcrypt

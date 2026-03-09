@@ -116,6 +116,8 @@ func setupAuthRoutes(apiV1 *gin.RouterGroup, authHandler *handlers.AuthHandler, 
 	{
 		authRoutes.POST("/login", authHandler.HandleLogin)
 		authRoutes.POST("/system-token", authHandler.HandleGetSystemToken)
+		authRoutes.POST("/forgot-password", authHandler.HandleForgotPassword)
+		authRoutes.POST("/reset-password", authHandler.HandleResetPassword)
 		authRoutes.POST("/first-password-change", middleware.JwtAuthMiddleware(store), firstPasswordChangeHandler(store))
 	}
 }

@@ -180,7 +180,24 @@ func NewSignedTokenFromEnv(subject string, roles []string, ttl time.Duration, mu
 		claims["exp"] = time.Now().Add(ttl).Unix()
 	}
 
-	// charger la clé privée et signer.
+	return signTokenFromClaims(claims)
+}
+
+func NewPasswordResetTokenFromEnv(subject string, email string, ttl time.Duration) (string, error) {
+	claims := jwt.MapClaims{
+		"sub":     subject,
+		"email":   email,
+		"purpose": "password_reset",
+		"iat":     time.Now().Unix(),
+	}
+	if ttl > 0 {
+		claims["exp"] = time.Now().Add(ttl).Unix()
+	}
+
+	return signTokenFromClaims(claims)
+}
+
+func signTokenFromClaims(claims jwt.MapClaims) (string, error) {
 	priv, err := LoadPrivateKeyFromEnv()
 	if err != nil {
 		return "", err

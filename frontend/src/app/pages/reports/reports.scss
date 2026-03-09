@@ -1,29 +1,53 @@
+@use "sass:color";
+
+/* --- VARIABLES --- */
 $primary: #2e6cf2;
 $success: #10b981;
 $danger: #ef4444;
 $warning: #f59e0b;
 $dark: #1e293b;
+$text-muted: #64748b;
 $gray-bg: #f8fafc;
 $border: #e2e8f0;
 
+/* --- MIXINS RESPONSIVE --- */
+@mixin tablet { @media (max-width: 1024px) { @content; } }
+@mixin mobile { @media (max-width: 768px) { @content; } }
+@mixin small { @media (max-width: 480px) { @content; } }
+
+/* --- CONTENEUR GLOBAL --- */
 .reports-container {
   padding: 1.5rem;
   background: #f1f5f9;
   min-height: 100vh;
+  font-family: 'Inter', system-ui, sans-serif;
+  overflow-x: hidden; 
+
+  @include mobile { padding: 1rem; }
 }
 
-/* HEADER & TOOLBAR */
+/* --- HEADER & TOOLBAR DESIGN --- */
 .dashboard-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
   margin-bottom: 2rem;
-  flex-wrap: wrap;
   gap: 1.5rem;
 
+  @include tablet {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .title-section {
-    h1 { font-size: 1.5rem; font-weight: 800; color: #0f172a; margin: 0; }
-    .subtitle { color: #64748b; margin-top: 4px; font-size: 0.9rem; }
+    h1 { 
+      font-size: 1.6rem; 
+      font-weight: 800; 
+      color: #0f172a; 
+      margin: 0;
+      letter-spacing: -0.02em;
+    }
+    .subtitle { color: $text-muted; margin-top: 4px; font-size: 0.9rem; }
   }
 }
 
@@ -31,107 +55,225 @@ $border: #e2e8f0;
   display: flex;
   gap: 1rem;
   align-items: center;
+  flex-wrap: wrap;
+
+  @include tablet { width: 100%; }
 
   .filter-card {
     background: white;
     padding: 8px 16px;
     border-radius: 12px;
-    border: 1px solid $border;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    border: 1.5px solid $border;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    transition: all 0.2s ease;
+
+    @include small { width: 100%; }
+
+    &:hover { border-color: $primary; }
+    &:focus-within {
+      border-color: $primary;
+      box-shadow: 0 0 0 3px rgba($primary, 0.1);
+    }
 
     .date-group {
-      display: flex; align-items: center; gap: 10px;
+      display: flex; 
+      align-items: center; 
+      gap: 10px;
       mat-icon { font-size: 18px; color: $primary; }
-      input { border: none; font-size: 0.85rem; font-weight: 600; color: $dark; outline: none; }
+      
+      input[type="date"] { 
+        border: none; 
+        font-size: 0.85rem; 
+        font-weight: 600; 
+        color: $dark; 
+        outline: none; 
+        background: transparent;
+        cursor: pointer;
+        width: auto;
+
+        &::-webkit-calendar-picker-indicator {
+          cursor: pointer;
+          opacity: 0.6;
+          &:hover { opacity: 1; }
+        }
+      }
+      span { color: #cbd5e1; font-weight: 800; }
     }
   }
 
   .button-group {
     display: flex;
     gap: 0.75rem;
-    align-items: center;
+
+    @include small {
+      width: 100%;
+      button { flex: 1; padding: 12px 8px; font-size: 0.75rem; }
+    }
   }
 }
 
-/* KPI CARDS */
+/* --- BOUTONS DESIGN --- */
+.btn-primary, .btn-danger, .btn-outline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+  white-space: nowrap;
+
+  mat-icon { font-size: 20px; width: 20px; height: 20px; }
+  &:active { transform: scale(0.96); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, $primary, color.adjust($primary, $lightness: -10%));
+  color: white;
+  box-shadow: 0 4px 12px rgba($primary, 0.25);
+  &:hover:not(:disabled) { box-shadow: 0 6px 15px rgba($primary, 0.35); filter: brightness(1.1); }
+}
+
+.btn-danger {
+  background: white;
+  color: $danger;
+  border: 1.5px solid rgba($danger, 0.25);
+  &:hover:not(:disabled) {
+    background: $danger;
+    color: white;
+    border-color: $danger;
+    box-shadow: 0 4px 12px rgba($danger, 0.2);
+  }
+}
+
+.btn-outline {
+  background: white;
+  border: 1px solid $border;
+  color: $dark;
+  &:hover:not(:disabled) {
+    border-color: $primary;
+    color: $primary;
+    background: rgba($primary, 0.02);
+  }
+}
+
+/* --- KPI GRID --- */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 1.5rem;
   margin-bottom: 2rem;
+
+  @media (max-width: 1200px) { grid-template-columns: repeat(2, 1fr); }
+  @include small { grid-template-columns: 1fr; }
 }
 
 .kpi-stat-card {
   background: white;
-  border-radius: 20px;
+  border-radius: 16px;
   padding: 1.5rem;
   border: 1px solid $border;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s ease;
 
   &:hover { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
 
-  .kpi-header {
-    display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;
-    .icon-circle { 
-      width: 44px; height: 44px; border-radius: 12px; 
-      display: flex; align-items: center; justify-content: center;
+  .kpi-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    .icon-circle {
+      width: 48px; height: 48px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
       mat-icon { font-size: 24px; }
     }
-    .trend { font-size: 0.75rem; font-weight: 700; padding: 4px 8px; border-radius: 20px; background: #f1f5f9; }
-    .trend.up { color: $success; background: rgba($success, 0.1); }
-    .trend.down { color: $danger; background: rgba($danger, 0.1); }
+
+    .kpi-inline {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .kpi-value {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: $dark;
+      line-height: 1.1;
+    }
+
+    .kpi-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: $text-muted;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
   }
 
-  h3 { font-size: 1.8rem; font-weight: 800; color: $dark; margin: 0; }
-  label { font-size: 0.85rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
-
-  // Variants
   &.alerts .icon-circle { background: rgba($warning, 0.1); color: $warning; }
   &.success .icon-circle { background: rgba($success, 0.1); color: $success; }
   &.info .icon-circle { background: rgba($primary, 0.1); color: $primary; }
   &.danger .icon-circle { background: rgba($danger, 0.1); color: $danger; }
 }
 
-/* CHARTS AREA */
+/* --- CHARTS AREA (AVEC FIX DÉBORDEMENT) --- */
 .main-stats-area {
   background: white;
-  border-radius: 24px;
+  border-radius: 20px;
   padding: 2rem;
   border: 1px solid $border;
+  width: 100%;
+  box-sizing: border-box;
+
+  @include mobile { padding: 1.25rem; border-radius: 16px; }
 
   .chart-section-header {
-    display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;
-    h2 { font-size: 1.1rem; font-weight: 700; color: $dark; }
-    
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+
+    @include mobile { flex-direction: column; align-items: flex-start; gap: 1rem; }
+
     .left {
       display: flex;
       align-items: center;
       gap: 1.5rem;
+      flex-wrap: wrap;
+      h2 { font-size: 1.1rem; font-weight: 700; color: $dark; margin: 0; }
     }
 
     .toggle-group {
       background: #f1f5f9; padding: 4px; border-radius: 10px; display: inline-flex;
       button { 
-        border: none; padding: 6px 16px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; color: #64748b; cursor: pointer;
+        border: none; padding: 6px 16px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; color: $text-muted; cursor: pointer;
         transition: all 0.2s;
         &.active { background: white; color: $primary; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        &:hover:not(.active) { color: $primary; }
       }
     }
 
     select { 
-      padding: 8px 14px; 
-      border-radius: 10px; 
-      border: 1px solid $border; 
-      font-size: 0.85rem; 
+      appearance: none;
+      background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center;
+      padding: 10px 40px 10px 14px;
+      border-radius: 10px;
+      border: 1px solid $border;
+      font-size: 0.85rem;
       font-weight: 600;
       color: $dark;
-      background: white;
       cursor: pointer;
       outline: none;
-      transition: border-color 0.2s;
+      min-width: 180px;
+
+      @include mobile { width: 100%; }
       &:hover { border-color: $primary; }
-      &:focus { border-color: $primary; box-shadow: 0 0 0 3px rgba($primary, 0.1); }
     }
   }
 }
@@ -140,27 +282,43 @@ $border: #e2e8f0;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2rem;
+  width: 100%;
+  min-width: 0; // Fix crucial pour le débordement CSS Grid
 
-  @media (max-width: 1024px) { grid-template-columns: 1fr; }
+  @include tablet { grid-template-columns: 1fr; gap: 1.5rem; }
 }
 
 .chart-card-v2 {
+  width: 100%;
+  min-width: 0; // Force l'enfant à ne pas dépasser la colonne de la grille
+
   .card-head { 
     display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;
-    h3 { font-size: 0.9rem; color: #64748b; font-weight: 700; text-transform: uppercase; }
-    mat-icon { color: #cbd5e1; font-size: 18px; cursor: help; }
+    h3 { 
+      font-size: 0.85rem; color: $text-muted; font-weight: 700; text-transform: uppercase;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
+    }
+    mat-icon { color: #cbd5e1; font-size: 18px; }
   }
-  .canvas-container { height: 320px; position: relative; }
+
+  .canvas-container { 
+    height: 320px; 
+    width: 100% !important; 
+    position: relative; // Obligatoire pour le mode responsive de Chart.js
+    
+    @include mobile { height: 280px; }
+  }
 }
 
-/* BUTTONS */
-.btn-primary, .btn-danger, .btn-outline {
-  display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 12px; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: 0.2s;
-}
-.btn-primary { background: $primary; color: white; border: none; &:hover { filter: brightness(0.9); } }
-.btn-danger { background: white; color: $danger; border: 1px solid $danger; &:hover { background: $danger; color: white; } }
-.btn-outline { background: white; border: 1px solid $border; color: $dark; &:hover { background: #f8fafc; } }
-
-
+/* --- ANIMATIONS & UTILS --- */
 .spinning { animation: rotate 1s linear infinite; }
 @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.status-overlay {
+  display: flex; justify-content: center; padding: 2rem;
+  .loader { display: flex; align-items: center; gap: 12px; color: $text-muted; font-weight: 600; }
+  .spinner { 
+    width: 24px; height: 24px; border: 3px solid rgba($primary, 0.1); 
+    border-top-color: $primary; border-radius: 50%; animation: rotate 0.8s linear infinite; 
+  }
+}

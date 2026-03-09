@@ -13,6 +13,8 @@ interface LoginResp {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly loginUrl = '/api/v1/auth/login';
+  private readonly forgotPasswordUrl = '/api/v1/auth/forgot-password';
+  private readonly resetPasswordUrl = '/api/v1/auth/reset-password';
 
   private accessToken: string | null = null;
 
@@ -135,6 +137,20 @@ export class AuthService {
           globalThis.window.sessionStorage.setItem('token', res.access_token);
         }
       }),
+      map(() => true),
+      catchError(() => of(false))
+    );
+  }
+
+  forgotPassword(email: string): Observable<boolean> {
+    return this.http.post<{ message: string }>(this.forgotPasswordUrl, { email }).pipe(
+      map(() => true),
+      catchError(() => of(false))
+    );
+  }
+
+  resetPassword(token: string, newPassword: string): Observable<boolean> {
+    return this.http.post<{ message: string }>(this.resetPasswordUrl, { token, newPassword }).pipe(
       map(() => true),
       catchError(() => of(false))
     );

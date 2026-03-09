@@ -12,12 +12,14 @@ import { TrackingComponent } from './pages/tracking/tracking';
 import { CreateUserComponent } from './pages/create-user/create-user';
 import { ParametreComponent } from './pages/parametre/parametre';
 import { FirstPasswordChangeComponent } from './pages/first-password-change/first-password-change';
+import { ForgotPasswordComponent } from './pages/forgot-password/forgot-password';
 import { AuthGuard } from './guards/auth.guard';
 import { RoleGuard } from './guards/role.guard';
 import { firstPasswordChangeGuard } from './guards/first-password-change.guard';
 import { LayoutComponent } from './layouts/layout/layout';
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
+  { path: 'forgot-password', component: ForgotPasswordComponent },
   { path: 'first-password-change', component: FirstPasswordChangeComponent, canActivate: [AuthGuard] },
   {
     path: '',

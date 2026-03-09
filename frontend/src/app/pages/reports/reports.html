@@ -43,46 +43,46 @@
     
     <div class="kpi-grid">
       <div class="kpi-stat-card alerts">
-        <div class="kpi-header">
+        <div class="kpi-row">
           <div class="icon-circle"><mat-icon>notifications_active</mat-icon></div>
-        </div>
-        <div class="kpi-body">
-          <h3 *ngIf="!loadingStates.performance">{{ performanceData.anomaliesGenerees | number }}</h3>
+          <div class="kpi-inline" *ngIf="!loadingStates.performance">
+            <span class="kpi-value">{{ performanceData.anomaliesGenerees | number }}</span>
+            <span class="kpi-title">Alertes Générées</span>
+          </div>
           <div class="skeleton-text" *ngIf="loadingStates.performance"></div>
-          <label>Alertes Générées</label>
         </div>
       </div>
 
       <div class="kpi-stat-card success">
-        <div class="kpi-header">
+        <div class="kpi-row">
           <div class="icon-circle"><mat-icon>verified_user</mat-icon></div>
-        </div>
-        <div class="kpi-body">
-          <h3 *ngIf="!loadingStates.performance">{{ performanceData.anomaliesTraitees | number }}</h3>
+          <div class="kpi-inline" *ngIf="!loadingStates.performance">
+            <span class="kpi-value">{{ performanceData.anomaliesTraitees | number }}</span>
+            <span class="kpi-title">Alertes Traitées</span>
+          </div>
           <div class="skeleton-text" *ngIf="loadingStates.performance"></div>
-          <label>Alertes Traitées</label>
         </div>
       </div>
 
       <div class="kpi-stat-card info">
-        <div class="kpi-header">
+        <div class="kpi-row">
           <div class="icon-circle"><mat-icon>receipt_long</mat-icon></div>
-        </div>
-        <div class="kpi-body">
-          <h3 *ngIf="!loadingStates.performance">{{ performanceData.transactionsAnalysees | number }}</h3>
+          <div class="kpi-inline" *ngIf="!loadingStates.performance">
+            <span class="kpi-value">{{ performanceData.transactionsAnalysees | number }}</span>
+            <span class="kpi-title">Transactions Analysées</span>
+          </div>
           <div class="skeleton-text" *ngIf="loadingStates.performance"></div>
-          <label>Transactions Analysées</label>
         </div>
       </div>
 
       <div class="kpi-stat-card danger">
-        <div class="kpi-header">
+        <div class="kpi-row">
           <div class="icon-circle"><mat-icon>block</mat-icon></div>
-        </div>
-        <div class="kpi-body">
-          <h3 *ngIf="!loadingStates.performance">{{ regulatoryData.transactionsBloquees | number }}</h3>
+          <div class="kpi-inline" *ngIf="!loadingStates.performance">
+            <span class="kpi-value">{{ regulatoryData.transactionsBloquees | number }}</span>
+            <span class="kpi-title">Transactions Bloquées</span>
+          </div>
           <div class="skeleton-text" *ngIf="loadingStates.performance"></div>
-          <label>Transactions Bloquées</label>
         </div>
       </div>
     </div>

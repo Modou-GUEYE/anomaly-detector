@@ -62,9 +62,9 @@ export class ReportsComponent implements OnInit, OnDestroy, AfterViewInit {
   realRuleViolationsData: RuleViolationData[] = [];
   realEfficiencyData: EfficiencyData[] = [];
 
-  private destroy$ = new Subject<void>();
+  private readonly destroy$ = new Subject<void>();
 
-  constructor(private reportsService: ReportsService) {
+  constructor(private readonly reportsService: ReportsService) {
     Chart.register(...registerables);
   }
 
@@ -363,7 +363,7 @@ export class ReportsComponent implements OnInit, OnDestroy, AfterViewInit {
                 if (hasData && context.length > 0) {
                   const index = context[0].dataIndex;
                   const data = this.realEfficiencyData[index];
-                  if (data && data.date) {
+                  if (data?.date) {
                     const formattedDate = new Date(data.date).toLocaleDateString('fr-FR', {
                       day: '2-digit',
                       month: '2-digit',
@@ -434,11 +434,7 @@ export class ReportsComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
     // Filtrage souple: si type spécifique, garder ceux dont le nom contient le type (minuscule)
-    let filteredData = this.realRuleViolationsData;
-    if (this.currentFilters.typeRule !== 'all') {
-      const needle = this.currentFilters.typeRule.toLowerCase();
-      filteredData = this.realRuleViolationsData.filter(item => item.ruleName.toLowerCase().includes(needle));
-    }
+    const filteredData = this.realRuleViolationsData.filter(item => this.matchesSelectedRule(item.ruleName));
 
     const labels = filteredData.map(item => item.ruleName);
     const data = filteredData.map(item => item.count);
@@ -456,6 +452,42 @@ export class ReportsComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     
     this.chartRegles.update('active');
+  }
+
+  private normalizeRuleText(value: string): string {
+    return value
+      .normalize('NFD')
+      .replaceAll(/\p{Diacritic}/gu, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  private matchesSelectedRule(ruleName: string): boolean {
+    if (this.currentFilters.typeRule === 'all') {
+      return true;
+    }
+
+    const normalizedRule = this.normalizeRuleText(ruleName);
+    const selected = this.currentFilters.typeRule;
+
+    switch (selected) {
+      case 'montant':
+        return normalizedRule.includes('montant');
+      case 'frequence':
+        return normalizedRule.includes('frequence');
+      case 'pays':
+        return normalizedRule.includes('pays');
+      case 'blacklist':
+        return normalizedRule.includes('blacklist');
+      case 'pep':
+        return normalizedRule.includes('pep');
+      case 'surveilles':
+        return normalizedRule.includes('surveille');
+      case 'interdit':
+        return normalizedRule.includes('interdit');
+      default:
+        return normalizedRule.includes(this.normalizeRuleText(selected));
+    }
   }
 
   /**
@@ -719,9 +751,7 @@ export class ReportsComponent implements OnInit, OnDestroy, AfterViewInit {
       y += 6;
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(55, 65, 81);
-      const filteredData = this.currentFilters.typeRule === 'all'
-        ? this.realRuleViolationsData
-        : this.realRuleViolationsData.filter(item => item.ruleName === this.currentFilters.typeRule);
+      const filteredData = this.realRuleViolationsData.filter(item => this.matchesSelectedRule(item.ruleName));
       if (filteredData.length === 0) {
         doc.text('Aucune donnée.', 18, y);
         y += 6;
@@ -801,9 +831,7 @@ export class ReportsComponent implements OnInit, OnDestroy, AfterViewInit {
     ];
 
     // Ajouter les données de violations
-    const filteredData = this.currentFilters.typeRule === 'all'
-      ? this.realRuleViolationsData
-      : this.realRuleViolationsData.filter(item => item.ruleName === this.currentFilters.typeRule);
+    const filteredData = this.realRuleViolationsData.filter(item => this.matchesSelectedRule(item.ruleName));
     
     if (filteredData.length === 0) {
       data.push(['Aucune donnée']);
@@ -813,9 +841,11 @@ export class ReportsComponent implements OnInit, OnDestroy, AfterViewInit {
       });
     }
 
-    data.push(['']);
-    data.push(['EFFICACITÉ ET DÉLAIS DE TRAITEMENT']);
-    data.push(['Période', 'Délai Moyen (jours)', 'Taux de Résolution (%)']);
+    data.push(
+      [''],
+      ['EFFICACITÉ ET DÉLAIS DE TRAITEMENT'],
+      ['Période', 'Délai Moyen (jours)', 'Taux de Résolution (%)']
+    );
 
     // Ajouter les données d'efficacité
     if (this.realEfficiencyData.length === 0) {
@@ -836,7 +866,7 @@ export class ReportsComponent implements OnInit, OnDestroy, AfterViewInit {
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    link.remove();
     this.exporting = false;
   }
 

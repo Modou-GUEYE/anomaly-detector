@@ -106,6 +106,41 @@ func (s *Service) SendAccountActivatedEmail(toEmail, username string) error {
 	return s.SendEmail(toEmail, subject, body)
 }
 
+// SendPasswordResetEmail envoie un lien de réinitialisation de mot de passe.
+func (s *Service) SendPasswordResetEmail(toEmail, username, resetLink string) error {
+	subject := "Réinitialisation de votre mot de passe"
+	body := fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+	<div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+		<h2 style="color: #2463DE;">Réinitialisation du mot de passe</h2>
+		<p>Bonjour %s,</p>
+
+		<p>Nous avons reçu une demande de réinitialisation de mot de passe pour votre compte.</p>
+
+		<div style="background: #f0f4ff; border-left: 4px solid #2463DE; padding: 15px; margin: 20px 0; border-radius: 4px;">
+			<p style="margin: 0 0 12px 0;">Cliquez sur le bouton ci-dessous pour définir un nouveau mot de passe :</p>
+			<a href="%s" style="display: inline-block; padding: 10px 16px; background: #2463DE; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600;">Réinitialiser mon mot de passe</a>
+		</div>
+
+		<p style="color: #666;">Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email.</p>
+
+		<hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+		<p style="color: #999; font-size: 12px;">
+			Cet email a été envoyé automatiquement. Merci de ne pas répondre à ce message.
+		</p>
+	</div>
+</body>
+</html>
+`, username, resetLink)
+
+	return s.SendEmail(toEmail, subject, body)
+}
+
 // SendEmail envoie un email via SMTP
 func (s *Service) SendEmail(to, subject, htmlBody string) error {
 	// Vérifier la configuration
