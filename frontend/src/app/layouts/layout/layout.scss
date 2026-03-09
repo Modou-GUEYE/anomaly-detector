@@ -41,7 +41,7 @@ $border-color: #e2e8f0;
       width: 48px;
       height: 48px;
       background: linear-gradient(135deg, $accent-orange 0%, #f97316 100%);
-      color: white;
+      color: #111827;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -83,7 +83,7 @@ $border-color: #e2e8f0;
 
       mat-icon { font-size: 20px; width: 20px; height: 20px; color: $accent-orange; }
       
-      &:hover { background: rgba(255,255,255,0.05); color: white !important; }
+      &:hover { background: rgba(15, 23, 42, 0.55); color: #f8fafc !important; }
       &.active { 
         background: $sidebar-link-active !important; 
 
@@ -135,9 +135,9 @@ $border-color: #e2e8f0;
       width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
       cursor: pointer; color: #64748b; position: relative; transition: 0.2s;
       &:hover { background: #f1f5f9; color: $sidebar-link-active; }
-      &.logout:hover { background: #fee2e2; color: #ef4444; }
+      &.logout:hover { background: #fee2e2; color: #7f1d1d; }
       .badge {
-        position: absolute; top: 4px; right: 4px; background: #ef4444; color: white;
+        position: absolute; top: 4px; right: 4px; background: #b91c1c; color: white;
         font-size: 10px; min-width: 16px; height: 16px; border-radius: 50%;
         display: flex; align-items: center; justify-content: center; border: 2px solid white;
       }

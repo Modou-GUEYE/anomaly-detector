@@ -113,7 +113,7 @@ $white: #ffffff;
       }
       &.cancel { background: #f1f5f9; color: $text-muted; &:hover { background: #e2e8f0; color: $text-main; } }
       &.danger { 
-        background: #ef4444; color: white; 
+        background: #b91c1c; color: white; 
         &:hover { background: #dc2626; transform: translateY(-2px); box-shadow: 0 4px 12px rgba($danger, 0.2); }
       }
     }
@@ -157,8 +157,8 @@ $white: #ffffff;
       width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
       border: none; background: transparent; border-radius: 10px; cursor: pointer; color: $text-muted;
       transition: 0.2s;
-      &.edit:hover { background: #fef3c7; color: #f59e0b; }
-      &.delete:hover { background: #fee2e2; color: #ef4444; }
+      &.edit:hover { background: #fef3c7; color: #92400e; }
+      &.delete:hover { background: #fee2e2; color: #7f1d1d; }
     }
   }
 

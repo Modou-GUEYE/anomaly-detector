@@ -34,16 +34,14 @@ body {
   margin: 0;
 }
 :root { color-scheme: light; }
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
 html, body { height: 100%; }
-body { margin: 0; font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif; }
 
 /* Masquer les barres de scroll tout en conservant la fonctionnalité */
-* {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* Internet Explorer 10+ */
-}
-
 *::-webkit-scrollbar {
   display: none; /* Safari et Chrome */
 }
@@ -79,8 +77,3 @@ aside.dashboard-sidebar {
 .app-layout {
   background: #F7F8FA !important;
 }
-
-
-
-html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }

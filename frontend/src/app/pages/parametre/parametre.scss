@@ -64,7 +64,7 @@ $danger: #ef4444;
       align-items: center; justify-content: center; background: #f1f5f9; color: $text-muted;
       mat-icon { font-size: 20px; }
       &.role { background: rgba($primary, 0.1); color: $primary; }
-      &.date { background: #fff7ed; color: #ea580c; }
+      &.date { background: #fff7ed; color: #9a3412; }
       &.active-bg { background: #ecfdf5; color: $success; }
       &.inactive-bg { background: #fef2f2; color: $danger; }
     }
