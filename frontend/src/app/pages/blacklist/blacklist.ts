@@ -39,6 +39,8 @@ export class BlacklistComponent implements OnInit {
   editingEntity: EntiteBlacklist | null = null;
   showDeleteModal = false;
   deletingEntity: EntiteBlacklist | null = null;
+  showValidationModal = false;
+  validationMessage = '';
   showDetailsModal = false;
   detailsEntity: EntiteBlacklist | null = null;
   formData: EntiteBlacklist = {
@@ -169,9 +171,19 @@ export class BlacklistComponent implements OnInit {
     return anyEntity?.id || anyEntity?._id || null;
   }
 
+  private openValidationModal(message: string): void {
+    this.validationMessage = message;
+    this.showValidationModal = true;
+  }
+
+  closeValidationModal(): void {
+    this.showValidationModal = false;
+    this.validationMessage = '';
+  }
+
   saveEntity() {
     if (!this.formData.nom || !this.formData.numeroCompte || !this.formData.typeEntite) {
-      alert('Veuillez remplir tous les champs obligatoires');
+      this.openValidationModal('Veuillez remplir tous les champs obligatoires');
       return;
     }
 

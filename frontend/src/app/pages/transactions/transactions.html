@@ -117,24 +117,24 @@
         <p class="description" [ngClass]="getStatusClass(getTransactionStatus(detailsTransaction!))">{{ getTransactionStatus(detailsTransaction!) }}</p>
       </div>
       <div class="info-grid">
-        <div class="info-item"><span>ID Transaction</span><span class="mono">#{{ detailsTransaction?.id }}</span></div>
-        <div class="info-item"><span>Montant</span><span class="bold">{{ detailsTransaction?.montant | number:'1.0-0' }} FCFA</span></div>
-        <div class="info-item"><span>Date Opération</span><span>{{ formatDateFR(detailsTransaction?.date_operation || '') }}</span></div>
-        <div class="info-item"><span>Portée</span><span>{{ detailsTransaction?.portee }}</span></div>
-        <div class="info-item"><span>Devise</span><span>FCFA (XOF)</span></div>
+        <div class="info-item"><span>ID Transaction: </span><span class="mono">#{{ detailsTransaction?.id }}</span></div>
+        <div class="info-item"><span>Montant: </span><span class="bold">{{ detailsTransaction?.montant | number:'1.0-0' }} FCFA</span></div>
+        <div class="info-item"><span>Date Opération: </span><span>{{ formatDateFR(detailsTransaction?.date_operation || '') }}</span></div>
+        <div class="info-item"><span>Portée: </span><span>{{ detailsTransaction?.portee }}</span></div>
+        <div class="info-item"><span>Devise: </span><span>FCFA (XOF)</span></div>
         
-        <div class="info-item"><span>Payeur</span><span>{{ detailsTransaction?.nom_payeur }}</span></div>
-        <div class="info-item"><span>N° Compte Payeur</span><span class="mono">{{ detailsTransaction?.numero_compte_payeur }}</span></div>
-        <div class="info-item"><span>Type Payeur</span><span>{{ getTypeClientLabel(detailsTransaction?.type_client_payeur || '') }}</span></div>
+        <div class="info-item"><span>Payeur: </span><span>{{ detailsTransaction?.nom_payeur }}</span></div>
+        <div class="info-item"><span>N° Compte Payeur: </span><span class="mono">{{ detailsTransaction?.numero_compte_payeur }}</span></div>
+        <div class="info-item"><span>Type Payeur: </span><span>{{ getTypeClientLabel(detailsTransaction?.type_client_payeur || '') }}</span></div>
         
-        <div class="info-item"><span>Bénéficiaire</span><span>{{ detailsTransaction?.nom_paye }}</span></div>
-        <div class="info-item"><span>N° Compte Bénéficiaire</span><span class="mono">{{ detailsTransaction?.numero_compte_paye }}</span></div>
-        <div class="info-item"><span>Type Bénéficiaire</span><span>{{ getTypeClientLabel(detailsTransaction?.type_client_paye || '') }}</span></div>
+        <div class="info-item"><span>Bénéficiaire: </span><span>{{ detailsTransaction?.nom_paye }}</span></div>
+        <div class="info-item"><span>N° Compte Bénéficiaire: </span><span class="mono">{{ detailsTransaction?.numero_compte_paye }}</span></div>
+        <div class="info-item"><span>Type Bénéficiaire: </span><span>{{ getTypeClientLabel(detailsTransaction?.type_client_paye || '') }}</span></div>
         
-        <div class="info-item"><span>Ville Payeur</span><span>{{ detailsTransaction?.ville_payeur }}</span></div>
-        <div class="info-item"><span>Pays Payeur</span><span>{{ getCountryNameFromCode(detailsTransaction?.pays_payeur || '') }}</span></div>
-        <div class="info-item"><span>Ville Bénéficiaire</span><span>{{ detailsTransaction?.ville_paye || 'N/A' }}</span></div>
-        <div class="info-item"><span>Pays Bénéficiaire</span><span>{{ getCountryNameFromCode(detailsTransaction?.pays_paye || '') }}</span></div>
+        <div class="info-item"><span>Ville Payeur: </span><span>{{ detailsTransaction?.ville_payeur }}</span></div>
+        <div class="info-item"><span>Pays Payeur: </span><span>{{ getCountryNameFromCode(detailsTransaction?.pays_payeur || '') }}</span></div>
+        <div class="info-item"><span>Ville Bénéficiaire: </span><span>{{ detailsTransaction?.ville_paye || 'N/A' }}</span></div>
+        <div class="info-item"><span>Pays Bénéficiaire: </span><span>{{ getCountryNameFromCode(detailsTransaction?.pays_paye || '') }}</span></div>
       </div>
 
       <!-- Alertes Associées Section -->

@@ -112,14 +112,14 @@
         <p class="status-value" [ngClass]="getAnomalyStatusClass(detailsAnomaly?.statut || '')">{{ detailsAnomaly?.statut }}</p>
       </div>
       <div class="info-grid">
-        <div class="info-item"><span>Code</span><span class="mono">{{ detailsAnomaly?.code }}</span></div>
-        <div class="info-item"><span>Type</span><span>{{ detailsAnomaly?.type }}</span></div>
-        <div class="info-item"><span>Score Risque</span><span class="bold">{{ detailsAnomaly?.scoreRisque }}</span></div>
-        <div class="info-item"><span>Compte</span><span class="mono">{{ detailsAnomaly?.numeroCompte }}</span></div>
-        <div class="info-item"><span>Action</span><span>{{ detailsAnomaly?.action }}</span></div>
-        <div class="info-item"><span>Analyste</span><span>{{ detailsAnomaly?.analysteNom || detailsAnomaly?.analysteAssigneID || 'Aucun' }}</span></div>
-        <div class="info-item" *ngIf="detailsAnomaly?.paysRisque"><span>Pays à Risque</span><span>{{ detailsAnomaly?.paysRisque }}</span></div>
-        <div class="info-item full"><span>Message</span><span>{{ detailsAnomaly?.message }}</span></div>
+        <div class="info-item"><span>Code: </span><span class="mono">{{ detailsAnomaly?.code }}</span></div>
+        <div class="info-item"><span>Type: </span><span>{{ detailsAnomaly?.type }}</span></div>
+        <div class="info-item"><span>Score Risque: </span><span class="bold">{{ detailsAnomaly?.scoreRisque }}</span></div>
+        <div class="info-item"><span>Compte: </span><span class="mono">{{ detailsAnomaly?.numeroCompte }}</span></div>
+        <div class="info-item"><span>Action: </span><span>{{ detailsAnomaly?.action }}</span></div>
+        <div class="info-item"><span>Analyste: </span><span>{{ detailsAnomaly?.analysteNom || detailsAnomaly?.analysteAssigneID || 'Aucun' }}</span></div>
+        <div class="info-item" *ngIf="detailsAnomaly?.paysRisque"><span>Pays à Risque: </span><span>{{ detailsAnomaly?.paysRisque }}</span></div>
+        <div class="info-item full"><span>Message: </span><span>{{ detailsAnomaly?.message }}</span></div>
       </div>
       <div class="status-change">
         <label for="anomaly-change-status">Changer le statut</label>

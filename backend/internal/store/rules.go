@@ -10,6 +10,12 @@ import (
 	"anomaly-detector/internal/models"
 )
 
+const (
+	rulesControlDomain = "Règles de Contrôle"
+	auditSuccessStatus = "succès"
+	ruleIDWhereClause  = "id = ?"
+)
+
 // ===================== REGLES DE CONTROLE =====================
 
 // CreateRegleControle insère une nouvelle règle de contrôle dans la base de données.
@@ -22,7 +28,7 @@ func (s *Store) CreateRegleControle(ctx context.Context, regle *models.RegleCont
 		if userID != "" {
 			actionDescription := fmt.Sprintf("Création de la règle '%s'", regle.NomRegle)
 			details := fmt.Sprintf("Échec lors de la création de la règle de contrôle: %s, Erreur: %v", regle.NomRegle, result.Error)
-			_ = s.LogAction(ctx, userID, actionDescription, "Règles de Contrôle", "", details, "échec")
+			_ = s.LogAction(ctx, userID, actionDescription, rulesControlDomain, "", details, "échec")
 		}
 		return nil, result.Error
 	}
@@ -30,7 +36,7 @@ func (s *Store) CreateRegleControle(ctx context.Context, regle *models.RegleCont
 	// Logging d'audit automatique si userID fourni
 	if userID != "" {
 		actionDescription := fmt.Sprintf("Création de la règle '%s'", regle.NomRegle)
-		err := s.LogAction(ctx, userID, actionDescription, "Règles de Contrôle", regle.ID, fmt.Sprintf("Création de la règle de contrôle: %s", regle.NomRegle), "succès")
+		err := s.LogAction(ctx, userID, actionDescription, rulesControlDomain, regle.ID, fmt.Sprintf("Création de la règle de contrôle: %s", regle.NomRegle), auditSuccessStatus)
 		if err != nil {
 			// Ne pas faire échouer la création si le logging échoue, mais logger l'erreur
 			fmt.Printf("Erreur lors du logging d'audit pour la création de règle %s: %v\n", regle.ID, err)
@@ -72,14 +78,14 @@ func (s *Store) UpdateRegleControle(ctx context.Context, id string, regle *model
 	// vider la liste par inadvertance lors d'une simple édition de la règle.
 
 	result := s.gormDB.WithContext(ctx).Model(&models.RegleControle{}).
-		Where("id = ?", id).
+		Where(ruleIDWhereClause, id).
 		Updates(updateFields)
 	if result.Error != nil {
 		return nil, result.Error
 	}
 	// Recharger la règle mise à jour
 	var updated models.RegleControle
-	if err := s.gormDB.WithContext(ctx).First(&updated, "id = ?", id).Error; err != nil {
+	if err := s.gormDB.WithContext(ctx).First(&updated, ruleIDWhereClause, id).Error; err != nil {
 		return nil, err
 	}
 	*regle = updated
@@ -87,7 +93,7 @@ func (s *Store) UpdateRegleControle(ctx context.Context, id string, regle *model
 	// Logging d'audit automatique si userID fourni
 	if userID != "" {
 		actionDescription := fmt.Sprintf("Modification de la règle '%s'", updated.NomRegle)
-		err := s.LogAction(ctx, userID, actionDescription, "Règles de Contrôle", id, fmt.Sprintf("Modification de la règle de contrôle: %s", updated.NomRegle), "succès")
+		err := s.LogAction(ctx, userID, actionDescription, rulesControlDomain, id, fmt.Sprintf("Modification de la règle de contrôle: %s", updated.NomRegle), auditSuccessStatus)
 		if err != nil {
 			// Ne pas faire échouer la mise à jour si le logging échoue, mais logger l'erreur
 			fmt.Printf("Erreur lors du logging d'audit pour la modification de règle %s: %v\n", id, err)
@@ -102,7 +108,7 @@ func (s *Store) UpdateRegleControle(ctx context.Context, id string, regle *model
 func (s *Store) DeleteRegleControle(ctx context.Context, id string, userID string) error {
 	// Vérifier que la règle existe
 	var regle models.RegleControle
-	if err := s.gormDB.WithContext(ctx).First(&regle, "id = ?", id).Error; err != nil {
+	if err := s.gormDB.WithContext(ctx).First(&regle, ruleIDWhereClause, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fmt.Errorf("aucune règle trouvée avec l'ID: %s", id)
 		}
@@ -129,7 +135,7 @@ func (s *Store) DeleteRegleControle(ctx context.Context, id string, userID strin
 	// Logging d'audit automatique si userID fourni
 	if userID != "" {
 		actionDescription := fmt.Sprintf("Suppression de la règle '%s'", regle.NomRegle)
-		err := s.LogAction(ctx, userID, actionDescription, "Règles de Contrôle", id, fmt.Sprintf("Suppression de la règle de contrôle: %s", regle.NomRegle), "succès")
+		err := s.LogAction(ctx, userID, actionDescription, rulesControlDomain, id, fmt.Sprintf("Suppression de la règle de contrôle: %s", regle.NomRegle), auditSuccessStatus)
 		if err != nil {
 			// Ne pas faire échouer la suppression si le logging échoue, mais logger l'erreur
 			fmt.Printf("Erreur lors du logging d'audit pour la suppression de règle %s: %v\n", id, err)
@@ -145,7 +151,7 @@ func (s *Store) UpdateRegleControleStatus(ctx context.Context, id string, status
 	var beforeUpdate models.RegleControle
 	var nomRegle string
 	if userID != "" {
-		if err := s.gormDB.WithContext(ctx).First(&beforeUpdate, "id = ?", id).Error; err != nil {
+		if err := s.gormDB.WithContext(ctx).First(&beforeUpdate, ruleIDWhereClause, id).Error; err != nil {
 			return nil, err
 		}
 		nomRegle = beforeUpdate.NomRegle
@@ -154,7 +160,7 @@ func (s *Store) UpdateRegleControleStatus(ctx context.Context, id string, status
 	// Convertir le statut string en booléen (Actif = true, Inactif = false)
 	isActive := status == "Actif"
 
-	result := s.gormDB.WithContext(ctx).Model(&models.RegleControle{}).Where("id = ?", id).
+	result := s.gormDB.WithContext(ctx).Model(&models.RegleControle{}).Where(ruleIDWhereClause, id).
 		Update("active", isActive)
 	if result.Error != nil {
 		return nil, result.Error
@@ -162,7 +168,7 @@ func (s *Store) UpdateRegleControleStatus(ctx context.Context, id string, status
 
 	// Recharger la règle mise à jour
 	var updated models.RegleControle
-	if err := s.gormDB.WithContext(ctx).First(&updated, "id = ?", id).Error; err != nil {
+	if err := s.gormDB.WithContext(ctx).First(&updated, ruleIDWhereClause, id).Error; err != nil {
 		return nil, err
 	}
 
@@ -171,7 +177,7 @@ func (s *Store) UpdateRegleControleStatus(ctx context.Context, id string, status
 		actionDescription := fmt.Sprintf("%s de la règle '%s'", status, nomRegle)
 		details := fmt.Sprintf("Changement statut règle '%s' vers: %s", nomRegle, status)
 
-		err := s.LogAction(ctx, userID, actionDescription, "Règles de Contrôle", id, details, "succès")
+		err := s.LogAction(ctx, userID, actionDescription, rulesControlDomain, id, details, auditSuccessStatus)
 		if err != nil {
 			fmt.Printf("Erreur lors du logging d'audit pour le changement de statut de règle %s: %v\n", id, err)
 		}
@@ -193,7 +199,7 @@ func (s *Store) GetAllRegles(ctx context.Context) ([]models.RegleControle, error
 // GetRegleByID récupère une règle de contrôle par son ID.
 func (s *Store) GetRegleByID(ctx context.Context, id string) (*models.RegleControle, error) {
 	var regle models.RegleControle
-	if err := s.gormDB.WithContext(ctx).First(&regle, "id = ?", id).Error; err != nil {
+	if err := s.gormDB.WithContext(ctx).First(&regle, ruleIDWhereClause, id).Error; err != nil {
 		return nil, err
 	}
 	return &regle, nil
@@ -204,6 +210,9 @@ func (s *Store) GetRegleByType(ctx context.Context, typeRegle string) (*models.R
 	var regle models.RegleControle
 	result := s.gormDB.WithContext(ctx).Where("type_regle = ? AND active = ?", typeRegle, true).First(&regle)
 	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
 		return nil, result.Error
 	}
 	return &regle, nil

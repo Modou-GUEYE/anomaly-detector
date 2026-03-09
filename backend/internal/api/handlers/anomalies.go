@@ -6,6 +6,7 @@ import (
 	"anomaly-detector/internal/store"
 	"errors"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -16,6 +17,35 @@ import (
 // AnomaliesHandler gère les opérations liées aux anomalies et alertes
 type AnomaliesHandler struct {
 	store *store.Store
+}
+
+type accountPayload struct {
+	nomClient      string
+	numeroCompte   string
+	typeCompte     string
+	typeClient     string
+	categorie      string
+	pays           string
+	ville          string
+	adresse        string
+	roleLabel      string
+	errorCreateMsg string
+}
+
+func partnerBankCodeFromEnv() (string, error) {
+	partnerBankCode := strings.TrimSpace(os.Getenv("PARTNER_BANK_CODE"))
+	if partnerBankCode == "" {
+		return "", core.ErrMissingPartnerBankCode
+	}
+	return partnerBankCode, nil
+}
+
+func isPartnerAccount(numeroCompte string, partnerBankCode string) bool {
+	return strings.HasPrefix(numeroCompte, partnerBankCode)
+}
+
+func hasPartnerAccount(tx *models.Transaction, partnerBankCode string) bool {
+	return isPartnerAccount(tx.NumeroComptePayeur, partnerBankCode) || isPartnerAccount(tx.NumeroComptePaye, partnerBankCode)
 }
 
 // NewAnomaliesHandler crée une nouvelle instance du handler d'anomalies
@@ -47,85 +77,103 @@ func (h *AnomaliesHandler) HandleAnalyzeTransaction(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Utilisateur non identifié"})
 		return
 	}
+	userIDStr := userID.(string)
 
-	// Création automatique du compte payeur si inexistant
-	if tx.NumeroComptePayeur != "" {
-		clientPayeur, err := h.store.GetCompteByCompte(ctx, tx.NumeroComptePayeur)
-		if err != nil || clientPayeur.ID == "" {
-			profilID, errProfil := h.store.GetProfilClientIDByCode(ctx, tx.TypeClientPayeur)
-			if errProfil != nil {
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Profil client introuvable pour le type: " + tx.TypeClientPayeur, "details": errProfil.Error()})
-				return
-			}
-			_, errCreate := h.store.CreateCompte(ctx, &models.Compte{
-				NomClient:      tx.NomPayeur,
-				NumeroCompte:   tx.NumeroComptePayeur,
-				TypeCompte:     tx.TypeComptePayeur,
-				TypeClient:     tx.TypeClientPayeur,
-				Categorie:      tx.CategoriePayeur,
-				Pays:           tx.PaysPayeur,
-				Ville:          tx.VillePayeur,
-				Adresse:        tx.AdressePayeur,
-				ProfilClientID: profilID,
-				DateCreation:   time.Now(),
-			}, userID.(string))
-			if errCreate != nil {
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors de la création du client payeur", "details": errCreate.Error()})
-				return
-			}
-		}
+	payeur := accountPayload{
+		nomClient:      tx.NomPayeur,
+		numeroCompte:   tx.NumeroComptePayeur,
+		typeCompte:     tx.TypeComptePayeur,
+		typeClient:     tx.TypeClientPayeur,
+		categorie:      tx.CategoriePayeur,
+		pays:           tx.PaysPayeur,
+		ville:          tx.VillePayeur,
+		adresse:        tx.AdressePayeur,
+		roleLabel:      "payeur",
+		errorCreateMsg: "Erreur lors de la création du client payeur",
 	}
-
-	// Création automatique du compte payé si inexistant
-	if tx.NumeroComptePaye != "" {
-		clientPaye, err := h.store.GetCompteByCompte(ctx, tx.NumeroComptePaye)
-		if err != nil || clientPaye.ID == "" {
-			profilID, errProfil := h.store.GetProfilClientIDByCode(ctx, tx.TypeClientPaye)
-			if errProfil != nil {
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Profil client introuvable pour le type: " + tx.TypeClientPaye, "details": errProfil.Error()})
-				return
-			}
-			_, errCreate := h.store.CreateCompte(ctx, &models.Compte{
-				NomClient:      tx.NomPaye,
-				NumeroCompte:   tx.NumeroComptePaye,
-				TypeCompte:     tx.TypeComptePaye,
-				TypeClient:     tx.TypeClientPaye,
-				Categorie:      tx.CategoriePaye,
-				Pays:           tx.PaysPaye,
-				Ville:          tx.VillePaye,
-				Adresse:        tx.AdressePaye,
-				ProfilClientID: profilID,
-				DateCreation:   time.Now(),
-			}, userID.(string))
-			if errCreate != nil {
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors de la création du client payé", "details": errCreate.Error()})
-				return
-			}
-		}
-	}
-
-	// Code banque du partenaire principal
-	const partnerBankCode = "SN079"
-	isPayeurPartenaire := len(tx.NumeroComptePayeur) >= 5 && tx.NumeroComptePayeur[:5] == partnerBankCode
-	isPayePartenaire := len(tx.NumeroComptePaye) >= 5 && tx.NumeroComptePaye[:5] == partnerBankCode
-	if !isPayeurPartenaire && !isPayePartenaire {
-		ctx.JSON(http.StatusOK, gin.H{"status": "transaction_non_analysee", "raison": "Aucun compte partenaire (code banque SN079) impliqué dans la transaction."})
+	if err := h.ensureAccountIfMissing(ctx, payeur, userIDStr); err != nil {
 		return
 	}
 
-	// Analyse de la transaction
+	paye := accountPayload{
+		nomClient:      tx.NomPaye,
+		numeroCompte:   tx.NumeroComptePaye,
+		typeCompte:     tx.TypeComptePaye,
+		typeClient:     tx.TypeClientPaye,
+		categorie:      tx.CategoriePaye,
+		pays:           tx.PaysPaye,
+		ville:          tx.VillePaye,
+		adresse:        tx.AdressePaye,
+		roleLabel:      "payé",
+		errorCreateMsg: "Erreur lors de la création du client payé",
+	}
+	if err := h.ensureAccountIfMissing(ctx, paye, userIDStr); err != nil {
+		return
+	}
+
+	partnerBankCode, err := partnerBankCodeFromEnv()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if !hasPartnerAccount(&tx, partnerBankCode) {
+		ctx.JSON(http.StatusOK, gin.H{"status": "transaction_non_analysee", "raison": "Aucun compte partenaire impliqué dans la transaction."})
+		return
+	}
+
+	h.analyzeAndRespond(ctx, &tx, userIDStr)
+}
+
+func (h *AnomaliesHandler) ensureAccountIfMissing(ctx *gin.Context, payload accountPayload, userID string) error {
+	if payload.numeroCompte == "" {
+		return nil
+	}
+
+	compte, err := h.store.GetCompteByCompte(ctx, payload.numeroCompte)
+	if err == nil && compte.ID != "" {
+		return nil
+	}
+
+	profilID, errProfil := h.store.GetProfilClientIDByCode(ctx, payload.typeClient)
+	if errProfil != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Profil client introuvable pour le type: " + payload.typeClient, "details": errProfil.Error()})
+		return errProfil
+	}
+
+	_, errCreate := h.store.CreateCompte(ctx, &models.Compte{
+		NomClient:      payload.nomClient,
+		NumeroCompte:   payload.numeroCompte,
+		TypeCompte:     payload.typeCompte,
+		TypeClient:     payload.typeClient,
+		Categorie:      payload.categorie,
+		Pays:           payload.pays,
+		Ville:          payload.ville,
+		Adresse:        payload.adresse,
+		ProfilClientID: profilID,
+		DateCreation:   time.Now(),
+	}, userID)
+	if errCreate != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": payload.errorCreateMsg, "details": errCreate.Error()})
+		return errCreate
+	}
+
+	return nil
+}
+
+func (h *AnomaliesHandler) analyzeAndRespond(ctx *gin.Context, tx *models.Transaction, userID string) {
 	rulesEngine := core.NewRulesEngine(h.store)
-	alertes, err := rulesEngine.AnalyzeTransaction(ctx, &tx)
+	alertes, err := rulesEngine.AnalyzeTransaction(ctx, tx)
 	if err != nil {
 		if errors.Is(err, core.ErrTransactionRefused) {
-			h.handleRefusedTransaction(ctx, &tx, alertes, userID.(string))
+			h.handleRefusedTransaction(ctx, tx, alertes, userID)
 			return
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	h.handleValidTransaction(ctx, &tx, alertes, userID.(string))
+	h.handleValidTransaction(ctx, tx, alertes, userID)
 }
 
 // handleRefusedTransaction traite une transaction refusée
@@ -196,8 +244,11 @@ func (h *AnomaliesHandler) handleValidTransaction(ctx *gin.Context, tx *models.T
 
 // createSuiviIfNeeded ajoute à suivi_blacklist si nécessaire
 func (h *AnomaliesHandler) createSuiviIfNeeded(ctx *gin.Context, transactionID string, alerte *models.Alerte) {
-	const partnerBankCode = "SN079"
-	if alerte.NumeroCompte != "" && len(alerte.NumeroCompte) >= 5 && alerte.NumeroCompte[:5] == partnerBankCode {
+	partnerBankCode, err := partnerBankCodeFromEnv()
+	if err != nil {
+		return
+	}
+	if alerte.NumeroCompte != "" && isPartnerAccount(alerte.NumeroCompte, partnerBankCode) {
 		if h.shouldCreateSuivi(alerte) {
 			_ = h.store.CreateSuiviBlacklist(ctx, transactionID, alerte.NumeroCompte, "surveiller", alerte.Type)
 		}

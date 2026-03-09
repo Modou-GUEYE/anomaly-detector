@@ -117,18 +117,18 @@
         <p class="description" [ngClass]="detailsAccount?.isSurveilled ? 'status-surveille' : 'status-nonsurveille'">{{ detailsAccount?.numeroCompte }}</p>
       </div>
       <div class="info-grid">
-        <div class="info-item"><span>Nom Client</span><span>{{ detailsAccount?.nomClient }}</span></div>
-        <div class="info-item"><span>Type Client</span><span>{{ getTypeClientLabel(detailsAccount?.typeClient || '') }}</span></div>
-        <div class="info-item"><span>Catégorie</span><span>{{ detailsAccount?.categorie }}</span></div>
-        <div class="info-item"><span>Profil</span><span>{{ getProfileClientName(detailsAccount?.profilClientId) }}</span></div>
-        <div class="info-item"><span>Pays</span><span>{{ getCountryNameFromCode(detailsAccount?.pays || '') }}</span></div>
-        <div class="info-item"><span>Ville</span><span>{{ detailsAccount?.ville }}</span></div>
-        <div class="info-item"><span>Date d'Ouverture</span><span>{{ detailsAccount?.dateCreation | date: 'dd MMMM yyyy' }}</span></div>
-        <div class="info-item"><span>Statut</span><span class="bold" [ngClass]="detailsAccount?.isSurveilled ? 'status-surveille' : 'status-nonsurveille'">{{ detailsAccount?.isSurveilled ? 'Surveillé' : 'Non Surveillé' }}</span></div>
-        <div class="info-item full" *ngIf="detailsAccount?.adresse"><span>Adresse</span><span>{{ detailsAccount?.adresse }}</span></div>
-        <div class="info-item full" *ngIf="detailsAccount?.isSurveilled"><span>Motif de Surveillance</span><span>{{ detailsAccount?.suiviRaison }}</span></div>
-        <div class="info-item" *ngIf="detailsAccount?.isSurveilled"><span>Dernière Activité</span><span>{{ detailsAccount?.suiviDate | date: 'dd/MM/yy à HH:mm' }}</span></div>
-        <div class="info-item" *ngIf="detailsAccount?.isSurveilled"><span>Statut Suivi</span><span>{{ detailsAccount?.suiviStatus }}</span></div>
+        <div class="info-item"><span>Nom Client: </span><span>{{ detailsAccount?.nomClient }}</span></div>
+        <div class="info-item"><span>Type Client: </span><span>{{ getTypeClientLabel(detailsAccount?.typeClient || '') }}</span></div>
+        <div class="info-item"><span>Catégorie: </span><span>{{ detailsAccount?.categorie }}</span></div>
+        <div class="info-item"><span>Profil: </span><span>{{ getProfileClientName(detailsAccount?.profilClientId) }}</span></div>
+        <div class="info-item"><span>Pays: </span><span>{{ getCountryNameFromCode(detailsAccount?.pays || '') }}</span></div>
+        <div class="info-item"><span>Ville: </span><span>{{ detailsAccount?.ville }}</span></div>
+        <div class="info-item"><span>Date d'Ouverture: </span><span>{{ detailsAccount?.dateCreation | date: 'dd MMMM yyyy' }}</span></div>
+        <div class="info-item"><span>Statut: </span><span class="bold" [ngClass]="detailsAccount?.isSurveilled ? 'status-surveille' : 'status-nonsurveille'">{{ detailsAccount?.isSurveilled ? 'Surveillé' : 'Non Surveillé' }}</span></div>
+        <div class="info-item full" *ngIf="detailsAccount?.adresse"><span>Adresse: </span><span>{{ detailsAccount?.adresse }}</span></div>
+        <div class="info-item full" *ngIf="detailsAccount?.isSurveilled"><span>Motif de Surveillance: </span><span>{{ detailsAccount?.suiviRaison }}</span></div>
+        <div class="info-item" *ngIf="detailsAccount?.isSurveilled"><span>Dernière Activité: </span><span>{{ detailsAccount?.suiviDate | date: 'dd/MM/yy à HH:mm' }}</span></div>
+        <div class="info-item" *ngIf="detailsAccount?.isSurveilled"><span>Statut Suivi: </span><span>{{ detailsAccount?.suiviStatus }}</span></div>
       </div>
     </div>
   </div>

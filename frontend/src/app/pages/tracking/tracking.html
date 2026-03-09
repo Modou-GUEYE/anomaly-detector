@@ -154,11 +154,11 @@
           <p class="description">{{ selectedEvent['details'] || 'Aucun détail supplémentaire.' }}</p>
         </div>
         <div class="info-grid">
-          <div class="info-item"><span>ID Log</span><span>#{{ selectedEvent['id'] }}</span></div>
-          <div class="info-item"><span>Module</span><span>{{ selectedEvent['type_action'] }}</span></div>
-          <div class="info-item"><span>Utilisateur</span><span>{{ selectedEvent['nom_utilisateur'] }} ({{selectedEvent['utilisateur_id']}})</span></div>
-          <div class="info-item"><span>Résultat</span><span class="bold">{{ selectedEvent['resultat'] }}</span></div>
-          <div class="info-item"><span>Entité ID</span><span>{{ selectedEvent['entity_id'] || 'N/A' }}</span></div>
+          <div class="info-item"><span>ID Log: </span><span>#{{ selectedEvent['id'] }}</span></div>
+          <div class="info-item"><span>Module: </span><span>{{ selectedEvent['type_action'] }}</span></div>
+          <div class="info-item"><span>Utilisateur: </span><span>{{ selectedEvent['nom_utilisateur'] }} ({{selectedEvent['utilisateur_id']}})</span></div>
+          <div class="info-item"><span>Résultat: </span><span class="bold">{{ selectedEvent['resultat'] }}</span></div>
+          <div class="info-item"><span>Entité ID: </span><span>{{ selectedEvent['entity_id'] || 'N/A' }}</span></div>
         </div>
       </div>
     </div>

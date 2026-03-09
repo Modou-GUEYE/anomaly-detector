@@ -23,6 +23,7 @@ func NewRulesHandler(store *store.Store) *RulesHandler {
 const (
 	defaultMontantPeriode   = "7d"
 	defaultFrequencePeriode = "24h"
+	userNotIdentifiedError  = "Utilisateur non identifié"
 )
 
 // allowedTypes répertorie les types de règles autorisées (évolutif)
@@ -38,27 +39,41 @@ var allowedActions = map[string]struct{}{
 	"notifier":   {},
 }
 
-// normalizeAndValidateRegle applique les valeurs par défaut et valide les champs selon le type.
-// Elle ne persiste rien : uniquement transformation/validation.
-func normalizeAndValidateRegle(r *models.RegleControle) error {
-	r.TypeRegle = strings.TrimSpace(strings.ToLower(r.TypeRegle))
-	if _, ok := allowedTypes[r.TypeRegle]; !ok {
-		return fmt.Errorf("typeRegle invalide: %s", r.TypeRegle)
+var allowedRulePeriods = map[string]struct{}{
+	"24h": {},
+	"7d":  {},
+	"30d": {},
+}
+
+func normalizeProfilClientID(r *models.RegleControle) {
+	if r.ProfilClientID == nil {
+		return
 	}
 
-	// Action par défaut si vide
+	profil := strings.TrimSpace(*r.ProfilClientID)
+	if profil == "" {
+		r.ProfilClientID = nil
+		return
+	}
+
+	r.ProfilClientID = &profil
+}
+
+func normalizeAction(r *models.RegleControle) {
 	if strings.TrimSpace(r.Action) == "" {
 		r.Action = "surveiller"
 	}
-	// Normaliser action et valider
+
 	r.Action = strings.TrimSpace(strings.ToLower(r.Action))
 	if _, ok := allowedActions[r.Action]; !ok {
 		r.Action = "surveiller"
 	}
+}
 
-	// Nom et description basiques requis
+func validateRequiredFields(r *models.RegleControle) error {
 	r.NomRegle = strings.TrimSpace(r.NomRegle)
 	r.Description = strings.TrimSpace(r.Description)
+
 	if r.NomRegle == "" {
 		return fmt.Errorf("nomRegle est obligatoire")
 	}
@@ -66,45 +81,57 @@ func normalizeAndValidateRegle(r *models.RegleControle) error {
 		return fmt.Errorf("description est obligatoire")
 	}
 
+	return nil
+}
+
+func normalizePeriod(periodeReference string, defaultPeriod string) string {
+	if periodeReference == "" {
+		return defaultPeriod
+	}
+
+	p := strings.ToLower(strings.TrimSpace(periodeReference))
+	if _, ok := allowedRulePeriods[p]; !ok {
+		return defaultPeriod
+	}
+
+	return p
+}
+
+func validateTypeSpecificFields(r *models.RegleControle) error {
 	switch r.TypeRegle {
 	case "montant":
-		// Périodes autorisées pour montant
-		allowed := map[string]struct{}{"24h": {}, "7d": {}, "30d": {}}
-		if r.PeriodeReference == "" {
-			r.PeriodeReference = defaultMontantPeriode
-		} else {
-			p := strings.ToLower(strings.TrimSpace(r.PeriodeReference))
-			if _, ok := allowed[p]; !ok {
-				// Valeur non autorisée -> défaut sécurisé
-				r.PeriodeReference = defaultMontantPeriode
-			} else {
-				r.PeriodeReference = p
-			}
-		}
+		r.PeriodeReference = normalizePeriod(r.PeriodeReference, defaultMontantPeriode)
 		if r.Seuil <= 0 {
 			return fmt.Errorf("seuil doit être > 0 pour une règle de type montant")
 		}
 	case "frequence":
-		// Périodes autorisées pour frequence
-		allowed := map[string]struct{}{"24h": {}, "7d": {}, "30d": {}}
-		if r.PeriodeReference == "" {
-			r.PeriodeReference = defaultFrequencePeriode
-		} else {
-			p := strings.ToLower(strings.TrimSpace(r.PeriodeReference))
-			if _, ok := allowed[p]; !ok {
-				r.PeriodeReference = defaultFrequencePeriode
-			} else {
-				r.PeriodeReference = p
-			}
-		}
+		r.PeriodeReference = normalizePeriod(r.PeriodeReference, defaultFrequencePeriode)
 		if r.Seuil <= 0 {
 			return fmt.Errorf("seuil doit être > 0 pour une règle de type frequence")
 		}
 	default:
-		// Pour pays_risque: pas de periodeReference, pas de seuil obligatoire
 		r.PeriodeReference = ""
 	}
+
 	return nil
+}
+
+// normalizeAndValidateRegle applique les valeurs par défaut et valide les champs selon le type.
+// Elle ne persiste rien : uniquement transformation/validation.
+func normalizeAndValidateRegle(r *models.RegleControle) error {
+	r.TypeRegle = strings.TrimSpace(strings.ToLower(r.TypeRegle))
+	normalizeProfilClientID(r)
+	if _, ok := allowedTypes[r.TypeRegle]; !ok {
+		return fmt.Errorf("typeRegle invalide: %s", r.TypeRegle)
+	}
+
+	normalizeAction(r)
+
+	if err := validateRequiredFields(r); err != nil {
+		return err
+	}
+
+	return validateTypeSpecificFields(r)
 }
 
 // HandleGetAllRegles liste toutes les règles de contrôle
@@ -148,7 +175,7 @@ func (h *RulesHandler) HandleCreateRegleControle(ctx *gin.Context) {
 	// Récupérer l'utilisateur connecté
 	userID, exists := ctx.Get("userID")
 	if !exists {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Utilisateur non identifié"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": userNotIdentifiedError})
 		return
 	}
 
@@ -187,7 +214,7 @@ func (h *RulesHandler) HandleUpdateRegleControle(ctx *gin.Context) {
 	// Récupérer l'utilisateur connecté
 	userID, exists := ctx.Get("userID")
 	if !exists {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Utilisateur non identifié"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": userNotIdentifiedError})
 		return
 	}
 
@@ -219,7 +246,7 @@ func (h *RulesHandler) HandleDeleteRegleControle(ctx *gin.Context) {
 	// Récupérer l'ID utilisateur depuis le token
 	userID, exists := ctx.Get("userID")
 	if !exists {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Utilisateur non identifié"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": userNotIdentifiedError})
 		return
 	}
 
@@ -257,7 +284,7 @@ func (h *RulesHandler) HandleToggleRegleStatus(ctx *gin.Context) {
 	// Récupérer l'utilisateur connecté
 	userID, exists := ctx.Get("userID")
 	if !exists {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Utilisateur non identifié"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": userNotIdentifiedError})
 		return
 	}
 
