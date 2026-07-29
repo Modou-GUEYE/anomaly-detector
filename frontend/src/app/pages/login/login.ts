@@ -35,16 +35,14 @@ export class LoginComponent {
     // Handler du formulaire de connexion
     this.message = '';
     this.success = false;
-    this.isLoadingMessage = false;
     if (this.email && this.password) {
       this.isLoadingMessage = true;
-      this.message = 'Connexion...';
       // Convertir l'email en minuscules pour être insensible à la casse
       const emailLowerCase = this.email.toLowerCase();
       // Le rôle est déterminé automatiquement côté serveur
       this.authService.login(emailLowerCase, this.password).subscribe((ok) => {
+        this.isLoadingMessage = false;
         if (ok) {
-          this.isLoadingMessage = false;
           this.success = true;
           this.authState.isAuthenticated.set(true);
           
@@ -55,7 +53,6 @@ export class LoginComponent {
             this.router.navigate(['/dashboard']);
           }
         } else {
-          this.isLoadingMessage = false;
           this.success = false;
           this.message = 'Identifiants invalides';
         }

@@ -3,14 +3,15 @@
   <div class="container">
     <div class="card">
       @if (isLoadingMessage) {
-        <div class="loading-float">
+        <div class="loading-overlay">
           <mat-icon class="loading-icon">hourglass_top</mat-icon>
-          <span>{{ message || 'Connexion...' }}</span>
+          <span>Connexion en cours...</span>
         </div>
       }
+
       <header class="header">
-        <div class="icon-circle">
-          <mat-icon>account_circle</mat-icon>
+        <div class="logo-wrapper">
+          <img src="assets/logo.png" alt="Logo Bank" class="login-logo" />
         </div>
         <h1>Connexion</h1>
         <p class="subtitle">Accédez à votre espace de lutte contre le blanchiment et le financement du terrorisme (LBC/FT).</p>
@@ -27,6 +28,7 @@
               name="email"
               autocomplete="email"
               [(ngModel)]="email"
+              [disabled]="isLoadingMessage"
               required
               placeholder="Votre adresse email"
             />
@@ -43,29 +45,33 @@
               name="password"
               [attr.autocomplete]="showPassword ? 'off' : 'current-password'"
               [(ngModel)]="password"
+              [disabled]="isLoadingMessage"
               required
               placeholder="Votre mot de passe"
             />
-            <button type="button" class="eye-toggle" (click)="togglePasswordVisibility()">
+            <button type="button" class="eye-toggle" (click)="togglePasswordVisibility()" [disabled]="isLoadingMessage">
               <mat-icon>{{ showPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
             </button>
           </div>
         </div>
 
-        <div class="forgot-link">
-          <a routerLink="/forgot-password">Mot de passe oublié ?</a>
+        <div class="form-row-options">
+          <div class="error-inline">
+            @if (message && !isLoadingMessage) {
+              <span [class.error-text]="!success" [class.success-text]="success">
+                {{ message }}
+              </span>
+            }
+          </div>
+          <div class="forgot-link">
+            <a routerLink="/forgot-password">Mot de passe oublié ?</a>
+          </div>
         </div>
 
-        <button type="submit" class="btn-submit" [disabled]="!loginForm.form.valid">
+        <button type="submit" class="btn-submit" [disabled]="!loginForm.form.valid || isLoadingMessage">
           <mat-icon>login</mat-icon>
           <span>Se connecter</span>
         </button>
-
-        @if (message && !isLoadingMessage) {
-          <div [ngClass]="isLoadingMessage ? 'msg-info' : (success ? 'msg-success' : 'msg-error')" class="feedback">
-            {{ message }}
-          </div>
-        }
       </form>
     </div>
   </div>
