@@ -1,0 +1,125 @@
+{
+  "info": {
+    "_postman_id": "9d9d5a6e-8f0d-4f72-93d3-2ff8e2c2bbd2",
+    "name": "LAB - Partner Transaction Analysis",
+    "description": "Minimal partner collection with only system token generation and transaction analysis.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Generate System Token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "var body = pm.response.json();",
+              "pm.test('access_token is present', function () {",
+              "  pm.expect(body.access_token).to.be.a('string').and.not.empty;",
+              "});",
+              "",
+              "pm.collectionVariables.set('access_token', body.access_token);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"system_id\": \"bis-partner-01\",\n  \"role\": \"system\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}api/v1/auth/system-token",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "auth",
+            "system-token"
+          ]
+        },
+        "description": "Generate a machine token for partner integration. Requires system_id + role allowed in backend."
+      },
+      "response": []
+    },
+    {
+      "name": "Analyze Transaction",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200, 201, or 403', function () {",
+              "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 403]);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"date_operation\": \"2026-04-15T10:00:00Z\",\n  \"montant\": 2750000,\n  \"portee\": \"national\",\n  \"pays_payeur\": \"SN\",\n  \"ville_payeur\": \"Dakar\",\n  \"adresse_payeur\": \"Point E\",\n  \"type_compte_payeur\": \"courant\",\n  \"type_client_payeur\": \"particulier\",\n  \"categorie_payeur\": \"retail\",\n  \"numero_compte_payeur\": \"SN07900000123\",\n  \"nom_payeur\": \"Client Payeur Test\",\n  \"pays_paye\": \"SN\",\n  \"ville_paye\": \"Thies\",\n  \"adresse_paye\": \"Grand Standing\",\n  \"type_compte_paye\": \"courant\",\n  \"type_client_paye\": \"particulier\",\n  \"categorie_paye\": \"retail\",\n  \"numero_compte_paye\": \"SN07900000999\",\n  \"nom_paye\": \"Client Beneficiaire Test\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}api/v1/anomalies/analyze",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "anomalies",
+            "analyze"
+          ]
+        },
+        "description": "Main endpoint to analyze one transaction and generate alerts when rules are violated."
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://module-lab-test.gsietechnology.com/",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

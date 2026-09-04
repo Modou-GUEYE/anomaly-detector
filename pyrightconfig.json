@@ -1,0 +1,9 @@
+{
+  "venvPath": "load-tests",
+  "venv": ".venv",
+  "extraPaths": [
+    "load-tests",
+    "load-tests/.venv/lib/python3.9/site-packages"
+  ]
+}
+

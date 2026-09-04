@@ -59,3 +59,7 @@ temp/
 *.db
 *.sqlite
 *.sqlite3
+
+# Load testing
+load-tests/.venv/
+load-tests/reports/
