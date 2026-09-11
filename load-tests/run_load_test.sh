@@ -51,8 +51,9 @@ show_help() {
     echo ""
     echo "Options:"
     echo "  --smoke       : Test court de validation (10 users, 30 secondes)"
-    echo "  --rampup      : Montée en charge progressive (50 -> 200 users, 3 minutes)"
-    echo "  --stress      : Test de stress poussé (500 users, 5 minutes)"
+    echo "  --rampup      : Montée en charge progressive (100 users, 3 minutes)"
+    echo "  --stress      : Test de performance cible (100 users, 5 minutes)"
+    echo "  --stress-500  : Test de stress poussé (500 users, 5 minutes)"
     echo "  --volume-500k : Simulation gros volume (injection intensive continue)"
     echo "  --ui          : Lancement de l'interface Web interactive Locust (port 8089)"
     echo "  --help        : Affiche cette aide"
@@ -110,6 +111,10 @@ case "$1" in
         exit 0
         ;;
     --stress)
+        run_test 100 10 "5m" "stress_100u"
+        exit 0
+        ;;
+    --stress-500)
         run_test 500 25 "5m" "stress_500u"
         exit 0
         ;;
@@ -131,19 +136,21 @@ esac
 echo "Choisissez un scénario de test :"
 echo "  1) Smoke Test (10 users, 30s) - Validation rapide"
 echo "  2) Montée en charge (100 users, 3 min) - Test intermédiaire"
-echo "  3) Stress Test (500 users, 5 min) - Haute intensité"
+echo "  3) Test de performance (100 users, 5 min) - Cible Cheikh"
 echo "  4) Volume 500k (250 users, 15 min) - Simulation gros volume"
-echo "  5) Interface Web interactive (Locust UI sur port 8089)"
-echo "  6) Quitter"
+echo "  5) Stress Test (500 users, 5 min) - Haute intensité"
+echo "  6) Interface Web interactive (Locust UI sur port 8089)"
+echo "  7) Quitter"
 echo ""
-read -p "Votre choix (1-6) : " choice
+read -p "Votre choix (1-7) : " choice
 
 case "$choice" in
     1) run_test 10 2 "30s" "smoke_test" ;;
     2) run_test 100 10 "3m" "rampup_100u" ;;
-    3) run_test 500 25 "5m" "stress_500u" ;;
+    3) run_test 100 10 "5m" "stress_100u" ;;
     4) run_test 250 50 "15m" "volume_500k_target" ;;
-    5) run_web_ui ;;
-    6) echo "Arrêt."; exit 0 ;;
+    5) run_test 500 25 "5m" "stress_500u" ;;
+    6) run_web_ui ;;
+    7) echo "Arrêt."; exit 0 ;;
     *) echo -e "${RED}Choix invalide.${NC}"; exit 1 ;;
 esac

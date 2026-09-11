@@ -46,6 +46,13 @@ func (s *Store) InitializeRequiredData(ctx context.Context) error {
 		return fmt.Errorf("erreur lors de l'initialisation des utilisateurs par défaut: %w", err)
 	}
 
+	// 5. Charger l'ensemble des données de référence dans le cache mémoire
+	if err := s.RefreshAll(ctx); err != nil {
+		log.Printf("Avertissement: échec partiel du chargement du cache mémoire: %v", err)
+	} else {
+		log.Println("✓ Cache mémoire de référence initialisé")
+	}
+
 	log.Println("✓ Données requises initialisées avec succès")
 	return nil
 }

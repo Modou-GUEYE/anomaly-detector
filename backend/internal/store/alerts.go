@@ -169,12 +169,32 @@ func (s *Store) UpdateAlerteStatus(ctx context.Context, alerteID string, analyst
 
 // GetAlertMetaByType récupère la meta-donnée d'alerte pour un type donné (ex: Interdits, Blacklist, PEP, Surveillés)
 func (s *Store) GetAlertMetaByType(ctx context.Context, alertType string) (*models.AlertMeta, error) {
-	normalizedType := strings.TrimSpace(alertType)
+	normalizedType := strings.ToLower(strings.TrimSpace(alertType))
+
+	// 1. Recherche dans le cache mémoire
+	if s.refCache != nil {
+		s.refCache.mu.RLock()
+		if meta, found := s.refCache.alertMeta[normalizedType]; found && meta != nil {
+			s.refCache.mu.RUnlock()
+			return meta, nil
+		}
+		s.refCache.mu.RUnlock()
+	}
+
+	// 2. Repli base de données si absent
 	var meta models.AlertMeta
 	result := s.gormDB.WithContext(ctx).Table("alertes_meta").Where("type ILIKE ?", normalizedType).Limit(1).First(&meta)
 	if result.Error != nil {
 		return nil, result.Error
 	}
+
+	// Mettre en cache pour les prochains appels
+	if s.refCache != nil {
+		s.refCache.mu.Lock()
+		s.refCache.alertMeta[normalizedType] = &meta
+		s.refCache.mu.Unlock()
+	}
+
 	return &meta, nil
 }
 

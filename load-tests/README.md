@@ -31,7 +31,8 @@ cd load-tests
 | :--- | :--- | :--- |
 | `./run_load_test.sh --smoke` | **Smoke test :** validation rapide du script (10 users) | 30 secondes |
 | `./run_load_test.sh --rampup` | **Montée en charge :** test intermédiaire (100 users) | 3 minutes |
-| `./run_load_test.sh --stress` | **Stress test :** test de haute intensité (500 users) | 5 minutes |
+| `./run_load_test.sh --stress` | **Test de performance cible :** 100 utilisateurs | 5 minutes |
+| `./run_load_test.sh --stress-500` | **Stress test :** test de haute intensité (500 utilisateurs) | 5 minutes |
 | `./run_load_test.sh --volume-500k` | **Endurance 500k :** injection continue grand volume | ~15 minutes |
 | `./run_load_test.sh --ui` | **Interface Web :** ouvre Locust sur `http://localhost:8089` | Interactif |
 

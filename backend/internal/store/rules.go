@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"gorm.io/gorm"
 
@@ -43,6 +44,7 @@ func (s *Store) CreateRegleControle(ctx context.Context, regle *models.RegleCont
 		}
 	}
 
+	s.InvalidateRules(ctx)
 	return regle, nil
 }
 
@@ -100,6 +102,7 @@ func (s *Store) UpdateRegleControle(ctx context.Context, id string, regle *model
 		}
 	}
 
+	s.InvalidateRules(ctx)
 	return regle, nil
 }
 
@@ -142,6 +145,7 @@ func (s *Store) DeleteRegleControle(ctx context.Context, id string, userID strin
 		}
 	}
 
+	s.InvalidateRules(ctx)
 	return nil
 }
 
@@ -183,6 +187,7 @@ func (s *Store) UpdateRegleControleStatus(ctx context.Context, id string, status
 		}
 	}
 
+	s.InvalidateRules(ctx)
 	return &updated, nil
 }
 
@@ -207,6 +212,21 @@ func (s *Store) GetRegleByID(ctx context.Context, id string) (*models.RegleContr
 
 // GetRegleByType retourne la règle métier correspondant à un type donné (ex: PEP, Blacklist, etc.)
 func (s *Store) GetRegleByType(ctx context.Context, typeRegle string) (*models.RegleControle, error) {
+	normType := strings.ToLower(strings.TrimSpace(typeRegle))
+
+	// 1. Recherche dans le cache mémoire
+	if s.refCache != nil {
+		s.refCache.mu.RLock()
+		if s.refCache.initialized {
+			if r, exists := s.refCache.rulesByType[normType]; exists && r != nil {
+				s.refCache.mu.RUnlock()
+				return r, nil
+			}
+		}
+		s.refCache.mu.RUnlock()
+	}
+
+	// 2. Repli base de données
 	var regle models.RegleControle
 	result := s.gormDB.WithContext(ctx).Where("type_regle = ? AND active = ?", typeRegle, true).First(&regle)
 	if result.Error != nil {

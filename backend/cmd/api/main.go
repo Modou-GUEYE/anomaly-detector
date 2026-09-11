@@ -70,7 +70,8 @@ func main() {
 	}
 
 	server := api.NewServer(dbStore)
-	if err := server.Start(":8080"); err != nil {
+	port := getEnv("PORT", "8080")
+	if err := server.Start(":" + port); err != nil {
 		log.Fatalf("Impossible de démarrer le serveur: %v", err)
 	}
 }

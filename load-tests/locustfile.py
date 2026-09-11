@@ -20,6 +20,11 @@ ANALYST_EMAIL = os.getenv("TEST_ANALYST_EMAIL", "analyste@gsie.sn")
 ANALYST_PASSWORD = os.getenv("TEST_ANALYST_PASSWORD", "analyste123")
 
 
+# Cache mémoire du token partagé pour éviter le stampede Bcrypt au démarrage
+_SHARED_TOKENS = {}
+PRESET_AUTH_TOKEN = os.getenv("TEST_AUTH_TOKEN", "").strip()
+
+
 class BaseAuthenticatedUser(HttpUser):
     """Classe de base gérant l'authentification JWT pour les utilisateurs de test"""
     abstract = True
@@ -30,6 +35,15 @@ class BaseAuthenticatedUser(HttpUser):
 
     def on_start(self):
         """Authentification au démarrage de l'utilisateur virtuel"""
+        if PRESET_AUTH_TOKEN:
+            self.token = PRESET_AUTH_TOKEN
+            return
+
+        # Réutilisation du token déjà obtenu pour cet email afin de préserver le CPU
+        if self.email in _SHARED_TOKENS:
+            self.token = _SHARED_TOKENS[self.email]
+            return
+
         self.authenticate()
 
     def authenticate(self):
@@ -48,6 +62,8 @@ class BaseAuthenticatedUser(HttpUser):
                 try:
                     data = response.json()
                     self.token = data.get("access_token")
+                    if self.token:
+                        _SHARED_TOKENS[self.email] = self.token
                 except Exception as e:
                     response.failure(f"Impossible de parser le token: {e}")  # type: ignore
             else:

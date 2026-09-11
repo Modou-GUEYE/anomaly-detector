@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -33,6 +34,7 @@ func (s *Store) CreateBlacklistEntry(ctx context.Context, entry *models.EntiteBl
 			log.Printf("Erreur logging audit blacklist %s: %v", entry.ID, err)
 		}
 	}
+	s.InvalidateBlacklist(ctx)
 	return entry, nil
 }
 
@@ -78,6 +80,7 @@ func (s *Store) UpdateBlacklistEntry(ctx context.Context, id string, entry *mode
 			log.Printf("Erreur logging audit blacklist %s: %v", id, err)
 		}
 	}
+	s.InvalidateBlacklist(ctx)
 	return entry, nil
 }
 
@@ -108,11 +111,29 @@ func (s *Store) DeleteBlacklistEntry(ctx context.Context, id string, userID stri
 			log.Printf("Erreur logging audit blacklist %s: %v", id, err)
 		}
 	}
+	s.InvalidateBlacklist(ctx)
 	return nil
 }
 
 // GetBlacklistStatusForCompte vérifie si un compte est dans la blacklist et retourne le type d'entité s'il y est.
 func (s *Store) GetBlacklistStatusForCompte(ctx context.Context, compteID string) (string, error) {
+	upperCompte := strings.ToUpper(strings.TrimSpace(compteID))
+
+	// 1. Recherche dans le cache mémoire (0ms)
+	if s.refCache != nil {
+		s.refCache.mu.RLock()
+		if s.refCache.initialized {
+			status, exists := s.refCache.blacklist[upperCompte]
+			s.refCache.mu.RUnlock()
+			if exists {
+				return status, nil
+			}
+			return "", nil
+		}
+		s.refCache.mu.RUnlock()
+	}
+
+	// 2. Repli base de données
 	var entite models.EntiteBlacklist
 	err := s.gormDB.WithContext(ctx).Where("numero_compte = ?", compteID).First(&entite).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -126,6 +147,23 @@ func (s *Store) GetBlacklistStatusForCompte(ctx context.Context, compteID string
 
 // IsAccountOnBlacklist vérifie si un KYC ID est sur la blacklist.
 func (s *Store) IsAccountOnBlacklist(ctx context.Context, kycID string) (string, error) {
+	upperKyc := strings.ToUpper(strings.TrimSpace(kycID))
+
+	// 1. Recherche dans le cache mémoire (0ms)
+	if s.refCache != nil {
+		s.refCache.mu.RLock()
+		if s.refCache.initialized {
+			status, exists := s.refCache.blacklist[upperKyc]
+			s.refCache.mu.RUnlock()
+			if exists {
+				return status, nil
+			}
+			return "", nil
+		}
+		s.refCache.mu.RUnlock()
+	}
+
+	// 2. Repli base de données
 	var entite models.EntiteBlacklist
 	db := s.gormDB.WithContext(ctx)
 

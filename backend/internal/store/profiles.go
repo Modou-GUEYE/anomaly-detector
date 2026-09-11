@@ -3,12 +3,47 @@ package store
 import (
 	"anomaly-detector/internal/models"
 	"context"
+	"strings"
 )
 
 // ===================== PROFILS CLIENTS =====================
 
 // GetProfilClientIDByCode retourne l'ID du profil client à partir du code type client.
 func (s *Store) GetProfilClientIDByCode(ctx context.Context, code string) (*string, error) {
+	norm := strings.ToLower(strings.TrimSpace(code))
+
+	// 1. Lecture rapide depuis le cache mémoire
+	if s.refCache != nil {
+		s.refCache.mu.RLock()
+		if id, exists := s.refCache.profilIDs[norm]; exists && id != "" {
+			s.refCache.mu.RUnlock()
+			idCopy := id
+			return &idCopy, nil
+		}
+
+		// Alias / fallback
+		var fallbackKey string
+		switch norm {
+		case "p", "particulier":
+			fallbackKey = "particulier"
+		case "m", "entreprise":
+			fallbackKey = "entreprise"
+		case "c", "commerçant", "commercant":
+			fallbackKey = "commerçant"
+		case "b", "business":
+			fallbackKey = "business"
+		default:
+			fallbackKey = "particulier"
+		}
+		if id, exists := s.refCache.profilIDs[fallbackKey]; exists && id != "" {
+			s.refCache.mu.RUnlock()
+			idCopy := id
+			return &idCopy, nil
+		}
+		s.refCache.mu.RUnlock()
+	}
+
+	// 2. Repli base de données
 	var nomProfil string
 	switch code {
 	case "P":
@@ -23,7 +58,6 @@ func (s *Store) GetProfilClientIDByCode(ctx context.Context, code string) (*stri
 		nomProfil = "Particulier"
 	}
 	var profil models.ProfilClient
-	// Recherche case-insensitive pour supporter différentes variations
 	result := s.gormDB.WithContext(ctx).Where("LOWER(nom_profil) = LOWER(?)", nomProfil).First(&profil)
 	if result.Error != nil {
 		return nil, result.Error
@@ -37,6 +71,7 @@ func (s *Store) CreateProfilClient(ctx context.Context, profil *models.ProfilCli
 	if result.Error != nil {
 		return nil, result.Error
 	}
+	s.InvalidateProfiles(ctx)
 	return profil, nil
 }
 
@@ -67,11 +102,15 @@ func (s *Store) UpdateProfilClient(ctx context.Context, id string, profil *model
 		return nil, err
 	}
 	*profil = updated
+	s.InvalidateProfiles(ctx)
 	return profil, nil
 }
 
 // DeleteProfilClient supprime un profil client par son ID.
 func (s *Store) DeleteProfilClient(ctx context.Context, id string) error {
 	result := s.gormDB.WithContext(ctx).Delete(&models.ProfilClient{}, "id = ?", id)
+	if result.Error == nil {
+		s.InvalidateProfiles(ctx)
+	}
 	return result.Error
 }

@@ -46,7 +46,7 @@ type Compte struct {
 // @Description Transaction financière entre deux entités
 type Transaction struct {
 	ID                 string         `json:"id,omitempty" gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
-	DateOperation      time.Time      `json:"date_operation" gorm:"column:date_operation"`
+	DateOperation      time.Time      `json:"date_operation" gorm:"column:date_operation;index:idx_transactions_date_operation;index:idx_transactions_payeur_date,priority:2;index:idx_transactions_paye_date,priority:2"`
 	Montant            float64        `json:"montant" gorm:"column:montant"`
 	Portee             string         `json:"portee" gorm:"column:portee"`
 	PaysPayeur         string         `json:"pays_payeur" gorm:"column:pays_payeur"` // Code pays ISO alpha-2 (ex: SN, ML, CI) - Compatible SPI
@@ -55,7 +55,7 @@ type Transaction struct {
 	TypeComptePayeur   string         `json:"type_compte_payeur" gorm:"column:type_compte_payeur"`
 	TypeClientPayeur   string         `json:"type_client_payeur" gorm:"column:type_client_payeur"`
 	CategoriePayeur    string         `json:"categorie_payeur" gorm:"column:categorie_payeur"`
-	NumeroComptePayeur string         `json:"numero_compte_payeur" gorm:"column:numero_compte_payeur"`
+	NumeroComptePayeur string         `json:"numero_compte_payeur" gorm:"column:numero_compte_payeur;index:idx_transactions_payeur_date,priority:1"`
 	NomPayeur          string         `json:"nom_payeur" gorm:"column:nom_payeur"`
 	PaysPaye           string         `json:"pays_paye" gorm:"column:pays_paye"` // Code pays ISO alpha-2 (ex: SN, ML, CI) - Compatible SPI
 	VillePaye          string         `json:"ville_paye" gorm:"column:ville_paye"`
@@ -63,7 +63,7 @@ type Transaction struct {
 	TypeComptePaye     string         `json:"type_compte_paye" gorm:"column:type_compte_paye"`
 	TypeClientPaye     string         `json:"type_client_paye" gorm:"column:type_client_paye"`
 	CategoriePaye      string         `json:"categorie_paye" gorm:"column:categorie_paye"`
-	NumeroComptePaye   string         `json:"numero_compte_paye" gorm:"column:numero_compte_paye"`
+	NumeroComptePaye   string         `json:"numero_compte_paye" gorm:"column:numero_compte_paye;index:idx_transactions_paye_date,priority:1"`
 	NomPaye            string         `json:"nom_paye" gorm:"column:nom_paye"`
 	RawData            datatypes.JSON `json:"raw_data" gorm:"column:raw_data;type:jsonb"`
 }
@@ -75,7 +75,7 @@ type Transaction struct {
 type EntiteBlacklist struct {
 	ID                          string    `json:"id" gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
 	Nom                         string    `json:"nom"`
-	NumeroCompte                string    `json:"numeroCompte"`
+	NumeroCompte                string    `json:"numeroCompte" gorm:"index:idx_blacklist_numero_compte"`
 	TypeEntite                  string    `json:"typeEntite"`
 	InformationsSupplementaires string    `json:"informationsSupplementaires"`
 	DateAjout                   time.Time `json:"dateAjout"`
@@ -109,9 +109,9 @@ type RegleControle struct {
 	Criticite        string         `json:"criticite"`
 	Seuil            float64        `json:"seuil"`
 	PeriodeReference string         `json:"periodeReference"`
-	Active           bool           `json:"active"`
+	Active           bool           `json:"active" gorm:"index:idx_regles_active_profil,priority:1"`
 	Action           string         `json:"action" gorm:"default:'surveiller'"` // Action: "bloquer", "surveiller", "notifier"
-	ProfilClientID   *string        `json:"profilClientId"`
+	ProfilClientID   *string        `json:"profilClientId" gorm:"index:idx_regles_active_profil,priority:2"`
 	ListePays        datatypes.JSON `json:"listePays" gorm:"type:jsonb"`
 	// Pays lie explicitement cette règle aux entrées de la table pays_risque (utile pour la règle de type 'pays_risque')
 	Pays []PaysRisque `json:"pays,omitempty" gorm:"foreignKey:RegleControleID;references:ID"`

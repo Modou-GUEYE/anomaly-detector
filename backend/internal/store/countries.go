@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"gorm.io/gorm"
 
@@ -14,6 +15,19 @@ import (
 
 // GetAllPaysARisque récupère tous les pays à risque actifs
 func (s *Store) GetAllPaysARisque(ctx context.Context) ([]models.PaysRisque, error) {
+	// 1. Lecture cache mémoire
+	if s.refCache != nil {
+		s.refCache.mu.RLock()
+		if s.refCache.initialized && len(s.refCache.paysRisqueList) > 0 {
+			list := make([]models.PaysRisque, len(s.refCache.paysRisqueList))
+			copy(list, s.refCache.paysRisqueList)
+			s.refCache.mu.RUnlock()
+			return list, nil
+		}
+		s.refCache.mu.RUnlock()
+	}
+
+	// 2. Repli base de données
 	var pays []models.PaysRisque
 	result := s.gormDB.WithContext(ctx).Where("active = ?", true).Order("nom_pays ASC").Find(&pays)
 	if result.Error != nil {
@@ -38,9 +52,23 @@ func (s *Store) IsPaysARisque(ctx context.Context, nomPays string) (bool, error)
 
 // IsPaysARisqueByCode vérifie si un pays est dans la liste des pays à risque actifs (par code ISO alpha-2)
 func (s *Store) IsPaysARisqueByCode(ctx context.Context, codePays string) (bool, error) {
+	upperCode := strings.ToUpper(strings.TrimSpace(codePays))
+
+	// 1. Recherche cache mémoire
+	if s.refCache != nil {
+		s.refCache.mu.RLock()
+		if s.refCache.initialized {
+			_, exists := s.refCache.paysRisqueMap[upperCode]
+			s.refCache.mu.RUnlock()
+			return exists, nil
+		}
+		s.refCache.mu.RUnlock()
+	}
+
+	// 2. Repli base de données
 	var count int64
 	result := s.gormDB.WithContext(ctx).Model(&models.PaysRisque{}).
-		Where("code ILIKE ? AND active = ?", codePays, true).
+		Where("code ILIKE ? AND active = ?", upperCode, true).
 		Count(&count)
 
 	if result.Error != nil {
@@ -117,6 +145,9 @@ func (s *Store) AddPaysARisqueWithCode(ctx context.Context, pays *models.PaysRis
 		}
 	}
 
+	// Invalider le cache des pays
+	s.InvalidateCountries(ctx)
+
 	return nil
 }
 
@@ -132,6 +163,7 @@ func (s *Store) LinkPaysRisqueToRegle(ctx context.Context) error {
 	if result.Error != nil {
 		return result.Error
 	}
+	s.InvalidateCountries(ctx)
 	return nil
 }
 
@@ -156,6 +188,9 @@ func (s *Store) DeletePaysARisque(ctx context.Context, nomPays string, userID st
 			fmt.Printf("Erreur lors du logging d'audit pour la suppression du pays %s: %v\n", nomPays, err)
 		}
 	}
+
+	// Invalider le cache des pays
+	s.InvalidateCountries(ctx)
 
 	return nil
 }
@@ -201,6 +236,9 @@ func (s *Store) UpdatePaysARisqueWithCode(ctx context.Context, ancienNom, nouvea
 		}
 	}
 
+	// Invalider le cache des pays
+	s.InvalidateCountries(ctx)
+
 	return nil
 }
 
@@ -208,6 +246,18 @@ func (s *Store) UpdatePaysARisqueWithCode(ctx context.Context, ancienNom, nouvea
 // Note: Maintenant que les pays sont dans une table séparée, cette méthode
 // est principalement utilisée pour vérifier si la règle est active
 func (s *Store) GetReglePaysRisqueActive(ctx context.Context) (*models.RegleControle, error) {
+	// 1. Lecture cache mémoire
+	if s.refCache != nil {
+		s.refCache.mu.RLock()
+		if s.refCache.initialized {
+			regle := s.refCache.reglePaysRisque
+			s.refCache.mu.RUnlock()
+			return regle, nil
+		}
+		s.refCache.mu.RUnlock()
+	}
+
+	// 2. Repli base de données
 	var regle models.RegleControle
 	result := s.gormDB.WithContext(ctx).Where("type_regle = ? AND active = ?", "pays_risque", true).First(&regle)
 	if result.Error != nil {

@@ -30,16 +30,29 @@ func (s *Store) CreateCompte(ctx context.Context, compte *models.Compte, userID 
 		return nil, err
 	}
 
-	// Logging d'audit (ne fait pas échouer la création)
-	actionDesc := fmt.Sprintf("Création du compte '%s'", compte.NumeroCompte)
-	details := fmt.Sprintf("Création du compte: %s (%s)", compte.NumeroCompte, compte.NomClient)
-	_ = s.LogAction(ctx, "MDA", actionDesc, "Comptes", compte.ID, details, "succès")
+	// Stocker immédiatement dans le cache mémoire
+	s.accountCache.Store(compte.NumeroCompte, compte)
+
+	// Logging d'audit asynchrone pour ne pas bloquer le chemin critique de traitement
+	go func(c models.Compte) {
+		actionDesc := fmt.Sprintf("Création du compte '%s'", c.NumeroCompte)
+		details := fmt.Sprintf("Création du compte: %s (%s)", c.NumeroCompte, c.NomClient)
+		_ = s.LogAction(context.Background(), "MDA", actionDesc, "Comptes", c.ID, details, "succès")
+	}(*compte)
 
 	return compte, nil
 }
 
 // GetCompteByCompte recherche un client par son numéro de compte unique.
 func (s *Store) GetCompteByCompte(ctx context.Context, numeroCompte string) (*models.Compte, error) {
+	// 1. Recherche dans le cache mémoire (0ms)
+	if val, ok := s.accountCache.Load(numeroCompte); ok {
+		if c, ok := val.(*models.Compte); ok && c != nil {
+			return c, nil
+		}
+	}
+
+	// 2. Recherche en base de données
 	var compte models.Compte
 	err := s.gormDB.WithContext(ctx).Where("numero_compte = ?", numeroCompte).First(&compte).Error
 	if err != nil {
@@ -48,20 +61,45 @@ func (s *Store) GetCompteByCompte(ctx context.Context, numeroCompte string) (*mo
 		}
 		return nil, err
 	}
+
+	// Mettre en cache pour les transactions suivantes
+	s.accountCache.Store(numeroCompte, &compte)
 	return &compte, nil
 }
 
 // GetReglesForCompte récupère les règles actives associées au profil client d'un compte donné.
 func (s *Store) GetReglesForCompte(ctx context.Context, numeroCompte string) ([]models.RegleControle, error) {
-	var compte models.Compte
-	if err := s.gormDB.WithContext(ctx).Where("numero_compte = ?", numeroCompte).First(&compte).Error; err != nil {
-		return nil, err
+	// 1. Filtrage ultra-rapide en mémoire si le cache est actif (0ms, aucun JOIN SQL)
+	if s.refCache != nil {
+		s.refCache.mu.RLock()
+		if s.refCache.initialized {
+			activeRules := s.refCache.activeRules
+			s.refCache.mu.RUnlock()
+
+			compte, err := s.GetCompteByCompte(ctx, numeroCompte)
+			if err == nil && compte != nil && compte.ID != "" {
+				matchedRules := make([]models.RegleControle, 0, len(activeRules))
+				for _, r := range activeRules {
+					// Règle universelle (sans profil spécifique) ou règle liée au profil du compte
+					if r.ProfilClientID == nil || *r.ProfilClientID == "" ||
+						(compte.ProfilClientID != nil && *r.ProfilClientID == *compte.ProfilClientID) {
+						matchedRules = append(matchedRules, r)
+					}
+				}
+				return matchedRules, nil
+			}
+		} else {
+			s.refCache.mu.RUnlock()
+		}
 	}
 
+	// 2. Repli SQL classique si le cache n'est pas prêt
 	var regles []models.RegleControle
-	// Récupérer les règles spécifiques au compte ET les règles universelles (tous les clients)
 	err := s.gormDB.WithContext(ctx).
-		Where("active = ? AND (profil_client_id = ? OR profil_client_id IS NULL OR profil_client_id = '')", true, compte.ProfilClientID).
+		Table("regles_controle AS r").
+		Select("r.*").
+		Joins("JOIN comptes AS c ON c.profil_client_id::text = r.profil_client_id OR r.profil_client_id IS NULL OR r.profil_client_id = ''").
+		Where("c.numero_compte = ? AND r.active = ?", numeroCompte, true).
 		Find(&regles).Error
 	return regles, err
 }

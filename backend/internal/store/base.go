@@ -3,6 +3,8 @@ package store
 import (
 	"os"
 	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"gorm.io/driver/postgres"
@@ -10,14 +12,26 @@ import (
 	gormLogger "gorm.io/gorm/logger"
 )
 
-// gormLoggerSilent retourne un logger GORM en mode silent
-func gormLoggerSilent() gormLogger.Interface {
-	return gormLogger.Default.LogMode(gormLogger.Info)
+// getGormLogger configure le niveau de log GORM. Par défaut: Silent pour des performances maximales.
+func getGormLogger() gormLogger.Interface {
+	logLevel := os.Getenv("DB_LOG_LEVEL")
+	switch strings.ToLower(logLevel) {
+	case "info":
+		return gormLogger.Default.LogMode(gormLogger.Info)
+	case "warn":
+		return gormLogger.Default.LogMode(gormLogger.Warn)
+	case "error":
+		return gormLogger.Default.LogMode(gormLogger.Error)
+	default:
+		return gormLogger.Default.LogMode(gormLogger.Silent)
+	}
 }
 
-// Store contient le pool de connexions à la base de données.
+// Store contient le pool de connexions à la base de données et les caches en mémoire.
 type Store struct {
-	gormDB *gorm.DB // Connexion GORM
+	gormDB       *gorm.DB
+	refCache     *RefCache
+	accountCache sync.Map // cache en mémoire: numeroCompte -> *models.Compte
 }
 
 // Gorm expose la connexion GORM pour des opérations directes si nécessaire.
@@ -27,9 +41,9 @@ func (s *Store) Gorm() *gorm.DB {
 
 // NewStore crée et retourne une nouvelle instance de notre Store avec un pool de connexions calibré.
 func NewStore(connStr string) (*Store, error) {
-	// Initialisation GORM avec logger en mode silent
+	// Initialisation GORM avec logger silencieux par défaut (configurable via DB_LOG_LEVEL)
 	gormDB, err := gorm.Open(postgres.Open(connStr), &gorm.Config{
-		Logger: gormLoggerSilent(),
+		Logger: getGormLogger(),
 	})
 	if err != nil {
 		return nil, err
@@ -49,7 +63,12 @@ func NewStore(connStr string) (*Store, error) {
 	sqlDB.SetMaxIdleConns(maxIdleConns)
 	sqlDB.SetConnMaxLifetime(connMaxLifetime)
 
-	return &Store{gormDB: gormDB}, nil
+	store := &Store{
+		gormDB:   gormDB,
+		refCache: newRefCache(),
+	}
+
+	return store, nil
 }
 
 func getEnvInt(key string, defaultVal int) int {
