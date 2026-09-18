@@ -30,113 +30,217 @@ func NewService() *Service {
 
 // SendUserProvisioningEmail envoie un email de bienvenue après création du compte par un administrateur
 func (s *Service) SendUserProvisioningEmail(toEmail, username, password, role string) error {
-	subject := "Bienvenue sur Le Moteur de Détection d'Anomalies !"
-	body := fmt.Sprintf(`
-<!DOCTYPE html>
-<html>
+	subject := "Création de votre compte — Moteur de Détection d'Anomalies"
+	body := fmt.Sprintf(`<!DOCTYPE html>
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Création de votre compte</title>
 </head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #2463DE;">Bienvenue, %s !</h2>
-        <p>Votre compte a été créé avec succès sur <strong>Le Moteur de Détection d'Anomalies</strong>.</p>
-        
-        <div style="background: #f0f4ff; border-left: 4px solid #2463DE; padding: 15px; margin: 20px 0; border-radius: 4px;">
-            <h3 style="margin-top: 0; color: #2463DE;">✉️ Vos identifiants de connexion</h3>
-            <p><strong>Email :</strong> <code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px;">%s</code></p>
-            <p><strong>Mot de passe :</strong> <code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px;">%s</code></p>
-            <p><strong>Rôle :</strong> <code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px;">%s</code></p>
-            <p><strong>Statut :</strong> En attente d'activation par un administrateur</p>
-        </div>
+<body style="margin: 0; padding: 24px 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #334155; line-height: 1.6;">
+    <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" border="0">
+        <tr>
+            <td align="center" style="padding: 0 16px;">
+                <table role="presentation" width="100%%" style="max-width: 580px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;" cellspacing="0" cellpadding="0" border="0">
+                    <!-- En-tête institutionnel -->
+                    <tr>
+                        <td style="padding: 24px 32px 20px; border-bottom: 1px solid #edf2f7; background-color: #ffffff;">
+                            <div style="font-size: 13px; font-weight: 700; color: #1e3a8a; letter-spacing: 0.5px; text-transform: uppercase;">
+                                Moteur de Détection d'Anomalies
+                            </div>
+                            <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+                                Plateforme de surveillance et conformité
+                            </div>
+                        </td>
+                    </tr>
+                    <!-- Corps du message -->
+                    <tr>
+                        <td style="padding: 32px 32px 28px;">
+                            <h1 style="margin: 0 0 16px; font-size: 18px; font-weight: 600; color: #0f172a;">
+                                Bienvenue, %s
+                            </h1>
+                            <p style="margin: 0 0 24px; font-size: 14px; color: #475569;">
+                                Votre compte utilisateur a été créé sur la plateforme <strong>Moteur de Détection d'Anomalies</strong>. Vous trouverez ci-dessous vos paramètres d'accès provisoires :
+                            </p>
 
-        <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
-            <p style="margin: 0; color: #856404;">
-                <strong>⚠️ Attention :</strong> Conservez vos identifiants en lieu sûr. Pour des raisons de sécurité, vous pouvez modifier votre mot de passe après activation.
-            </p>
-        </div>
+                            <!-- Tableau récapitulatif des identifiants -->
+                            <table role="presentation" width="100%%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; margin: 0 0 24px; font-size: 13px;" cellspacing="0" cellpadding="10" border="0">
+                                <tr>
+                                    <td width="35%%" style="padding: 10px 14px; color: #64748b; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Identifiant (Email)</td>
+                                    <td style="padding: 10px 14px; color: #0f172a; border-bottom: 1px solid #e2e8f0; font-weight: 600;">%s</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px 14px; color: #64748b; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Mot de passe temporaire</td>
+                                    <td style="padding: 10px 14px; color: #0f172a; border-bottom: 1px solid #e2e8f0; font-family: Consolas, Monaco, 'Courier New', monospace; font-size: 13px; font-weight: 600;">%s</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px 14px; color: #64748b; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Profil attribué</td>
+                                    <td style="padding: 10px 14px; color: #0f172a; border-bottom: 1px solid #e2e8f0;">%s</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px 14px; color: #64748b; font-weight: 500;">État du compte</td>
+                                    <td style="padding: 10px 14px; color: #0f172a;">En attente de validation administrateur</td>
+                                </tr>
+                            </table>
 
-        <p style="color: #666; margin: 20px 0;">
-            <strong>⏳ Un administrateur activera votre compte dans les 24 heures.</strong><br>
-            Une fois activé, vous recevrez un email de confirmation et pourrez accéder à votre espace.
-        </p>
-
-        <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
-        <p style="color: #999; font-size: 12px;">
-            Cet email a été envoyé automatiquement. Merci de ne pas répondre à ce message.
-        </p>
-    </div>
+                            <p style="margin: 0 0 16px; font-size: 13px; color: #64748b;">
+                                Un administrateur procédera à l'activation de vos accès. Dès validation, un email de confirmation vous sera transmis afin de vous permettre de vous connecter.
+                            </p>
+                            <p style="margin: 0; font-size: 12px; color: #64748b;">
+                                Par mesure de sécurité, nous vous recommandons de modifier ce mot de passe temporaire dès votre première connexion.
+                            </p>
+                        </td>
+                    </tr>
+                    <!-- Pied de page standard -->
+                    <tr>
+                        <td style="padding: 20px 32px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; text-align: center;">
+                            Ce message est généré automatiquement par la plateforme. Merci de ne pas y répondre.
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
-</html>
-`, username, toEmail, password, role)
+</html>`, username, toEmail, password, role)
 
 	return s.SendEmail(toEmail, subject, body)
 }
 
 // SendAccountActivatedEmail envoie un email de confirmation d'activation
 func (s *Service) SendAccountActivatedEmail(toEmail, username string) error {
-	subject := "Votre compte a été activé ✓"
-	body := fmt.Sprintf(`
-<!DOCTYPE html>
-<html>
+	subject := "Activation de votre compte — Moteur de Détection d'Anomalies"
+	body := fmt.Sprintf(`<!DOCTYPE html>
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compte activé</title>
 </head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #10b981;">✓ Compte activé avec succès !</h2>
-        <p>Bonjour %s,</p>
-        
-        <p>Votre compte a été <strong>activé par un administrateur</strong>. Vous pouvez maintenant accéder au <strong>Moteur de Détection d'Anomalies</strong>.</p>
-
-        <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 4px;">
-            <h3 style="margin-top: 0; color: #10b981;">🚀 Prêt à commencer ?</h3>
-            <p>Connectez-vous avec vos identifiants pour accéder à votre dashboard.</p>
-        </div>
-
-        <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
-        <p style="color: #999; font-size: 12px;">
-            Cet email a été envoyé automatiquement. Merci de ne pas répondre à ce message.
-        </p>
-    </div>
+<body style="margin: 0; padding: 24px 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #334155; line-height: 1.6;">
+    <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" border="0">
+        <tr>
+            <td align="center" style="padding: 0 16px;">
+                <table role="presentation" width="100%%" style="max-width: 580px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;" cellspacing="0" cellpadding="0" border="0">
+                    <!-- En-tête institutionnel -->
+                    <tr>
+                        <td style="padding: 24px 32px 20px; border-bottom: 1px solid #edf2f7; background-color: #ffffff;">
+                            <div style="font-size: 13px; font-weight: 700; color: #1e3a8a; letter-spacing: 0.5px; text-transform: uppercase;">
+                                Moteur de Détection d'Anomalies
+                            </div>
+                            <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+                                Plateforme de surveillance et conformité
+                            </div>
+                        </td>
+                    </tr>
+                    <!-- Corps du message -->
+                    <tr>
+                        <td style="padding: 32px 32px 28px;">
+                            <h1 style="margin: 0 0 16px; font-size: 18px; font-weight: 600; color: #0f172a;">
+                                Votre compte est désormais actif
+                            </h1>
+                            <p style="margin: 0 0 16px; font-size: 14px; color: #475569;">
+                                Bonjour %s,
+                            </p>
+                            <p style="margin: 0 0 20px; font-size: 14px; color: #475569;">
+                                Votre accès à la plateforme <strong>Moteur de Détection d'Anomalies</strong> a été validé et activé par un administrateur.
+                            </p>
+                            <p style="margin: 0 0 8px; font-size: 14px; color: #475569;">
+                                Vous pouvez à présent vous connecter à l'application à l'aide de vos identifiants de connexion pour accéder à votre espace de travail.
+                            </p>
+                        </td>
+                    </tr>
+                    <!-- Pied de page standard -->
+                    <tr>
+                        <td style="padding: 20px 32px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; text-align: center;">
+                            Ce message est généré automatiquement par la plateforme. Merci de ne pas y répondre.
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
-</html>
-`, username)
+</html>`, username)
 
 	return s.SendEmail(toEmail, subject, body)
 }
 
 // SendPasswordResetEmail envoie un lien de réinitialisation de mot de passe.
 func (s *Service) SendPasswordResetEmail(toEmail, username, resetLink string) error {
-	subject := "Réinitialisation de votre mot de passe"
-	body := fmt.Sprintf(`
-<!DOCTYPE html>
-<html>
+	subject := "Réinitialisation de votre mot de passe — Moteur de Détection d'Anomalies"
+	body := fmt.Sprintf(`<!DOCTYPE html>
+<html lang="fr">
 <head>
-	<meta charset="UTF-8">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Réinitialisation du mot de passe</title>
 </head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-	<div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-		<h2 style="color: #2463DE;">Réinitialisation du mot de passe</h2>
-		<p>Bonjour %s,</p>
+<body style="margin: 0; padding: 24px 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #334155; line-height: 1.6;">
+    <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" border="0">
+        <tr>
+            <td align="center" style="padding: 0 16px;">
+                <table role="presentation" width="100%%" style="max-width: 580px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;" cellspacing="0" cellpadding="0" border="0">
+                    <!-- En-tête institutionnel -->
+                    <tr>
+                        <td style="padding: 24px 32px 20px; border-bottom: 1px solid #edf2f7; background-color: #ffffff;">
+                            <div style="font-size: 13px; font-weight: 700; color: #1e3a8a; letter-spacing: 0.5px; text-transform: uppercase;">
+                                Moteur de Détection d'Anomalies
+                            </div>
+                            <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+                                Plateforme de surveillance et conformité
+                            </div>
+                        </td>
+                    </tr>
+                    <!-- Corps du message -->
+                    <tr>
+                        <td style="padding: 32px 32px 28px;">
+                            <h1 style="margin: 0 0 16px; font-size: 18px; font-weight: 600; color: #0f172a;">
+                                Réinitialisation de mot de passe
+                            </h1>
+                            <p style="margin: 0 0 12px; font-size: 14px; color: #475569;">
+                                Bonjour %s,
+                            </p>
+                            <p style="margin: 0 0 24px; font-size: 14px; color: #475569;">
+                                Une demande de réinitialisation de mot de passe a été initiée pour votre compte. Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe :
+                            </p>
 
-		<p>Nous avons reçu une demande de réinitialisation de mot de passe pour votre compte.</p>
+                            <!-- Bouton Call to Action sobre -->
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 0 24px;">
+                                <tr>
+                                    <td align="left" style="border-radius: 6px; background-color: #1e3a8a;">
+                                        <a href="%s" target="_blank" style="display: inline-block; padding: 11px 24px; font-size: 13px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 6px; letter-spacing: 0.2px;">
+                                            Définir un nouveau mot de passe
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
 
-		<div style="background: #f0f4ff; border-left: 4px solid #2463DE; padding: 15px; margin: 20px 0; border-radius: 4px;">
-			<p style="margin: 0 0 12px 0;">Cliquez sur le bouton ci-dessous pour définir un nouveau mot de passe :</p>
-			<a href="%s" style="display: inline-block; padding: 10px 16px; background: #2463DE; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600;">Réinitialiser mon mot de passe</a>
-		</div>
-
-		<p style="color: #666;">Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email.</p>
-
-		<hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
-		<p style="color: #999; font-size: 12px;">
-			Cet email a été envoyé automatiquement. Merci de ne pas répondre à ce message.
-		</p>
-	</div>
+                            <p style="margin: 0 0 12px; font-size: 12px; color: #64748b;">
+                                Ce lien est à usage unique et reste valable pendant 15 minutes.
+                            </p>
+                            <p style="margin: 0 0 16px; font-size: 12px; color: #64748b;">
+                                Si le bouton ne fonctionne pas, vous pouvez copier et coller l'adresse suivante dans votre navigateur :<br>
+                                <a href="%s" style="color: #1e3a8a; word-break: break-all; text-decoration: underline; font-size: 11px;">%s</a>
+                            </p>
+                            <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                                Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email en toute sécurité ; votre mot de passe actuel demeure inchangé.
+                            </p>
+                        </td>
+                    </tr>
+                    <!-- Pied de page standard -->
+                    <tr>
+                        <td style="padding: 20px 32px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; text-align: center;">
+                            Ce message est généré automatiquement par la plateforme. Merci de ne pas y répondre.
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
-</html>
-`, username, resetLink)
+</html>`, username, resetLink, resetLink, resetLink)
 
 	return s.SendEmail(toEmail, subject, body)
 }
@@ -154,7 +258,7 @@ func (s *Service) SendEmail(to, subject, htmlBody string) error {
 		from = fmt.Sprintf("%s <%s>", s.FromName, s.FromEmail)
 	}
 
-	message := []byte(fmt.Sprintf(
+	message := fmt.Appendf(nil,
 		"From: %s\r\n"+
 			"To: %s\r\n"+
 			"Subject: %s\r\n"+
@@ -162,7 +266,7 @@ func (s *Service) SendEmail(to, subject, htmlBody string) error {
 			"Content-Type: text/html; charset=UTF-8\r\n"+
 			"\r\n"+
 			"%s\r\n",
-		from, to, subject, htmlBody))
+		from, to, subject, htmlBody)
 
 	// Authentification SMTP
 	auth := smtp.PlainAuth("", s.SMTPUser, s.SMTPPassword, s.SMTPHost)

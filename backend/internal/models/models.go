@@ -36,7 +36,7 @@ type Compte struct {
 	Pays           string    `json:"pays" gorm:"column:pays"` // Code pays ISO alpha-2 (ex: SN, ML, CI) - Compatible SPI
 	Ville          string    `json:"ville" gorm:"column:ville"`
 	Adresse        string    `json:"adresse" gorm:"column:adresse"`
-	ProfilClientID *string   `json:"profilClientId,omitempty" gorm:"column:profil_client_id;type:uuid"`
+	ProfilClientID *string   `json:"profilClientId,omitempty" gorm:"column:profil_client_id;type:uuid;index:idx_comptes_profil_client_id"`
 	DateCreation   time.Time `json:"dateCreation" gorm:"column:date_creation;autoCreateTime"`
 }
 
@@ -144,30 +144,21 @@ func (PaysRisque) TableName() string { return "pays_risque" }
 // @Description Alerte générée lors du déclenchement d'une règle
 type Alerte struct {
 	ID                string     `json:"id" gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
-	TransactionID     *string    `json:"transactionId,omitempty"`
-	Code              string     `json:"code"` // Code d'alerte unique
-	Type              string     `json:"type"` // Type d'alerte (ex: "Montant", "Pays à risque", "Surveillé", etc.)
-	Statut            string     `json:"statut"`
-	Message           string     `json:"message"`
-	NiveauCriticite   string     `json:"niveauCriticite"`
-	ScoreRisque       float64    `json:"scoreRisque"`
-	AnalysteAssigneID *string    `json:"analysteAssigneID"`
+	TransactionID     *string    `json:"transactionId,omitempty" gorm:"column:transaction_id;index:idx_alertes_transaction_id"`
+	Code              string     `json:"code" gorm:"column:code;index:idx_alertes_code"` // Code d'alerte unique
+	Type              string     `json:"type" gorm:"column:type;index:idx_alertes_type_date,priority:1"` // Type d'alerte (ex: "Montant", "Pays à risque", "Surveillé", etc.)
+	Statut            string     `json:"statut" gorm:"column:statut;index:idx_alertes_statut"`
+	Message           string     `json:"message" gorm:"column:message"`
+	NiveauCriticite   string     `json:"niveauCriticite" gorm:"column:niveau_criticite;index:idx_alertes_criticite"`
+	ScoreRisque       float64    `json:"scoreRisque" gorm:"column:score_risque"`
+	AnalysteAssigneID *string    `json:"analysteAssigneID" gorm:"column:analyste_assigne_id"`
 	AnalysteNom       *string    `json:"analysteNom,omitempty" gorm:"column:analyste_nom;->"`
-	DateGeneration    time.Time  `json:"dateGeneration"`
-	DateTraitement    *time.Time `json:"dateTraitement,omitempty"` // Date de traitement/résolution
-	Action            string     `json:"action"`
-	NumeroCompte      string     `json:"numeroCompte"`
-	PaysRisque        *string    `json:"paysRisque,omitempty"`
-	RegleDeclencheeID *string    `json:"regleDeclencheeID,omitempty"`
-	// Documentation des codes d'alerte (exemple)
-	// A001 : Montant suspect
-	// A002 : Fréquence
-	// A003 : Pays à risque
-	// A004A : Interdit
-	// A004B : PEP
-	// A004C : Blacklist
-	// A004D : Surveillés
-	// ...
+	DateGeneration    time.Time  `json:"dateGeneration" gorm:"column:date_generation;index:idx_alertes_date_generation;index:idx_alertes_compte_date,priority:2;index:idx_alertes_type_date,priority:2"`
+	DateTraitement    *time.Time `json:"dateTraitement,omitempty" gorm:"column:date_traitement"` // Date de traitement/résolution
+	Action            string     `json:"action" gorm:"column:action"`
+	NumeroCompte      string     `json:"numeroCompte" gorm:"column:numero_compte;index:idx_alertes_compte_date,priority:1"`
+	PaysRisque        *string    `json:"paysRisque,omitempty" gorm:"column:pays_risque"`
+	RegleDeclencheeID *string    `json:"regleDeclencheeID,omitempty" gorm:"column:regle_declenchee_id"`
 }
 
 // ===================== META-ALERTES =====================
@@ -191,8 +182,8 @@ func (AlertMeta) TableName() string { return "alertes_meta" }
 // @Description Suivi des transactions liées aux entités blacklistées
 type SuiviBlacklist struct {
 	ID            string    `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
-	TransactionID string    `gorm:"type:uuid;not null" json:"transaction_id"`
-	NumeroCompte  string    `gorm:"not null" json:"numero_compte"`
+	TransactionID string    `gorm:"type:uuid;not null;index:idx_suivi_blacklist_transaction_id" json:"transaction_id"`
+	NumeroCompte  string    `gorm:"not null;index:idx_suivi_blacklist_numero_compte" json:"numero_compte"`
 	StatutSuivi   string    `gorm:"not null" json:"statut_suivi"`
 	Raison        string    `gorm:"default:''" json:"raison"` // Source du surveillance (ex: PEP, Blacklist, Montant, etc.)
 	DateDetection time.Time `gorm:"column:date_detection;autoCreateTime" json:"date_detection"`
@@ -208,8 +199,8 @@ func (SuiviBlacklist) TableName() string {
 // @Description Log d'audit des actions critiques
 type LogAudit struct {
 	ID              string    `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
-	DateHeure       time.Time `gorm:"column:date_heure;autoCreateTime" json:"date_heure"`
-	UtilisateurID   string    `gorm:"column:utilisateur_id" json:"utilisateur_id"`
+	DateHeure       time.Time `gorm:"column:date_heure;autoCreateTime;index:idx_logs_audit_date_heure" json:"date_heure"`
+	UtilisateurID   string    `gorm:"column:utilisateur_id;index:idx_logs_audit_utilisateur" json:"utilisateur_id"`
 	ActionEffectuee string    `gorm:"column:action_effectuee" json:"action_effectuee"`
 	Details         string    `gorm:"column:details" json:"details"`
 	Resultat        string    `gorm:"column:resultat" json:"resultat"`

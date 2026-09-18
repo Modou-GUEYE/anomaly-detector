@@ -19,7 +19,7 @@ import (
 const (
 	invalidCredentialsMessage = "Identifiants invalides"
 	invalidRequestMessage     = "Requête invalide"
-	passwordResetSentMessage  = "Si un compte existe pour cet email, un lien de réinitialisation a été envoyé."
+	passwordResetSentMessage  = "Un email contenant votre lien de réinitialisation vient de vous être envoyé."
 	passwordResetInvalidError = "Lien de réinitialisation invalide ou expiré"
 )
 
@@ -162,7 +162,7 @@ func (h *AuthHandler) HandleForgotPassword(ctx *gin.Context) {
 		return
 	}
 
-	resetLink := buildPasswordResetLink(resetToken)
+	resetLink := buildPasswordResetLink(ctx, resetToken)
 	if err := email.NewService().SendPasswordResetEmail(user.Email, user.NomUtilisateur, resetLink); err != nil {
 		log.Printf("password reset email failed for user %s: %v", user.Email, err)
 	}
@@ -227,8 +227,17 @@ func getPasswordResetTTL() time.Duration {
 	return 15 * time.Minute
 }
 
-func buildPasswordResetLink(token string) string {
-	baseURL := os.Getenv("PASSWORD_RESET_URL")
+func buildPasswordResetLink(ctx *gin.Context, token string) string {
+	baseURL := strings.TrimSpace(os.Getenv("PASSWORD_RESET_URL"))
+	if baseURL == "" && ctx != nil {
+		if origin := strings.TrimSpace(ctx.GetHeader("Origin")); origin != "" {
+			baseURL = strings.TrimRight(origin, "/") + "/forgot-password"
+		} else if referer := strings.TrimSpace(ctx.GetHeader("Referer")); referer != "" {
+			if u, err := url.Parse(referer); err == nil && u.Scheme != "" && u.Host != "" {
+				baseURL = u.Scheme + "://" + u.Host + "/forgot-password"
+			}
+		}
+	}
 	if baseURL == "" {
 		baseURL = "http://localhost:4200/forgot-password"
 	}

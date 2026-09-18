@@ -51,8 +51,8 @@ export class ForgotPasswordComponent implements OnInit {
       this.loading = false;
       this.success = ok;
       this.message = ok
-        ? 'Si un compte existe pour cet email, un lien de réinitialisation a été envoyé.'
-        : 'Impossible de traiter votre demande pour le moment.';
+        ? 'Un email contenant votre lien de réinitialisation vient de vous être envoyé. Pensez à vérifier vos courriers indésirables si besoin.'
+        : 'Impossible de traiter votre demande pour le moment. Veuillez réessayer.';
     });
   }
 
@@ -75,11 +75,11 @@ export class ForgotPasswordComponent implements OnInit {
       this.loading = false;
       this.success = ok;
       this.message = ok
-        ? 'Mot de passe réinitialisé avec succès. Vous pouvez vous connecter.'
-        : 'Le lien est invalide ou expiré.';
+        ? 'Votre mot de passe a été réinitialisé avec succès. Redirection en cours...'
+        : 'Ce lien de réinitialisation est invalide ou a expiré.';
 
       if (ok) {
-        setTimeout(() => this.router.navigate(['/login']), 800);
+        setTimeout(() => this.router.navigate(['/login']), 1200);
       }
     });
   }

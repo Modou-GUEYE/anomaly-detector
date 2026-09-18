@@ -25,6 +25,21 @@ _SHARED_TOKENS = {}
 PRESET_AUTH_TOKEN = os.getenv("TEST_AUTH_TOKEN", "").strip()
 
 
+@events.test_start.add_listener
+def on_test_start(environment, **kwargs):
+    """Pré-génération unique des tokens JWT pour éviter que 100 users ne bombardent Bcrypt"""
+    import requests
+    target = environment.host or DEFAULT_HOST
+    for email, pwd in [(ADMIN_EMAIL, ADMIN_PASSWORD), (ANALYST_EMAIL, ANALYST_PASSWORD)]:
+        if email not in _SHARED_TOKENS:
+            try:
+                res = requests.post(f"{target}/api/v1/auth/login", json={"email": email, "password": pwd}, timeout=10)
+                if res.status_code == 200:
+                    _SHARED_TOKENS[email] = res.json().get("access_token")
+            except Exception:
+                pass
+
+
 class BaseAuthenticatedUser(HttpUser):
     """Classe de base gérant l'authentification JWT pour les utilisateurs de test"""
     abstract = True
@@ -40,7 +55,7 @@ class BaseAuthenticatedUser(HttpUser):
             return
 
         # Réutilisation du token déjà obtenu pour cet email afin de préserver le CPU
-        if self.email in _SHARED_TOKENS:
+        if self.email in _SHARED_TOKENS and _SHARED_TOKENS[self.email]:
             self.token = _SHARED_TOKENS[self.email]
             return
 
