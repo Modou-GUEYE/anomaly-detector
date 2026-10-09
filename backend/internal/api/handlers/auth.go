@@ -163,9 +163,11 @@ func (h *AuthHandler) HandleForgotPassword(ctx *gin.Context) {
 	}
 
 	resetLink := buildPasswordResetLink(ctx, resetToken)
-	if err := email.NewService().SendPasswordResetEmail(user.Email, user.NomUtilisateur, resetLink); err != nil {
-		log.Printf("password reset email failed for user %s: %v", user.Email, err)
-	}
+	emailService := email.NewService()
+	to, name := user.Email, user.NomUtilisateur
+	email.SendAsync("réinitialisation de mot de passe pour "+to, func() error {
+		return emailService.SendPasswordResetEmail(to, name, resetLink)
+	})
 
 	ctx.JSON(http.StatusOK, gin.H{"message": passwordResetSentMessage})
 }

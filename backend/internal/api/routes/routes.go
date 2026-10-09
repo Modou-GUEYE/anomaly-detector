@@ -1062,9 +1062,10 @@ func usersGetByIDHandler(st *store.Store) gin.HandlerFunc {
 
 func sendProvisioningEmail(createdUser *models.Utilisateur, generatedPassword string) {
 	emailService := email.NewService()
-	if err := emailService.SendUserProvisioningEmail(createdUser.Email, createdUser.NomUtilisateur, generatedPassword, createdUser.Role); err != nil {
-		log.Printf("User provisioning email failed for admin-created user %s: %v", createdUser.Email, err)
-	}
+	to, name, role := createdUser.Email, createdUser.NomUtilisateur, createdUser.Role
+	email.SendAsync("création de compte pour "+to, func() error {
+		return emailService.SendUserProvisioningEmail(to, name, generatedPassword, role)
+	})
 }
 
 func userResponsePayload(createdUser *models.Utilisateur) gin.H {
@@ -1083,9 +1084,10 @@ func sendActivationEmailIfNeeded(actif *bool, wasActive bool, updated *models.Ut
 		return
 	}
 	emailService := email.NewService()
-	if err := emailService.SendAccountActivatedEmail(updated.Email, updated.NomUtilisateur); err != nil {
-		log.Printf("Email activation failed for user %s: %v", updated.Email, err)
-	}
+	to, name := updated.Email, updated.NomUtilisateur
+	email.SendAsync("activation de compte pour "+to, func() error {
+		return emailService.SendAccountActivatedEmail(to, name)
+	})
 }
 
 func generateTemporaryPassword(length int) (string, error) {

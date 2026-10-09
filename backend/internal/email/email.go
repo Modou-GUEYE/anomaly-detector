@@ -1,9 +1,11 @@
 package email
 
 import (
+	"crypto/tls"
 	"fmt"
-	"net/smtp"
 	"os"
+	"strings"
+	"time"
 )
 
 // Service gère l'envoi d'emails
@@ -14,10 +16,30 @@ type Service struct {
 	SMTPPassword string
 	FromEmail    string
 	FromName     string
+
+	// AuthMethod : auto | plain | login | xoauth2 | none (SMTP_AUTH_METHOD, auto par défaut).
+	// En auto, la méthode est choisie parmi celles annoncées par le serveur : Microsoft 365
+	// n'accepte que LOGIN et XOAUTH2, AWS SES accepte PLAIN.
+	AuthMethod string
+	// TLSMode : auto | starttls | implicit | none (SMTP_TLS_MODE). En auto : TLS direct sur
+	// le port 465, STARTTLS sinon.
+	TLSMode string
+	// Timeout borne la durée totale d'un envoi (SMTP_TIMEOUT, 15s par défaut).
+	Timeout time.Duration
+	// HeloName est le nom annoncé au serveur dans EHLO (SMTP_HELO_NAME, nom d'hôte par défaut).
+	HeloName string
+	// OAuth configure l'authentification XOAUTH2 (Microsoft 365 / Entra ID).
+	OAuth OAuthConfig
+
+	tlsConfig *tls.Config // surchargé par les tests
 }
 
 // NewService crée une nouvelle instance du service email à partir des variables d'environnement
 func NewService() *Service {
+	timeout := 15 * time.Second
+	if d, err := time.ParseDuration(os.Getenv("SMTP_TIMEOUT")); err == nil && d > 0 {
+		timeout = d
+	}
 	return &Service{
 		SMTPHost:     os.Getenv("SMTP_HOST"),
 		SMTPPort:     os.Getenv("SMTP_PORT"),
@@ -25,6 +47,17 @@ func NewService() *Service {
 		SMTPPassword: os.Getenv("SMTP_PASSWORD"),
 		FromEmail:    os.Getenv("SMTP_FROM_EMAIL"),
 		FromName:     os.Getenv("SMTP_FROM_NAME"),
+		AuthMethod:   strings.ToLower(strings.TrimSpace(os.Getenv("SMTP_AUTH_METHOD"))),
+		TLSMode:      strings.ToLower(strings.TrimSpace(os.Getenv("SMTP_TLS_MODE"))),
+		Timeout:      timeout,
+		HeloName:     os.Getenv("SMTP_HELO_NAME"),
+		OAuth: OAuthConfig{
+			TenantID:     os.Getenv("SMTP_OAUTH_TENANT_ID"),
+			ClientID:     os.Getenv("SMTP_OAUTH_CLIENT_ID"),
+			ClientSecret: os.Getenv("SMTP_OAUTH_CLIENT_SECRET"),
+			Scope:        os.Getenv("SMTP_OAUTH_SCOPE"),
+			TokenURL:     os.Getenv("SMTP_OAUTH_TOKEN_URL"),
+		},
 	}
 }
 
@@ -243,41 +276,4 @@ func (s *Service) SendPasswordResetEmail(toEmail, username, resetLink string) er
 </html>`, username, resetLink, resetLink, resetLink)
 
 	return s.SendEmail(toEmail, subject, body)
-}
-
-// SendEmail envoie un email via SMTP
-func (s *Service) SendEmail(to, subject, htmlBody string) error {
-	// Vérifier la configuration
-	if s.SMTPHost == "" || s.SMTPPort == "" {
-		return fmt.Errorf("SMTP configuration is missing")
-	}
-
-	// Construire le message avec l'en-tête Content-Type pour HTML
-	from := s.FromEmail
-	if s.FromName != "" {
-		from = fmt.Sprintf("%s <%s>", s.FromName, s.FromEmail)
-	}
-
-	message := fmt.Appendf(nil,
-		"From: %s\r\n"+
-			"To: %s\r\n"+
-			"Subject: %s\r\n"+
-			"MIME-Version: 1.0\r\n"+
-			"Content-Type: text/html; charset=UTF-8\r\n"+
-			"\r\n"+
-			"%s\r\n",
-		from, to, subject, htmlBody)
-
-	// Authentification SMTP
-	auth := smtp.PlainAuth("", s.SMTPUser, s.SMTPPassword, s.SMTPHost)
-
-	// Envoyer l'email
-	addr := fmt.Sprintf("%s:%s", s.SMTPHost, s.SMTPPort)
-	err := smtp.SendMail(addr, auth, s.FromEmail, []string{to}, message)
-
-	if err != nil {
-		return fmt.Errorf("failed to send email: %w", err)
-	}
-
-	return nil
 }
