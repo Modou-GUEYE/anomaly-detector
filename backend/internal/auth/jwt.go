@@ -15,17 +15,26 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// LoadPrivateKeyFromEnv retourne la clé RSA privée. Elle est lue et parsée une seule fois
+// puis conservée en mémoire : la relire à chaque requête coûtait un accès disque + un parsing
+// x509 sur le chemin critique de chaque appel authentifié. Une rotation de clé exige un redémarrage.
 func LoadPrivateKeyFromEnv() (*rsa.PrivateKey, error) {
+	if cachedPriv := getCachedPrivate(); cachedPriv != nil {
+		return cachedPriv, nil
+	}
+
 	if key, ok, err := loadPrivateKeyFromEnvValue("KEY_JWT_PRIVATE_KEY", "invalid PEM data in KEY_JWT_PRIVATE_KEY", "private key is not RSA"); ok {
+		if err == nil {
+			setCachedPrivate(key)
+		}
 		return key, err
 	}
 
 	if key, ok, err := loadPrivateKeyFromEnvFile("KEY_JWT_PRIVATE_KEY_FILE", "invalid PEM data in KEY_JWT_PRIVATE_KEY_FILE", "private key in file is not RSA"); ok {
+		if err == nil {
+			setCachedPrivate(key)
+		}
 		return key, err
-	}
-
-	if cachedPriv := getCachedPrivate(); cachedPriv != nil {
-		return cachedPriv, nil
 	}
 
 	return nil, errors.New("no private RSA key configured: set KEY_JWT_PRIVATE_KEY or KEY_JWT_PRIVATE_KEY_FILE")

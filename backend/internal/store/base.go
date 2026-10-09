@@ -1,10 +1,12 @@
 package store
 
 import (
+	"log"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"gorm.io/driver/postgres"
@@ -32,6 +34,13 @@ type Store struct {
 	gormDB       *gorm.DB
 	refCache     *RefCache
 	accountCache sync.Map // cache en mémoire: numeroCompte -> *models.Compte
+	accountCount atomic.Int64
+	accountMax   int64
+
+	userCache    sync.Map // cache en mémoire: id utilisateur -> userCacheEntry
+	userCacheTTL time.Duration
+
+	metricsCache sync.Map // cache court des agrégats du tableau de bord
 }
 
 // Gorm expose la connexion GORM pour des opérations directes si nécessaire.
@@ -55,20 +64,55 @@ func NewStore(connStr string) (*Store, error) {
 		return nil, err
 	}
 
-	maxOpenConns := getEnvInt("DB_MAX_OPEN_CONNS", 100)
-	maxIdleConns := getEnvInt("DB_MAX_IDLE_CONNS", 20)
-	connMaxLifetime := getEnvDuration("DB_CONN_MAX_LIFETIME", 5*time.Minute)
+	// Le pool doit rester nettement sous le max_connections de PostgreSQL (100 par défaut)
+	// pour éviter l'erreur SQLSTATE 53300 « too many clients ». Les connexions inactives
+	// sont conservées (idle = open) : en fermer sous charge force PostgreSQL à recréer un
+	// processus serveur à chaque pic, ce qui coûte plusieurs millisecondes par requête.
+	maxOpenConns := clampToServerLimit(gormDB, getEnvInt("DB_MAX_OPEN_CONNS", 50))
+	maxIdleConns := min(getEnvInt("DB_MAX_IDLE_CONNS", maxOpenConns), maxOpenConns)
+	connMaxLifetime := getEnvDuration("DB_CONN_MAX_LIFETIME", 30*time.Minute)
+	connMaxIdleTime := getEnvDuration("DB_CONN_MAX_IDLE_TIME", 5*time.Minute)
 
 	sqlDB.SetMaxOpenConns(maxOpenConns)
 	sqlDB.SetMaxIdleConns(maxIdleConns)
 	sqlDB.SetConnMaxLifetime(connMaxLifetime)
+	sqlDB.SetConnMaxIdleTime(connMaxIdleTime)
 
 	store := &Store{
-		gormDB:   gormDB,
-		refCache: newRefCache(),
+		gormDB:       gormDB,
+		refCache:     newRefCache(),
+		accountMax:   int64(getEnvInt("ACCOUNT_CACHE_MAX", 500000)),
+		userCacheTTL: getEnvDuration("USER_CACHE_TTL", 30*time.Second),
 	}
 
 	return store, nil
+}
+
+// dbConnSafetyMargin connexions laissées libres pour l'administration, la supervision et les
+// migrations, en plus des connexions réservées au superutilisateur.
+const dbConnSafetyMargin = 10
+
+// clampToServerLimit plafonne la taille du pool sous la limite max_connections du serveur
+// PostgreSQL : un pool plus grand que ce que le serveur accepte provoque l'erreur
+// « too many clients already » (SQLSTATE 53300) dès que la charge sature le pool.
+func clampToServerLimit(db *gorm.DB, requested int) int {
+	var maxConns, reserved int
+	if err := db.Raw("SELECT current_setting('max_connections')::int, current_setting('superuser_reserved_connections')::int").
+		Row().Scan(&maxConns, &reserved); err != nil {
+		log.Printf("⚠️  Lecture de max_connections impossible, pool conservé à %d: %v", requested, err)
+		return requested
+	}
+	limit := maxConns - reserved - dbConnSafetyMargin
+	if limit < 1 {
+		limit = 1
+	}
+	if requested > limit {
+		log.Printf("⚠️  DB_MAX_OPEN_CONNS=%d dépasse la capacité PostgreSQL (max_connections=%d, réservées=%d) : pool plafonné à %d",
+			requested, maxConns, reserved, limit)
+		return limit
+	}
+	log.Printf("✓ Pool PostgreSQL: %d connexions max (serveur: max_connections=%d)", requested, maxConns)
+	return requested
 }
 
 func getEnvInt(key string, defaultVal int) int {

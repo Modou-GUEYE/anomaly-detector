@@ -5,11 +5,36 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"gorm.io/gorm"
 )
 
 const whereUserIDEquals = "id = ?"
+
+// userCacheEntry conserve un utilisateur lu en base pour une durée limitée.
+type userCacheEntry struct {
+	user    *models.Utilisateur
+	expires time.Time
+}
+
+// GetUserByIDCached retourne l'utilisateur depuis un cache mémoire à durée de vie courte
+// (USER_CACHE_TTL, 30s par défaut). Utilisé par le middleware JWT et l'audit, qui
+// interrogeaient la table utilisateurs à chaque requête authentifiée.
+// Le cache est invalidé immédiatement par UpdateUser et DeleteUser.
+func (s *Store) GetUserByIDCached(ctx context.Context, id string) (*models.Utilisateur, error) {
+	if val, ok := s.userCache.Load(id); ok {
+		if entry := val.(userCacheEntry); time.Now().Before(entry.expires) {
+			return entry.user, nil
+		}
+	}
+	user, err := s.GetUserByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	s.userCache.Store(id, userCacheEntry{user: user, expires: time.Now().Add(s.userCacheTTL)})
+	return user, nil
+}
 
 // ===================== UTILISATEURS =====================
 
@@ -76,6 +101,8 @@ func (s *Store) UpdateUser(ctx context.Context, id string, updates map[string]in
 		return nil, err
 	}
 
+	s.userCache.Delete(id)
+
 	// Recharger
 	if err := s.gormDB.WithContext(ctx).First(&user, whereUserIDEquals, id).Error; err != nil {
 		return nil, err
@@ -94,6 +121,7 @@ func (s *Store) DeleteUser(ctx context.Context, id string) error {
 	if count > 0 {
 		// Désactiver si des traces existent
 		err := s.gormDB.WithContext(ctx).Model(&models.Utilisateur{}).Where(whereUserIDEquals, id).Update("actif", false).Error
+		s.userCache.Delete(id)
 		if err != nil {
 			return err
 		}
@@ -101,5 +129,7 @@ func (s *Store) DeleteUser(ctx context.Context, id string) error {
 		return fmt.Errorf("blocked:disabled")
 	}
 	// Sinon, supprimer physiquement
-	return s.gormDB.WithContext(ctx).Delete(&models.Utilisateur{}, whereUserIDEquals, id).Error
+	err = s.gormDB.WithContext(ctx).Delete(&models.Utilisateur{}, whereUserIDEquals, id).Error
+	s.userCache.Delete(id)
+	return err
 }

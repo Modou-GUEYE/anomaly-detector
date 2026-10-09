@@ -32,7 +32,7 @@ func (s *Store) LogAction(ctx context.Context, utilisateurID, action, typeAction
 	default:
 		// Récupérer le rôle depuis la base de données (admin/analyst/etc.)
 		// Tous les vrais utilisateurs (admin et analyst) passent ici
-		user, err := s.GetUserByID(ctx, utilisateurID)
+		user, err := s.GetUserByIDCached(ctx, utilisateurID)
 		if err == nil && user != nil {
 			role = user.Role // "admin" ou "analyst" depuis la table utilisateurs
 		}

@@ -269,12 +269,14 @@ func (re *RulesEngine) applyRulesForAccount(ctx context.Context, tx *models.Tran
 		return nil, err
 	}
 
+	// Les cumuls de toutes les règles montant/fréquence du compte sont calculés en une seule requête.
+	activity, err := re.store.GetAccountActivity(ctx, numeroCompte, activityPeriods(regles))
+	if err != nil {
+		return nil, err
+	}
+
 	for _, regle := range regles {
-		violation, err := re.isRuleViolated(ctx, tx, numeroCompte, regle)
-		if err != nil {
-			return nil, err
-		}
-		if !violation {
+		if !isRuleViolated(tx, regle, activity) {
 			continue
 		}
 
@@ -294,29 +296,39 @@ func (re *RulesEngine) applyRulesForAccount(ctx context.Context, tx *models.Tran
 	return alertes, nil
 }
 
-func (re *RulesEngine) isRuleViolated(ctx context.Context, tx *models.Transaction, numeroCompte string, regle models.RegleControle) (bool, error) {
+// activityPeriods retourne les périodes (en jours) dont les règles montant/fréquence ont besoin.
+func activityPeriods(regles []models.RegleControle) []int {
+	var periods []int
+	seen := map[int]bool{}
+	for _, regle := range regles {
+		var days int
+		switch regle.TypeRegle {
+		case "montant":
+			days = periodDays(regle.PeriodeReference, 7)
+		case "frequence":
+			days = periodDays(regle.PeriodeReference, 1)
+		default:
+			continue
+		}
+		if !seen[days] {
+			seen[days] = true
+			periods = append(periods, days)
+		}
+	}
+	return periods
+}
+
+func isRuleViolated(tx *models.Transaction, regle models.RegleControle, activity map[int]store.PeriodStats) bool {
 	switch regle.TypeRegle {
 	case "montant":
-		return re.isMontantRuleViolated(ctx, tx, numeroCompte, regle), nil
+		total := activity[periodDays(regle.PeriodeReference, 7)].Sum + tx.Montant
+		return total > regle.Seuil
 	case "frequence":
-		return re.isFrequenceRuleViolated(ctx, numeroCompte, regle), nil
+		count := activity[periodDays(regle.PeriodeReference, 1)].Count + 1
+		return count > int64(regle.Seuil)
 	default:
-		return false, nil
+		return false
 	}
-}
-
-func (re *RulesEngine) isMontantRuleViolated(ctx context.Context, tx *models.Transaction, numeroCompte string, regle models.RegleControle) bool {
-	days := periodDays(regle.PeriodeReference, 7)
-	total, _ := re.store.GetTransactionSumForPeriod(ctx, numeroCompte, days)
-	total += tx.Montant
-	return total > regle.Seuil
-}
-
-func (re *RulesEngine) isFrequenceRuleViolated(ctx context.Context, numeroCompte string, regle models.RegleControle) bool {
-	days := periodDays(regle.PeriodeReference, 1)
-	count, _ := re.store.GetTransactionCountForPeriod(ctx, numeroCompte, days)
-	count += 1
-	return count > int64(regle.Seuil)
 }
 
 func periodDays(periodeReference string, defaultDays int) int {

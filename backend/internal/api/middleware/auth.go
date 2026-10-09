@@ -66,7 +66,7 @@ func JwtAuthMiddleware(s *store.Store) gin.HandlerFunc {
 		// Vérifier que l'utilisateur existe et est actif (si le store est fourni)
 		if sub, ok := claims["sub"].(string); ok {
 			if s != nil {
-				if usr, err := s.GetUserByID(ctx, sub); err == nil {
+				if usr, err := s.GetUserByIDCached(ctx, sub); err == nil {
 					if !usr.Actif {
 						ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Identifiants invalides"})
 						return

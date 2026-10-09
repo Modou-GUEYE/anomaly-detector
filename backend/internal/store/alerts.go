@@ -16,12 +16,21 @@ const whereIDEquals = "id = ?"
 
 // GetAlertes récupère toutes les alertes du système.
 func (s *Store) GetAlertes(ctx context.Context) ([]models.Alerte, error) {
+	return s.GetAlertesPage(ctx, 0, 0)
+}
+
+// GetAlertesPage récupère les alertes, les plus récentes d'abord. limit <= 0 retourne tout.
+// La pagination s'appuie sur l'index idx_alertes_date_generation.
+func (s *Store) GetAlertesPage(ctx context.Context, limit, offset int) ([]models.Alerte, error) {
 	var alertes []models.Alerte
-	if err := s.gormDB.WithContext(ctx).
+	query := s.gormDB.WithContext(ctx).
 		Select("alertes.*, utilisateurs.nom_utilisateur as analyste_nom").
 		Joins("LEFT JOIN utilisateurs ON NULLIF(alertes.analyste_assigne_id, '')::uuid = utilisateurs.id").
-		Order("alertes.date_generation DESC").
-		Find(&alertes).Error; err != nil {
+		Order("alertes.date_generation DESC")
+	if limit > 0 {
+		query = query.Limit(limit).Offset(offset)
+	}
+	if err := query.Find(&alertes).Error; err != nil {
 		return nil, err
 	}
 	return alertes, nil
@@ -30,6 +39,19 @@ func (s *Store) GetAlertes(ctx context.Context) ([]models.Alerte, error) {
 // GetAlertCountsByMonthAndType retourne le nombre d'alertes par type pour les derniers 12 mois.
 // Retourne une map: type -> [{year: YYYY, month: M, count: N}, ...]
 func (s *Store) GetAlertCountsByMonthAndType(ctx context.Context, months int) (map[string][]map[string]int64, error) {
+	// Agrégat sur 12 mois d'alertes : mis en cache 15s, ce qui suffit pour un tableau de bord
+	// et évite de rescanner la table à chaque rafraîchissement d'un analyste.
+	type cachedMetrics struct {
+		data    map[string][]map[string]int64
+		expires time.Time
+	}
+	cacheKey := fmt.Sprintf("alert_counts_%d", months)
+	if val, ok := s.metricsCache.Load(cacheKey); ok {
+		if entry := val.(cachedMetrics); time.Now().Before(entry.expires) {
+			return entry.data, nil
+		}
+	}
+
 	// On utilise une requête SQL brute pour grouper par type, année et mois
 	type Row struct {
 		Type  string
@@ -56,6 +78,7 @@ func (s *Store) GetAlertCountsByMonthAndType(ctx context.Context, months int) (m
 		key := r.Type
 		out[key] = append(out[key], map[string]int64{"year": int64(r.Year), "month": int64(r.Month), "count": r.Count})
 	}
+	s.metricsCache.Store(cacheKey, cachedMetrics{data: out, expires: time.Now().Add(15 * time.Second)})
 	return out, nil
 }
 

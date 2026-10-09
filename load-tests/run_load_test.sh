@@ -13,6 +13,9 @@ VENV_DIR="${SCRIPT_DIR}/.venv"
 
 TARGET_HOST="${TARGET_HOST:-http://localhost:8080}"
 PARTNER_BANK_CODE="${PARTNER_BANK_CODE:-SN079}"
+# Nombre de processus Locust (-1 = un par cœur CPU). Un seul processus Python sature
+# au-delà de ~500 req/s et fausse alors les temps de réponse mesurés.
+LOCUST_PROCESSES="${LOCUST_PROCESSES:--1}"
 
 # Couleurs pour le terminal
 GREEN='\033[0;32m'
@@ -28,6 +31,7 @@ echo -e "${BLUE}        MODULE LAB - SUITE DE TESTS DE CHARGE LOCUST           $
 echo -e "${BLUE}================================================================${NC}"
 echo -e "Cible (Host)       : ${GREEN}${TARGET_HOST}${NC}"
 echo -e "Code Partenaire    : ${GREEN}${PARTNER_BANK_CODE}${NC}"
+echo -e "Processus Locust   : ${GREEN}${LOCUST_PROCESSES}${NC}"
 echo -e "Dossier Rapports   : ${GREEN}${REPORTS_DIR}${NC}"
 echo -e "----------------------------------------------------------------"
 
@@ -80,6 +84,7 @@ run_test() {
     locust \
         -f "${SCRIPT_DIR}/locustfile.py" \
         --headless \
+        --processes="${LOCUST_PROCESSES}" \
         --host="${TARGET_HOST}" \
         --users="${users}" \
         --spawn-rate="${spawn_rate}" \

@@ -48,6 +48,27 @@ TARGET_HOST="http://10.70.1.120:8080" ./run_load_test.sh --stress
 
 ---
 
+## ⏱️ Temps serveur vs temps réseau
+
+Le backend renvoie l'en-tête `X-Response-Time` (temps de traitement interne). Locust l'enregistre
+comme une statistique distincte, préfixée **`[Serveur]`**, à côté de la mesure de bout en bout.
+
+- Écart entre les deux = latence réseau entre l'injecteur et le serveur (≈ 75 ms depuis un poste
+  hors du réseau LAB : c'est le temps minimum observé sur l'endpoint en mémoire `/entities/:id/status`).
+- Pour mesurer un objectif de type **P50 ≤ 100 ms**, lancer Locust **depuis une machine du même
+  réseau que le serveur** (ou depuis le serveur lui-même), sinon la latence réseau domine.
+
+## ⚙️ Injecteur multi-processus
+
+Un seul processus Python sature vers ~500 req/s (avertissement `CPU usage above 90%`) et fausse
+alors les temps mesurés. Le script utilise un processus par cœur (`LOCUST_PROCESSES=-1`) :
+
+```bash
+LOCUST_PROCESSES=4 TARGET_HOST="http://10.70.1.145:8080" ./run_load_test.sh --stress-500
+```
+
+---
+
 ## 📊 Rapports Générés
 
 Tous les rapports d'exécution sont horodatés et automatiquement sauvegardés dans le dossier `reports/` :

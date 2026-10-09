@@ -9,7 +9,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,16 +19,14 @@ type AnomaliesHandler struct {
 }
 
 type accountPayload struct {
-	nomClient      string
-	numeroCompte   string
-	typeCompte     string
-	typeClient     string
-	categorie      string
-	pays           string
-	ville          string
-	adresse        string
-	roleLabel      string
-	errorCreateMsg string
+	nomClient    string
+	numeroCompte string
+	typeCompte   string
+	typeClient   string
+	categorie    string
+	pays         string
+	ville        string
+	adresse      string
 }
 
 func partnerBankCodeFromEnv() (string, error) {
@@ -71,43 +68,33 @@ func (h *AnomaliesHandler) HandleAnalyzeTransaction(ctx *gin.Context) {
 		return
 	}
 
-	// Récupérer l'utilisateur connecté pour l'audit logging
-	userID, exists := ctx.Get("userID")
-	if !exists {
+	// Vérifier que l'appelant est identifié (les écritures sont auditées sous l'acteur système "MDA")
+	if _, exists := ctx.Get("userID"); !exists {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Utilisateur non identifié"})
 		return
 	}
-	userIDStr := userID.(string)
 
 	payeur := accountPayload{
-		nomClient:      tx.NomPayeur,
-		numeroCompte:   tx.NumeroComptePayeur,
-		typeCompte:     tx.TypeComptePayeur,
-		typeClient:     tx.TypeClientPayeur,
-		categorie:      tx.CategoriePayeur,
-		pays:           tx.PaysPayeur,
-		ville:          tx.VillePayeur,
-		adresse:        tx.AdressePayeur,
-		roleLabel:      "payeur",
-		errorCreateMsg: "Erreur lors de la création du client payeur",
+		nomClient:    tx.NomPayeur,
+		numeroCompte: tx.NumeroComptePayeur,
+		typeCompte:   tx.TypeComptePayeur,
+		typeClient:   tx.TypeClientPayeur,
+		categorie:    tx.CategoriePayeur,
+		pays:         tx.PaysPayeur,
+		ville:        tx.VillePayeur,
+		adresse:      tx.AdressePayeur,
 	}
-	if err := h.ensureAccountIfMissing(ctx, payeur, userIDStr); err != nil {
-		return
-	}
-
 	paye := accountPayload{
-		nomClient:      tx.NomPaye,
-		numeroCompte:   tx.NumeroComptePaye,
-		typeCompte:     tx.TypeComptePaye,
-		typeClient:     tx.TypeClientPaye,
-		categorie:      tx.CategoriePaye,
-		pays:           tx.PaysPaye,
-		ville:          tx.VillePaye,
-		adresse:        tx.AdressePaye,
-		roleLabel:      "payé",
-		errorCreateMsg: "Erreur lors de la création du client payé",
+		nomClient:    tx.NomPaye,
+		numeroCompte: tx.NumeroComptePaye,
+		typeCompte:   tx.TypeComptePaye,
+		typeClient:   tx.TypeClientPaye,
+		categorie:    tx.CategoriePaye,
+		pays:         tx.PaysPaye,
+		ville:        tx.VillePaye,
+		adresse:      tx.AdressePaye,
 	}
-	if err := h.ensureAccountIfMissing(ctx, paye, userIDStr); err != nil {
+	if err := h.ensureAccounts(ctx, payeur, paye); err != nil {
 		return
 	}
 
@@ -122,87 +109,72 @@ func (h *AnomaliesHandler) HandleAnalyzeTransaction(ctx *gin.Context) {
 		return
 	}
 
-	h.analyzeAndRespond(ctx, &tx, userIDStr)
+	h.analyzeAndRespond(ctx, &tx)
 }
 
-func (h *AnomaliesHandler) ensureAccountIfMissing(ctx *gin.Context, payload accountPayload, userID string) error {
-	if payload.numeroCompte == "" {
-		return nil
+// ensureAccounts crée les comptes payeur/payé absents en une seule transaction SQL.
+func (h *AnomaliesHandler) ensureAccounts(ctx *gin.Context, payloads ...accountPayload) error {
+	comptes := make([]*models.Compte, 0, len(payloads))
+	for _, payload := range payloads {
+		if payload.numeroCompte == "" {
+			continue
+		}
+		profilID, errProfil := h.store.GetProfilClientIDByCode(ctx, payload.typeClient)
+		if errProfil != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Profil client introuvable pour le type: " + payload.typeClient, "details": errProfil.Error()})
+			return errProfil
+		}
+		comptes = append(comptes, &models.Compte{
+			NomClient:      payload.nomClient,
+			NumeroCompte:   payload.numeroCompte,
+			TypeCompte:     payload.typeCompte,
+			TypeClient:     payload.typeClient,
+			Categorie:      payload.categorie,
+			Pays:           payload.pays,
+			Ville:          payload.ville,
+			Adresse:        payload.adresse,
+			ProfilClientID: profilID,
+		})
 	}
 
-	compte, err := h.store.GetCompteByCompte(ctx, payload.numeroCompte)
-	if err == nil && compte.ID != "" {
-		return nil
+	if err := h.store.EnsureComptes(ctx, comptes); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors de la création des comptes payeur/payé", "details": err.Error()})
+		return err
 	}
-
-	profilID, errProfil := h.store.GetProfilClientIDByCode(ctx, payload.typeClient)
-	if errProfil != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Profil client introuvable pour le type: " + payload.typeClient, "details": errProfil.Error()})
-		return errProfil
-	}
-
-	_, errCreate := h.store.CreateCompte(ctx, &models.Compte{
-		NomClient:      payload.nomClient,
-		NumeroCompte:   payload.numeroCompte,
-		TypeCompte:     payload.typeCompte,
-		TypeClient:     payload.typeClient,
-		Categorie:      payload.categorie,
-		Pays:           payload.pays,
-		Ville:          payload.ville,
-		Adresse:        payload.adresse,
-		ProfilClientID: profilID,
-		DateCreation:   time.Now(),
-	}, userID)
-	if errCreate != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": payload.errorCreateMsg, "details": errCreate.Error()})
-		return errCreate
-	}
-
 	return nil
 }
 
-func (h *AnomaliesHandler) analyzeAndRespond(ctx *gin.Context, tx *models.Transaction, userID string) {
+func (h *AnomaliesHandler) analyzeAndRespond(ctx *gin.Context, tx *models.Transaction) {
 	rulesEngine := core.NewRulesEngine(h.store)
 	alertes, err := rulesEngine.AnalyzeTransaction(ctx, tx)
 	if err != nil {
 		if errors.Is(err, core.ErrTransactionRefused) {
-			h.handleRefusedTransaction(ctx, tx, alertes, userID)
+			h.handleRefusedTransaction(ctx, tx, alertes)
 			return
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	h.handleValidTransaction(ctx, tx, alertes, userID)
+	h.handleValidTransaction(ctx, tx, alertes)
 }
 
 // handleRefusedTransaction traite une transaction refusée
-func (h *AnomaliesHandler) handleRefusedTransaction(ctx *gin.Context, tx *models.Transaction, alertes []*models.Alerte, userID string) {
-	createdTx, txErr := h.store.CreateTransaction(ctx, tx)
-	if txErr != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible d'enregistrer la transaction: " + txErr.Error()})
-		return
-	}
-	savedBloqueAlertes := make([]*models.Alerte, 0)
+func (h *AnomaliesHandler) handleRefusedTransaction(ctx *gin.Context, tx *models.Transaction, alertes []*models.Alerte) {
 	for _, alerte := range alertes {
 		if strings.EqualFold(alerte.Action, "bloquer") {
 			alerte.Statut = "Traité"
 		}
-		alerte.TransactionID = &createdTx.ID
-		if alerte.DateGeneration.IsZero() {
-			alerte.DateGeneration = time.Now()
-		}
-		saved, _ := h.store.CreateAlerte(ctx, alerte, userID)
-		if saved != nil {
-			savedBloqueAlertes = append(savedBloqueAlertes, saved)
-		}
-		h.createSuiviIfNeeded(ctx, createdTx.ID, alerte)
 	}
-	ctx.JSON(http.StatusForbidden, gin.H{"status": "transaction_bloquee", "alertes": savedBloqueAlertes})
+	if err := h.store.SaveAnalysis(ctx, tx, h.analysisAlerts(alertes)); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible d'enregistrer la transaction: " + err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusForbidden, gin.H{"status": "transaction_bloquee", "alertes": alertes})
 }
 
 // handleValidTransaction traite une transaction valide
-func (h *AnomaliesHandler) handleValidTransaction(ctx *gin.Context, tx *models.Transaction, alertes []*models.Alerte, userID string) {
+func (h *AnomaliesHandler) handleValidTransaction(ctx *gin.Context, tx *models.Transaction, alertes []*models.Alerte) {
 	var bloqueAlertes []*models.Alerte
 	var autresAlertes []*models.Alerte
 	for _, alerte := range alertes {
@@ -214,45 +186,32 @@ func (h *AnomaliesHandler) handleValidTransaction(ctx *gin.Context, tx *models.T
 	}
 
 	if len(bloqueAlertes) > 0 {
-		h.handleRefusedTransaction(ctx, tx, bloqueAlertes, userID)
+		h.handleRefusedTransaction(ctx, tx, bloqueAlertes)
 		return
 	}
 
-	createdTx, err := h.store.CreateTransaction(ctx, tx)
-	if err != nil {
+	if err := h.store.SaveAnalysis(ctx, tx, h.analysisAlerts(autresAlertes)); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible d'enregistrer la transaction: " + err.Error()})
 		return
 	}
 
-	var savedAlertes []*models.Alerte
-	for _, alerte := range autresAlertes {
-		alerte.TransactionID = &createdTx.ID
-		if alerte.DateGeneration.IsZero() {
-			alerte.DateGeneration = time.Now()
-		}
-		saved, _ := h.store.CreateAlerte(ctx, alerte, userID)
-		savedAlertes = append(savedAlertes, saved)
-		h.createSuiviIfNeeded(ctx, createdTx.ID, alerte)
-	}
-
-	if len(savedAlertes) > 0 {
-		ctx.JSON(http.StatusCreated, gin.H{"status": "anomalie_detectee", "alertes": savedAlertes})
+	if len(autresAlertes) > 0 {
+		ctx.JSON(http.StatusCreated, gin.H{"status": "anomalie_detectee", "alertes": autresAlertes})
 	} else {
 		ctx.JSON(http.StatusOK, gin.H{"status": "aucune_anomalie_detectee"})
 	}
 }
 
-// createSuiviIfNeeded ajoute à suivi_blacklist si nécessaire
-func (h *AnomaliesHandler) createSuiviIfNeeded(ctx *gin.Context, transactionID string, alerte *models.Alerte) {
+// analysisAlerts indique pour chaque alerte si une entrée suivi_blacklist doit être créée.
+func (h *AnomaliesHandler) analysisAlerts(alertes []*models.Alerte) []store.AnalysisAlert {
 	partnerBankCode, err := partnerBankCodeFromEnv()
-	if err != nil {
-		return
+	result := make([]store.AnalysisAlert, 0, len(alertes))
+	for _, alerte := range alertes {
+		createSuivi := err == nil && alerte.NumeroCompte != "" &&
+			isPartnerAccount(alerte.NumeroCompte, partnerBankCode) && h.shouldCreateSuivi(alerte)
+		result = append(result, store.AnalysisAlert{Alerte: alerte, CreateSuivi: createSuivi})
 	}
-	if alerte.NumeroCompte != "" && isPartnerAccount(alerte.NumeroCompte, partnerBankCode) {
-		if h.shouldCreateSuivi(alerte) {
-			_ = h.store.CreateSuiviBlacklist(ctx, transactionID, alerte.NumeroCompte, "surveiller", alerte.Type)
-		}
-	}
+	return result
 }
 
 // shouldCreateSuivi détermine si un suivi doit être créé pour une alerte
@@ -289,15 +248,27 @@ func (h *AnomaliesHandler) HandleGetAlertMetrics(ctx *gin.Context) {
 }
 
 // @Summary      Lister toutes les alertes
-// @Description  Récupère la liste de toutes les alertes générées par le système.
+// @Description  Récupère la liste des alertes générées par le système, les plus récentes d'abord. Sans `limit`, toutes les alertes sont retournées.
 // @Tags         Anomalies
 // @Produce      json
+// @Param        limit  query     int  false  "Nombre maximum d'alertes (max 500)"
+// @Param        page   query     int  false  "Numéro de page (à partir de 1)"
 // @Success      200  {array}   models.Alerte
 // @Failure      401  {object}  map[string]string
 // @Security     BearerAuth
 // @Router       /anomalies [get]
 func (h *AnomaliesHandler) HandleGetAlertes(ctx *gin.Context) {
-	alertes, err := h.store.GetAlertes(ctx)
+	// Pagination optionnelle (?limit=20&page=2) : sans paramètre, toutes les alertes sont retournées.
+	limit, _ := strconv.Atoi(ctx.Query("limit"))
+	page, _ := strconv.Atoi(ctx.Query("page"))
+	if limit > 500 {
+		limit = 500
+	}
+	offset := 0
+	if limit > 0 && page > 1 {
+		offset = (page - 1) * limit
+	}
+	alertes, err := h.store.GetAlertesPage(ctx, limit, offset)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de récupérer les alertes"})
 		return

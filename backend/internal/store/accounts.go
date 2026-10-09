@@ -31,7 +31,7 @@ func (s *Store) CreateCompte(ctx context.Context, compte *models.Compte, userID 
 	}
 
 	// Stocker immédiatement dans le cache mémoire
-	s.accountCache.Store(compte.NumeroCompte, compte)
+	s.cacheAccount(compte)
 
 	// Logging d'audit asynchrone pour ne pas bloquer le chemin critique de traitement
 	go func(c models.Compte) {
@@ -63,8 +63,20 @@ func (s *Store) GetCompteByCompte(ctx context.Context, numeroCompte string) (*mo
 	}
 
 	// Mettre en cache pour les transactions suivantes
-	s.accountCache.Store(numeroCompte, &compte)
+	s.cacheAccount(&compte)
 	return &compte, nil
+}
+
+// cacheAccount ajoute un compte au cache mémoire. Le cache est borné (ACCOUNT_CACHE_MAX) :
+// au-delà, il est vidé pour éviter une croissance mémoire illimitée sur la durée.
+func (s *Store) cacheAccount(c *models.Compte) {
+	if _, loaded := s.accountCache.LoadOrStore(c.NumeroCompte, c); loaded {
+		return
+	}
+	if s.accountCount.Add(1) > s.accountMax {
+		s.accountCache.Clear()
+		s.accountCount.Store(0)
+	}
 }
 
 // GetReglesForCompte récupère les règles actives associées au profil client d'un compte donné.

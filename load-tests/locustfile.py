@@ -25,6 +25,37 @@ _SHARED_TOKENS = {}
 PRESET_AUTH_TOKEN = os.getenv("TEST_AUTH_TOKEN", "").strip()
 
 
+SERVER_TIME_HEADER = "X-Response-Time"
+SERVER_TIME_TYPE = "SERVEUR"
+
+
+@events.request.add_listener
+def record_server_time(request_type, name, response, exception, context, **kwargs):
+    """
+    Enregistre le temps de traitement côté backend (en-tête X-Response-Time) comme une
+    statistique distincte, préfixée [Serveur]. Elle isole le temps du backend de la latence
+    réseau entre l'injecteur Locust et le serveur.
+    """
+    if request_type == SERVER_TIME_TYPE or response is None or exception is not None:
+        return
+    header = response.headers.get(SERVER_TIME_HEADER, "")
+    if not header.endswith("ms"):
+        return
+    try:
+        server_ms = float(header[:-2])
+    except ValueError:
+        return
+    events.request.fire(
+        request_type=SERVER_TIME_TYPE,
+        name=f"[Serveur] {name}",
+        response_time=server_ms,
+        response_length=0,
+        response=None,
+        context=context,
+        exception=None,
+    )
+
+
 @events.test_start.add_listener
 def on_test_start(environment, **kwargs):
     """Pré-génération unique des tokens JWT pour éviter que 100 users ne bombardent Bcrypt"""

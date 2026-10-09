@@ -54,6 +54,9 @@ func NewAllHandlers(store *store.Store) *AllHandlers {
 
 // SetupRoutes configure toutes les routes de l'API
 func SetupRoutes(router *gin.Engine, handlers *AllHandlers, store *store.Store) {
+	// Mesure du temps de traitement serveur (en-tête X-Response-Time)
+	router.Use(middleware.ResponseTimeMiddleware())
+
 	// Configuration du middleware CORS
 	router.Use(middleware.CorsMiddleware())
 
