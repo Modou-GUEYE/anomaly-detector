@@ -151,6 +151,9 @@ func (h *AuthHandler) HandleForgotPassword(ctx *gin.Context) {
 
 	user, err := h.store.GetUserByEmail(ctx, strings.TrimSpace(req.Email))
 	if err != nil || user == nil || !user.Actif {
+		if email.LogContentEnabled() {
+			log.Printf("[EMAIL_DEBUG] mot de passe oublié ignoré pour %q (utilisateur introuvable ou inactif, err=%v)", req.Email, err)
+		}
 		ctx.JSON(http.StatusOK, gin.H{"message": passwordResetSentMessage})
 		return
 	}

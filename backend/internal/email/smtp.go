@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"mime"
 	"mime/quotedprintable"
 	"net"
@@ -22,6 +23,13 @@ import (
 
 // SendEmail envoie un email HTML via SMTP (appel synchrone, borné par Timeout).
 func (s *Service) SendEmail(to, subject, htmlBody string) error {
+	// Mode temporaire de diagnostic : trace le contenu de l'email avant tout envoi SMTP.
+	// ATTENTION : le corps contient des données sensibles (mot de passe temporaire, lien de
+	// réinitialisation). À désactiver (EMAIL_LOG_CONTENT=false) une fois la validation terminée.
+	if LogContentEnabled() {
+		log.Printf("[EMAIL_DEBUG] from=%q to=%q subject=%q\n--- corps ---\n%s\n--- fin ---",
+			s.FromEmail, to, subject, htmlBody)
+	}
 	if s.SMTPHost == "" || s.SMTPPort == "" {
 		return fmt.Errorf("SMTP configuration is missing")
 	}
@@ -316,4 +324,10 @@ func (s *Service) oauthUser() string {
 		return s.SMTPUser
 	}
 	return s.FromEmail
+}
+
+// LogContentEnabled indique si EMAIL_LOG_CONTENT=true : journalise chaque email envoyé.
+func LogContentEnabled() bool {
+	v := strings.ToLower(strings.TrimSpace(os.Getenv("EMAIL_LOG_CONTENT")))
+	return v == "true" || v == "1"
 }
