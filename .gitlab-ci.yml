@@ -1,5 +1,7 @@
 # GitLab CI pipeline to build and push backend and frontend Docker images
 # Uses GitLab's built-in registry with auto-provided credentials
+# Runner "docker-shell" : exécuteur shell, le Docker de la machine est utilisé directement
+# (pas d'image ni de service docker:dind).
 
 variables:
   IMAGE_REGISTRY_HOST: "$CI_REGISTRY"
@@ -10,14 +12,8 @@ stages:
   - build
 
 build_and_push_backend:
-  image: docker:24
-  services:
-    - docker:24-dind
   tags:
-    - docker
-  variables:
-    DOCKER_TLS_CERTDIR: ""
-    DOCKER_DRIVER: overlay2
+    - docker-shell
   stage: build
   before_script:
     - echo "$CI_JOB_TOKEN" | docker login -u gitlab-ci-token --password-stdin "$CI_REGISTRY"
@@ -29,14 +25,8 @@ build_and_push_backend:
     - if: $CI_COMMIT_TAG
 
 build_and_push_frontend:
-  image: docker:24
-  services:
-    - docker:24-dind
   tags:
-    - docker
-  variables:
-    DOCKER_TLS_CERTDIR: ""
-    DOCKER_DRIVER: overlay2
+    - docker-shell
   stage: build
   before_script:
     - echo "$CI_JOB_TOKEN" | docker login -u gitlab-ci-token --password-stdin "$CI_REGISTRY"
