@@ -1,7 +1,7 @@
 # GitLab CI pipeline to build and push backend and frontend Docker images
 # Uses GitLab's built-in registry with auto-provided credentials
-# Runner "docker-shell" : exécuteur shell, le Docker de la machine est utilisé directement
-# (pas d'image ni de service docker:dind).
+# Runner "docker-shell" : exécuteur Docker. L'image docker:24 fournit le client docker, qui
+# utilise le démon de la machine (pas de service docker:dind).
 
 variables:
   IMAGE_REGISTRY_HOST: "$CI_REGISTRY"
@@ -12,6 +12,7 @@ stages:
   - build
 
 build_and_push_backend:
+  image: docker:24
   tags:
     - docker-shell
   stage: build
@@ -25,6 +26,7 @@ build_and_push_backend:
     - if: $CI_COMMIT_TAG
 
 build_and_push_frontend:
+  image: docker:24
   tags:
     - docker-shell
   stage: build
